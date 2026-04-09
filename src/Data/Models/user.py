@@ -1,0 +1,21 @@
+"""User model"""
+from sqlalchemy import Column, String, DateTime, Integer, Boolean, ForeignKey, func
+from src.data.db_context.base import UuidPkUpdatableBaseModel
+
+class User(UuidPkUpdatableBaseModel):
+    __tablename__ = "user"
+    
+    document = Column(String(11), unique=True, nullable=False)
+    name = Column(String(200), nullable=False)
+    email = Column(String(120), unique=True, nullable=True)
+    cellphone_number = Column(String(9), unique=True, nullable=True)
+    contact_cellphone_number = Column(String(9), unique=True, nullable=True)
+    password = Column(String(512), nullable=False)
+    birthdate = Column(DateTime, nullable=False)
+    school = Column(String(200), nullable=True)
+    active = Column(Boolean, nullable=False, default=True)
+    
+    # Foreign keys
+    sex_id = Column(Integer, ForeignKey('user_sex_type.id'), nullable=False)
+    gender_id = Column(Integer, ForeignKey('user_gender_type.id'), nullable=False)
+    user_type_id = Column(Integer, ForeignKey('user_type.id'), nullable=False)
