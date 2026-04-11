@@ -3,7 +3,7 @@ from sqlalchemy import Column, Boolean, ForeignKey
 from sqlalchemy.dialects.mysql import BINARY
 from src.data.db_context.base import UuidPkUpdatableBaseModel
 
-class AttendanceModel(UuidPkUpdatableBaseModel):
+class ClassAttendanceModel(UuidPkUpdatableBaseModel):
     __tablename__ = "attendance"
     
     attended = Column(Boolean, nullable=False, default=False)

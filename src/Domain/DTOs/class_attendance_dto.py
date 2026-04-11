@@ -1,17 +1,16 @@
 """DTOs for Attendance operations"""
-from typing import Optional
 from pydantic import BaseModel
 
-class AttendanceCreateDTO(BaseModel):
+class ClassAttendanceCreateDTO(BaseModel):
     """DTO for creating attendance records"""
     user_id: str  # UUID as string
     class_session_id: str  # UUID as string
 
-class AttendanceUpdateDTO(BaseModel):
+class ClassAttendanceUpdateDTO(BaseModel):
     """DTO for updating attendance"""
     attended: bool
 
-class BulkAttendanceCreateDTO(BaseModel):
+class BulkClassAttendanceCreateDTO(BaseModel):
     """DTO for creating multiple attendance records"""
     class_session_id: str  # UUID as string
     user_ids: list[str]  # List of UUIDs as strings

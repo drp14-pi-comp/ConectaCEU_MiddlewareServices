@@ -4,7 +4,7 @@ from uuid import UUID
 from typing import Optional
 from pydantic import BaseModel, ConfigDict
 
-class Attendance(BaseModel):
+class ClassAttendance(BaseModel):
     """Attendance domain entity"""
     
     id: UUID
