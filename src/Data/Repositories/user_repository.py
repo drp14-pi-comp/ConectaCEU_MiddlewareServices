@@ -1,0 +1,109 @@
+"""User repository"""
+from typing import Optional, List
+from uuid import UUID
+from sqlalchemy.orm import Session
+from sqlalchemy import select, and_, or_
+
+from src.data.models.user_model import UserModel
+from src.data.repositories.base.base_repository import BaseRepository
+
+class UserRepository(BaseRepository[UserModel]):
+    """Repository for User entity"""
+    
+    def __init__(self, session: Session):
+        super().__init__(session, UserModel)
+    
+    async def get_by_document(self, document: str) -> Optional[UserModel]:
+        """Get user by document (CPF)"""
+        stmt = select(UserModel).where(UserModel.document == document)
+        result = await self.session.execute(stmt)
+        return result.scalar_one_or_none()
+    
+    async def get_by_email(self, email: str) -> Optional[UserModel]:
+        """Get user by email"""
+        if not email:
+            return None
+        stmt = select(UserModel).where(UserModel.email == email)
+        result = await self.session.execute(stmt)
+        return result.scalar_one_or_none()
+    
+    async def get_by_cellphone(self, cellphone: str) -> Optional[UserModel]:
+        """Get user by cellphone number"""
+        if not cellphone:
+            return None
+        stmt = select(UserModel).where(UserModel.cellphone_number == cellphone)
+        result = await self.session.execute(stmt)
+        return result.scalar_one_or_none()
+    
+    async def find_by_filters(
+        self,
+        name: Optional[str] = None,
+        document: Optional[str] = None,
+        email: Optional[str] = None,
+        user_type_id: Optional[int] = None,
+        sex_id: Optional[int] = None,
+        gender_id: Optional[int] = None,
+        active: Optional[bool] = None,
+        skip: int = 0,
+        limit: int = 100
+    ) -> List[UserModel]:
+        """Find users with multiple filters"""
+        conditions = []
+        
+        if name:
+            conditions.append(UserModel.name.contains(name))
+        if document:
+            conditions.append(UserModel.document == document)
+        if email:
+            conditions.append(UserModel.email == email)
+        if user_type_id:
+            conditions.append(UserModel.user_type_id == user_type_id)
+        if sex_id:
+            conditions.append(UserModel.sex_id == sex_id)
+        if gender_id:
+            conditions.append(UserModel.gender_id == gender_id)
+        if active is not None:
+            conditions.append(UserModel.active == active)
+        
+        stmt = select(UserModel)
+        if conditions:
+            stmt = stmt.where(and_(*conditions))
+        stmt = stmt.offset(skip).limit(limit)
+        
+        result = await self.session.execute(stmt)
+        return list(result.scalars().all())
+    
+    async def deactivate(self, user_id: UUID) -> bool:
+        """Soft delete - deactivate user"""
+        user = await self.get_by_id(user_id)
+        if user:
+            user.active = False
+            await self.session.flush()
+            return True
+        return False
+    
+    async def activate(self, user_id: UUID) -> bool:
+        """Activate user"""
+        user = await self.get_by_id(user_id)
+        if user:
+            user.active = True
+            await self.session.flush()
+            return True
+        return False
+    
+    async def update_password(self, user_id: UUID, hashed_password: str) -> bool:
+        """Update user password"""
+        user = await self.get_by_id(user_id)
+        if user:
+            user.password = hashed_password
+            await self.session.flush()
+            return True
+        return False
+    
+    async def get_educators(self, skip: int = 0, limit: int = 100) -> List[UserModel]:
+        """Get all educators (user_type_id = 4)"""
+        return await self.find_by_filters(user_type_id=4, active=True, skip=skip, limit=limit)
+    
+    async def get_students(self, skip: int = 0, limit: int = 100) -> List[UserModel]:
+        """Get all students (user_type_id = 5)"""
+        return await self.find_by_filters(user_type_id=5, active=True, skip=skip, limit=limit)

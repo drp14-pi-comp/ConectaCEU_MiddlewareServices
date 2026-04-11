@@ -1,0 +1,46 @@
+"""Course component repository"""
+from typing import List, Optional
+from uuid import UUID
+from sqlalchemy.orm import Session
+from sqlalchemy import select
+
+from src.data.models.course_component_model import CourseComponentModel
+from src.data.repositories.base.base_repository import BaseRepository
+
+class CourseComponentRepository(BaseRepository[CourseComponentModel]):
+    """Repository for Course Component entity"""
+    
+    def __init__(self, session: Session):
+        super().__init__(session, CourseComponentModel)
+    
+    async def get_by_course_id(self, course_id: UUID) -> List[CourseComponentModel]:
+        """Get all components for a course"""
+        stmt = select(CourseComponentModel).where(
+            CourseComponentModel.course_id == course_id.bytes
+        )
+        result = await self.session.execute(stmt)
+        return list(result.scalars().all())
+    
+    async def get_active_by_course_id(self, course_id: UUID) -> List[CourseComponentModel]:
+        """Get all active components for a course"""
+        stmt = select(CourseComponentModel).where(
+            CourseComponentModel.course_id == course_id.bytes,
+            CourseComponentModel.active == True
+        )
+        result = await self.session.execute(stmt)
+        return list(result.scalars().all())
+    
+    async def get_by_name(self, name: str) -> Optional[CourseComponentModel]:
+        """Get component by exact name"""
+        stmt = select(CourseComponentModel).where(CourseComponentModel.name == name)
+        result = await self.session.execute(stmt)
+        return result.scalar_one_or_none()
+    
+    async def deactivate(self, component_id: UUID) -> bool:
+        """Deactivate component"""
+        component = await self.get_by_id(component_id)
+        if component:
+            component.active = False
+            await self.session.flush()
+            return True
+        return False
