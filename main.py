@@ -9,7 +9,7 @@ from pathlib import Path
 # Add src to Python path
 sys.path.insert(0, str(Path(__file__).parent))
 
-from src.Infrastructure.Configuration.settings import config
+from src.infrastructure.configuration.settings import config
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
