@@ -1,11 +1,12 @@
-"""Course creation logging model"""
-from sqlalchemy import Column, String, ForeignKey
+"""Student enrollment logging model"""
+from sqlalchemy import Column, String, Boolean, ForeignKey
 from sqlalchemy.dialects.mysql import BINARY
 from src.data.db_context.base import LogBaseModel
 
-class LogCourseCreation(LogBaseModel):
-    __tablename__ = "log_course_creation"
+class LogStudentEnrollmentModel(LogBaseModel):
+    __tablename__ = "log_student_enrollment"
     
+    enrolled = Column(Boolean, nullable=False)
     user_ip_address = Column(String(39), nullable=False)
     
     # Foreign keys

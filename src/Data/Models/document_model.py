@@ -3,7 +3,7 @@ from sqlalchemy import Column, Boolean, ForeignKey, Text
 from sqlalchemy.dialects.mysql import BINARY
 from src.data.db_context.base import UuidPkUpdatableBaseModel
 
-class Document(UuidPkUpdatableBaseModel):
+class DocumentModel(UuidPkUpdatableBaseModel):
     __tablename__ = "document"
     
     base64 = Column(Text, nullable=False)

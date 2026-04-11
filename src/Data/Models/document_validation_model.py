@@ -3,7 +3,7 @@ from sqlalchemy import Column, String, ForeignKey
 from sqlalchemy.dialects.mysql import BINARY
 from src.data.db_context.base import UuidPkUpdatableBaseModel
 
-class DocumentValidation(UuidPkUpdatableBaseModel):
+class DocumentValidationModel(UuidPkUpdatableBaseModel):
     __tablename__ = "document_validation"
     
     rejection_reason = Column(String(500), nullable=True)

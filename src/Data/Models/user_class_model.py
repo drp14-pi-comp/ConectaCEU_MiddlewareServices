@@ -1,13 +1,13 @@
-"""Class attendance model"""
+"""User class enrollment model"""
 from sqlalchemy import Column, Boolean, ForeignKey
 from sqlalchemy.dialects.mysql import BINARY
 from src.data.db_context.base import UuidPkUpdatableBaseModel
 
-class Attendance(UuidPkUpdatableBaseModel):
-    __tablename__ = "attendance"
+class UserClassModel(UuidPkUpdatableBaseModel):
+    __tablename__ = "user_class"
     
-    attended = Column(Boolean, nullable=False, default=False)
+    active = Column(Boolean, nullable=False, default=True)
     
     # Foreign keys
     user_id = Column(BINARY(16), ForeignKey('user.id'), nullable=False)
-    class_session_id = Column(BINARY(16), ForeignKey('class_session.id'), nullable=False)
+    class_id = Column(BINARY(16), ForeignKey('class.id'), nullable=False)

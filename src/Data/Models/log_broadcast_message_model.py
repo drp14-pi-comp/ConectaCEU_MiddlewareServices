@@ -3,7 +3,7 @@ from sqlalchemy import Column, String, Boolean, ForeignKey, Text
 from sqlalchemy.dialects.mysql import BINARY
 from src.data.db_context.base import LogBaseModel
 
-class LogBroadcastMessage(LogBaseModel):
+class LogBroadcastMessageModel(LogBaseModel):
     __tablename__ = "log_broadcast_message"
     
     message = Column(Text, nullable=False)

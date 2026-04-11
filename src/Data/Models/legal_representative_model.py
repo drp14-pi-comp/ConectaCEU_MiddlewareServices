@@ -3,7 +3,7 @@ from sqlalchemy import Column, String, ForeignKey
 from sqlalchemy.dialects.mysql import BINARY
 from src.data.db_context.base import UuidPkUpdatableBaseModel
 
-class LegalRepresentative(UuidPkUpdatableBaseModel):
+class LegalRepresentativeModel(UuidPkUpdatableBaseModel):
     __tablename__ = "legal_representative"
     
     name = Column(String(200), nullable=False)

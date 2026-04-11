@@ -2,7 +2,7 @@
 from sqlalchemy import Column, String, Boolean
 from src.data.db_context.base import IntPkBaseModel
 
-class UserType(IntPkBaseModel):
+class UserTypeModel(IntPkBaseModel):
     __tablename__ = "user_type"
 
     description = Column(String(50), unique=True, nullable=False)

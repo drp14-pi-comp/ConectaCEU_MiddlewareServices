@@ -3,7 +3,7 @@ from sqlalchemy import Column, String, Integer, Boolean, ForeignKey
 from sqlalchemy.dialects.mysql import BINARY
 from src.data.db_context.base import UuidPkUpdatableBaseModel
 
-class Course(UuidPkUpdatableBaseModel):
+class CourseModel(UuidPkUpdatableBaseModel):
     __tablename__ = "course"
     
     name = Column(String(100), unique=True, nullable=False)

@@ -2,7 +2,7 @@
 from sqlalchemy import Column, String, DateTime, Integer, Boolean, ForeignKey, func
 from src.data.db_context.base import UuidPkUpdatableBaseModel
 
-class User(UuidPkUpdatableBaseModel):
+class UserModel(UuidPkUpdatableBaseModel):
     __tablename__ = "user"
     
     document = Column(String(11), unique=True, nullable=False)

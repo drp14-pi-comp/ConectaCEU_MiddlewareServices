@@ -3,7 +3,7 @@ from sqlalchemy import Column, String, ForeignKey
 from sqlalchemy.dialects.mysql import BINARY
 from src.data.db_context.base import UuidPkUpdatableBaseModel
 
-class Address(UuidPkUpdatableBaseModel):
+class AddressModel(UuidPkUpdatableBaseModel):
     __tablename__ = "address"
     
     zip_code = Column(String(8), nullable=False)
