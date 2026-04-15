@@ -10,10 +10,10 @@ class AppSettings(BaseSettings):
     """Application settings that can be overridden by environment variables"""
     
     # Database
-    DATABASE_URL: str = Field(default="mysql+pymysql://root:@localhost:3306/fastapi_db")
+    DATABASE_URL: str = Field(default="mysql+pymysql://root:15nR7xCS15EXSvh4I2y9@localhost:3306/conectaceu")
     DATABASE_HOST: str = Field(default="localhost")
     DATABASE_PORT: int = Field(default=3306)
-    DATABASE_NAME: str = Field(default="conectaceu_db")
+    DATABASE_NAME: str = Field(default="conectaceu")
     DATABASE_USER: str = Field(default="root")
     DATABASE_PASSWORD: str = Field(default="")
     DATABASE_POOL_SIZE: int = Field(default=10)
