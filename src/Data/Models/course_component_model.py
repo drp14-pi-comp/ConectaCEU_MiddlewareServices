@@ -4,7 +4,7 @@ from sqlalchemy.dialects.mysql import BINARY
 from src.data.db_context.base import UuidPkUpdatableBaseModel
 
 class CourseComponentModel(UuidPkUpdatableBaseModel):
-    __tablename__ = "component"
+    __tablename__ = "course_component"
     
     name = Column(String(100), unique=True, nullable=False)
     description = Column(String(500), unique=True, nullable=False)

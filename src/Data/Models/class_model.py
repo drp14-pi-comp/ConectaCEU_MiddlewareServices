@@ -11,4 +11,4 @@ class ClassModel(UuidPkUpdatableBaseModel):
     
     # Foreign keys
     component_id = Column(BINARY(16), ForeignKey('course_component.id'), nullable=False)
-    shift_type_id = Column(BINARY(16), ForeignKey('shift_type.id'), nullable=False)
+    shift_type_id = Column(Integer, ForeignKey('shift_type.id'), nullable=False)
