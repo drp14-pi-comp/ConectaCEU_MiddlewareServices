@@ -10,6 +10,8 @@ from src.domain.entities.user_class import UserClass
 from src.domain.entities.document import Document
 from src.domain.entities.legal_representative import LegalRepresentative
 
+from src.domain.entities.user_password_history import UserPasswordHistory
+from src.domain.view_models.user_password_history_view_model import UserPasswordHistoryViewModel
 from src.domain.view_models.user_view_model import UserViewModel
 from src.domain.view_models.address_view_model import AddressViewModel
 from src.domain.view_models.course_view_model import CourseViewModel
@@ -160,5 +162,15 @@ class EntityToViewModelMapper:
             updated_at=entity.updated_at,
             name=entity.name,
             document=entity.document,
+            user_id=entity.user_id
+        )
+    
+    # ========== User Password History ==========
+    @staticmethod
+    def user_password_history(entity: UserPasswordHistory) -> UserPasswordHistoryViewModel:
+        return UserPasswordHistoryViewModel(
+            id=entity.id,
+            created_at=entity.created_at,
+            password=entity.password,
             user_id=entity.user_id
         )

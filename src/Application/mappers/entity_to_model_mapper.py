@@ -1,6 +1,7 @@
 """All Entity to SQLAlchemy Model conversions"""
 from uuid import UUID
 
+from src.data.models.user_password_history_model import UserPasswordHistoryModel
 from src.domain.entities.user import User
 from src.domain.entities.address import Address
 from src.domain.entities.course import Course
@@ -22,6 +23,7 @@ from src.data.models.class_attendance_model import ClassAttendanceModel
 from src.data.models.user_class_model import UserClassModel
 from src.data.models.document_model import DocumentModel
 from src.data.models.legal_representative_model import LegalRepresentativeModel
+from src.domain.entities.user_password_history import UserPasswordHistory
 
 class EntityToModelMapper:
     """Centralized Entity to Model conversions"""
@@ -166,5 +168,15 @@ class EntityToModelMapper:
             updated_at=entity.updated_at,
             name=entity.name,
             document=entity.document,
+            user_id=entity.user_id.bytes
+        )
+    
+    # ========== User Password History ==========
+    @staticmethod
+    def user_password_history(entity: UserPasswordHistory) -> UserPasswordHistoryModel:
+        return UserPasswordHistoryModel(
+            id=entity.id.bytes,
+            created_at=entity.created_at,
+            password=entity.password,
             user_id=entity.user_id.bytes
         )
