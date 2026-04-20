@@ -1,4 +1,4 @@
-"""All update operations (DTO → existing Entity)"""
+"""All update operations (DTO -> existing Entity)"""
 from datetime import datetime
 from uuid import UUID
 
