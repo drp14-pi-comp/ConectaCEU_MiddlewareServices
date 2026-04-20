@@ -18,25 +18,25 @@ class AuthService:
     
     def create_access_token(self, user_id: UUID, user_type_id: int) -> str:
         """Create JWT access token"""
-        expire = datetime.utcnow() + timedelta(minutes=config.settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+        expire = datetime.now(datetime.timezone.utc) + timedelta(minutes=config.settings.ACCESS_TOKEN_EXPIRE_MINUTES)
         
         payload = {
             "sub": str(user_id),
             "user_type_id": user_type_id,
             "exp": expire,
-            "iat": datetime.utcnow()
+            "iat": datetime.now(datetime.timezone.utc)
         }
         
         return jwt.encode(payload, config.settings.SECRET_KEY, algorithm=config.settings.JWT_ALGORITHM)
     
     def create_refresh_token(self, user_id: UUID) -> str:
         """Create JWT refresh token"""
-        expire = datetime.utcnow() + timedelta(days=config.settings.REFRESH_TOKEN_EXPIRE_DAYS)
+        expire = datetime.now(datetime.timezone.utc) + timedelta(days=config.settings.REFRESH_TOKEN_EXPIRE_DAYS)
         
         payload = {
             "sub": str(user_id),
             "exp": expire,
-            "iat": datetime.utcnow(),
+            "iat": datetime.now(datetime.timezone.utc),
             "type": "refresh"
         }
         
@@ -96,7 +96,7 @@ class AuthService:
         
         # Check if account is locked
         if hasattr(user, 'locked_until') and user.locked_until:
-            if user.locked_until > datetime.utcnow():
+            if user.locked_until > datetime.now(datetime.timezone.utc):
                 return None
         
         # Generate tokens

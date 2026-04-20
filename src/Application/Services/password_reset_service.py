@@ -45,7 +45,7 @@ class PasswordResetService:
         
         # Generate reset token
         reset_token = secrets.token_urlsafe(32)
-        token_expiry = datetime.utcnow() + timedelta(hours=1)
+        token_expiry = datetime.now(datetime.timezone.utc) + timedelta(hours=1)
         
         # Save token to user
         user.password_reset_token = reset_token
@@ -87,7 +87,7 @@ class PasswordResetService:
         
         # Generate reset token
         reset_token = secrets.token_urlsafe(32)
-        token_expiry = datetime.utcnow() + timedelta(hours=1)
+        token_expiry = datetime.now(datetime.timezone.utc) + timedelta(hours=1)
         
         # Save token to user
         user.password_reset_token = reset_token
@@ -121,7 +121,7 @@ class PasswordResetService:
             return {"valid": False, "reason": "Invalid or expired token"}
         
         # Check if token is expired
-        if user.password_reset_expires and user.password_reset_expires < datetime.utcnow():
+        if user.password_reset_expires and user.password_reset_expires < datetime.now(datetime.timezone.utc):
             return {"valid": False, "reason": "Token has expired"}
         
         return {

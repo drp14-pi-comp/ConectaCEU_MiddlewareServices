@@ -106,7 +106,7 @@ class UserPasswordHistoryService(BaseService):
         
         entity = UserPasswordHistory(
             id=uuid4(),
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(datetime.timezone.utc),
             password=hashed_password,
             user_id=user_id
         )
@@ -143,7 +143,7 @@ class UserPasswordHistoryService(BaseService):
         
         entity = UserPasswordHistory(
             id=uuid4(),
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(datetime.timezone.utc),
             password=hashed_password,
             user_id=user_id
         )
@@ -274,7 +274,7 @@ class UserPasswordHistoryService(BaseService):
         
         from datetime import datetime
         current_password = recent[0]
-        age = (datetime.utcnow() - current_password.created_at).days
+        age = (datetime.now(datetime.timezone.utc) - current_password.created_at).days
         
         total = await self.repository.count_by_user_id(user_id)
         

@@ -22,7 +22,7 @@ class ClassSessionService(BaseService):
     async def create_session(self, dto: ClassSessionCreateDTO) -> ClassSessionViewModel:
         """Create a new class session"""
         # Validate date is in the future
-        if dto.date < datetime.utcnow():
+        if dto.date < datetime.now(datetime.timezone.utc):
             raise ValueError("Session date must be in the future")
         
         entity = DtoToEntityMapper.class_session(dto)
