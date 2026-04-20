@@ -1,0 +1,51 @@
+"""Base service with common business operations"""
+from typing import Optional, List, Any
+from uuid import UUID
+
+from src.data.repositories.base.base_repository import BaseRepository
+from src.application.mappers.dto_to_entity_mapper import DtoToEntityMapper
+from src.application.mappers.entity_to_model_mapper import EntityToModelMapper
+from src.application.mappers.model_to_entity_mapper import ModelToEntityMapper
+from src.application.mappers.entity_to_view_model_mapper import EntityToViewModelMapper
+from src.application.mappers.update_mapper import UpdateMapper
+
+class BaseService:
+    """Generic service with common CRUD operations"""
+    
+    def __init__(self, repository: BaseRepository):
+        self.repository = repository
+    
+    async def get_by_id(self, id: UUID) -> Optional[Any]:
+        """Get entity by ID"""
+        model = await self.repository.get_by_id(id)
+        if model:
+            return ModelToEntityMapper.from_model(model)
+        return None
+    
+    async def get_by_id_int(self, id: int) -> Optional[Any]:
+        """Get entity by integer ID"""
+        model = await self.repository.get_by_id_int(id)
+        if model:
+            return ModelToEntityMapper.from_model(model)
+        return None
+    
+    async def get_all(self, skip: int = 0, limit: int = 100) -> List[Any]:
+        """Get all entities with pagination"""
+        models = await self.repository.get_all(skip, limit)
+        return [ModelToEntityMapper.from_model(model) for model in models]
+    
+    async def delete(self, id: UUID) -> bool:
+        """Delete entity by ID"""
+        return await self.repository.delete(id)
+    
+    async def delete_int(self, id: int) -> bool:
+        """Delete entity by integer ID"""
+        return await self.repository.delete_int(id)
+    
+    async def exists(self, id: UUID) -> bool:
+        """Check if entity exists"""
+        return await self.repository.exists(id)
+    
+    async def exists_int(self, id: int) -> bool:
+        """Check if entity with integer ID exists"""
+        return await self.repository.exists_int(id)

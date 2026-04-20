@@ -107,3 +107,19 @@ class UserRepository(BaseRepository[UserModel]):
     async def get_students(self, skip: int = 0, limit: int = 100) -> List[UserModel]:
         """Get all students (user_type_id = 5)"""
         return await self.find_by_filters(user_type_id=5, active=True, skip=skip, limit=limit)
+    
+    async def find_by_password_reset_token(self, token: str) -> Optional[UserModel]:
+        """Find user by password reset token"""
+        stmt = select(UserModel).where(UserModel.password_reset_token == token)
+        result = await self.session.execute(stmt)
+        return result.scalar_one_or_none()
+
+    async def clear_password_reset_token(self, user_id: UUID) -> bool:
+        """Clear password reset token"""
+        user = await self.get_by_id(user_id)
+        if user:
+            user.password_reset_token = None
+            user.password_reset_expires = None
+            await self.session.flush()
+            return True
+        return False

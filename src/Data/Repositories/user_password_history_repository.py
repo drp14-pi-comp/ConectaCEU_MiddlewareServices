@@ -88,8 +88,6 @@ class UserPasswordHistoryRepository(BaseRepository):
         """Check if password was used recently"""
         recent_passwords = await self.get_recent_by_user_id(user_id, limit=check_count)
         
-        # Note: In a real implementation, you'd use proper password verification
-        # This is a simplified check - actual password verification should use bcrypt
         for history in recent_passwords:
             if history.password == password_hash:
                 return True
