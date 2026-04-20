@@ -41,7 +41,7 @@ class ClassSessionRepository(BaseRepository[ClassSessionModel]):
         """Get future sessions for a class"""
         stmt = select(ClassSessionModel).where(
             ClassSessionModel.class_id == class_id.bytes,
-            ClassSessionModel.date > datetime.utcnow()
+            ClassSessionModel.date > datetime.now(datetime.timezoze.utc)
         ).order_by(ClassSessionModel.date)
         result = await self.session.execute(stmt)
         return list(result.scalars().all())
@@ -50,7 +50,7 @@ class ClassSessionRepository(BaseRepository[ClassSessionModel]):
         """Get past sessions for a class"""
         stmt = select(ClassSessionModel).where(
             ClassSessionModel.class_id == class_id.bytes,
-            ClassSessionModel.date < datetime.utcnow()
+            ClassSessionModel.date < datetime.now(datetime.timezoze.utc)
         ).order_by(ClassSessionModel.date.desc())
         result = await self.session.execute(stmt)
         return list(result.scalars().all())
