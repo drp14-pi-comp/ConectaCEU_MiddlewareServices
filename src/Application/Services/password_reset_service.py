@@ -63,48 +63,6 @@ class PasswordResetService:
         
         return {"message": "If the information matches, a reset email will be sent"}
     
-    async def request_password_reset_by_document(self, document: str) -> dict:
-        """
-        Request password reset by document only.
-        Sends email to user's registered email.
-        
-        Args:
-            document: User's document (CPF)
-            
-        Returns:
-            Dict with status message
-        """
-        # Find user by document
-        user = await self.user_repo.get_by_document(document)
-        if not user:
-            return {"message": "If the document is registered, a reset email will be sent"}
-        
-        if not user.active:
-            return {"message": "If the document is registered, a reset email will be sent"}
-        
-        if not user.email:
-            return {"message": "No email registered for this document"}
-        
-        # Generate reset token
-        reset_token = secrets.token_urlsafe(32)
-        token_expiry = datetime.now(datetime.timezone.utc) + timedelta(hours=1)
-        
-        # Save token to user
-        user.password_reset_token = reset_token
-        user.password_reset_expires = token_expiry
-        await self.user_repo.update(user)
-        
-        # Send email
-        frontend_url = config.get("App.FrontendUrl", "http://localhost:3000")
-        await self.email_service.send_password_reset_email(
-            to_email=user.email,
-            user_name=user.name,
-            reset_token=reset_token,
-            frontend_url=frontend_url
-        )
-        
-        return {"message": "If the document is registered, a reset email will be sent"}
-    
     async def validate_reset_token(self, token: str) -> dict:
         """
         Validate password reset token.

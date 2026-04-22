@@ -101,30 +101,88 @@ class UserClassService(BaseService):
         
         class_ = await self.class_repo.get_by_id(class_id)
         if class_:
-            # You would need ComponentRepository injected
-            # This is a simplified version
-            return None
+            component_repo = CourseComponentRepository(self.class_repo.session)
+            component = await component_repo.get_by_id(UUID(bytes=class_.component_id))
+            return component
         return None
     
-    async def bulk_enroll(self, dto: UserClassBulkEnrollDTO) -> dict:
-        """Bulk enroll users in a class"""
-        enrolled = []
-        failed = []
+    async def validate_bulk_enrollment(self, class_id: UUID, user_ids: List[str]) -> dict:
+        """
+        Validate if users can be enrolled in a class.
+        Returns validation result with available seats and any issues.
+        """
+        class_ = await self.class_repo.get_by_id(class_id)
+        if not class_:
+            return {'valid': False, 'reason': 'Class not found'}
         
-        for user_id in dto.user_ids:
+        if not class_.active:
+            return {'valid': False, 'reason': 'Class is inactive'}
+        
+        component = await self._get_component_for_class(class_id)
+        if not component:
+            return {'valid': False, 'reason': 'Component not found'}
+        
+        available_seats = component.seat_limit_per_class - class_.seats_in_use
+        requested = len(user_ids)
+        
+        if requested > available_seats:
+            return {
+                'valid': False,
+                'reason': f'Insufficient seats',
+                'available_seats': available_seats,
+                'requested': requested
+            }
+        
+        # Check each user
+        issues = []
+        for user_id in user_ids:
             try:
-                enroll_dto = UserClassEnrollDTO(user_id=user_id, class_id=dto.class_id)
-                result = await self.enroll_user(enroll_dto)
-                enrolled.append(result)
-            except Exception as e:
-                failed.append({'user_id': user_id, 'error': str(e)})
+                user_uuid = UUID(user_id)
+                existing = await self.repository.get_by_user_and_class(user_uuid, class_id)
+                if existing and existing.active:
+                    issues.append({'user_id': user_id, 'issue': 'Already enrolled'})
+                    continue
+                
+                try:
+                    await self._validate_enrollment_rules(user_uuid, class_id)
+                except ValueError as e:
+                    issues.append({'user_id': user_id, 'issue': str(e)})
+            except ValueError:
+                issues.append({'user_id': user_id, 'issue': 'Invalid user ID format'})
         
         return {
+            'valid': len(issues) == 0,
+            'available_seats': available_seats,
+            'requested': requested,
+            'valid_enrollments': requested - len(issues),
+            'issues': issues
+        }
+
+    async def bulk_enroll(self, dto: UserClassBulkEnrollDTO) -> dict:
+        """Bulk enroll users after validation"""
+        validation = await self.validate_bulk_enrollment(UUID(dto.class_id), dto.user_ids)
+        
+        if not validation['valid']:
+            return {
+                'success': False,
+                'class_id': dto.class_id,
+                'validation': validation,
+                'enrolled': [],
+                'failed': validation['issues']
+            }
+        
+        enrolled = []
+        for user_id in dto.user_ids:
+            enroll_dto = UserClassEnrollDTO(user_id=user_id, class_id=dto.class_id)
+            result = await self.enroll_user(enroll_dto)
+            enrolled.append(result)
+        
+        return {
+            'success': True,
             'class_id': dto.class_id,
             'enrolled_count': len(enrolled),
-            'failed_count': len(failed),
-            'enrolled': enrolled,
-            'failed': failed
+            'available_seats_remaining': validation['available_seats'] - len(enrolled),
+            'enrolled': enrolled
         }
     
     async def unenroll_user(self, enrollment_id: UUID) -> bool:

@@ -47,7 +47,7 @@ class UserService(BaseService):
         if len(dto.password) < 8:
             raise ValueError("Password must be at least 8 characters")
         
-        # Convert DTO → Entity
+        # Convert DTO -> Entity
         entity = DtoToEntityMapper.user(dto)
         
         # Business rule: Validate age (must be at least 16)
@@ -58,7 +58,7 @@ class UserService(BaseService):
         hashed_password = self._hash_password(dto.password)
         entity.password = hashed_password
         
-        # Convert Entity → Model and save
+        # Convert Entity -> Model and save
         model = EntityToModelMapper.user(entity)
         saved_model = await self.repository.create(model)
         

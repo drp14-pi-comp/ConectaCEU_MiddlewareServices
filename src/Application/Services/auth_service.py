@@ -117,48 +117,6 @@ class AuthService:
             }
         }
     
-    async def authenticate_with_email(self, email: str, password: str) -> Optional[dict]:
-        """
-        Authenticate user with email and password.
-        
-        Args:
-            email: User's email
-            password: Plain text password
-            
-        Returns:
-            Dict with tokens if authentication successful, None otherwise
-        """
-        # Find user by email
-        user = await self.user_repo.get_by_email(email)
-        if not user:
-            return None
-        
-        # Check if user is active
-        if not user.active:
-            return None
-        
-        # Verify password
-        if not self._verify_password(password, user.password):
-            return None
-        
-        # Generate tokens
-        user_uuid = UUID(bytes=user.id)
-        access_token = self.create_access_token(user_uuid, user.user_type_id)
-        refresh_token = self.create_refresh_token(user_uuid)
-        
-        return {
-            "access_token": access_token,
-            "refresh_token": refresh_token,
-            "token_type": "bearer",
-            "expires_in": config.settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-            "user": {
-                "id": str(user_uuid),
-                "name": user.name,
-                "email": user.email,
-                "user_type_id": user.user_type_id
-            }
-        }
-    
     async def refresh_access_token(self, refresh_token: str) -> Optional[dict]:
         """
         Refresh access token using refresh token.

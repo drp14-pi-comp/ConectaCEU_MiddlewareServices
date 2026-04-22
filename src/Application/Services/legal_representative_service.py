@@ -59,12 +59,3 @@ class LegalRepresentativeService(BaseService):
         models = await self.repository.get_by_user_id(user_id)
         entities = [ModelToEntityMapper.legal_representative(model) for model in models]
         return [EntityToViewModelMapper.legal_representative(entity) for entity in entities]
-    
-    async def get_by_document(self, document: str) -> LegalRepresentativeViewModel:
-        """Get legal representative by document"""
-        model = await self.repository.get_by_document(document)
-        if not model:
-            raise ValueError("Representative not found")
-        
-        entity = ModelToEntityMapper.legal_representative(model)
-        return EntityToViewModelMapper.legal_representative(entity)
