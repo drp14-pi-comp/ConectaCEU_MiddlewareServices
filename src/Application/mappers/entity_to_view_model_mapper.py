@@ -18,7 +18,7 @@ from src.domain.view_models.course_view_model import CourseViewModel
 from src.domain.view_models.course_component_view_model import CourseComponentViewModel
 from src.domain.view_models.class_view_model import ClassViewModel
 from src.domain.view_models.class_session_view_model import ClassSessionViewModel
-from src.domain.view_models.attendance_view_model import AttendanceViewModel
+from src.domain.view_models.class_attendance_view_model import ClassAttendanceViewModel
 from src.domain.view_models.user_class_view_model import UserClassViewModel
 from src.domain.view_models.document_view_model import DocumentViewModel
 from src.domain.view_models.legal_representative_view_model import LegalRepresentativeViewModel
@@ -117,8 +117,8 @@ class EntityToViewModelMapper:
     
     # ========== Attendance ==========
     @staticmethod
-    def attendance(entity: ClassAttendance) -> AttendanceViewModel:
-        return AttendanceViewModel(
+    def attendance(entity: ClassAttendance) -> ClassAttendanceViewModel:
+        return ClassAttendanceViewModel(
             id=entity.id,
             created_at=entity.created_at,
             updated_at=entity.updated_at,

@@ -4,7 +4,7 @@ from uuid import UUID
 from typing import Optional
 from pydantic import BaseModel, ConfigDict
 
-class AttendanceViewModel(BaseModel):
+class ClassAttendanceViewModel(BaseModel):
     id: UUID
     created_at: datetime
     updated_at: Optional[datetime]
