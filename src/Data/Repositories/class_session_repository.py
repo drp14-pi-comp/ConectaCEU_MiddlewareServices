@@ -7,6 +7,7 @@ from sqlalchemy import select, and_
 
 from src.data.models.class_session_model import ClassSessionModel
 from src.data.repositories.base.base_repository import BaseRepository
+from src.infrastructure.handlers.datetime_handler import DateTimeHandler
 
 class ClassSessionRepository(BaseRepository[ClassSessionModel]):
     """Repository for Class Session entity"""
@@ -41,7 +42,7 @@ class ClassSessionRepository(BaseRepository[ClassSessionModel]):
         """Get future sessions for a class"""
         stmt = select(ClassSessionModel).where(
             ClassSessionModel.class_id == class_id.bytes,
-            ClassSessionModel.date > datetime.now(datetime.timezoze.utc)
+            ClassSessionModel.date > DateTimeHandler.now()
         ).order_by(ClassSessionModel.date)
         result = await self.session.execute(stmt)
         return list(result.scalars().all())
@@ -50,7 +51,7 @@ class ClassSessionRepository(BaseRepository[ClassSessionModel]):
         """Get past sessions for a class"""
         stmt = select(ClassSessionModel).where(
             ClassSessionModel.class_id == class_id.bytes,
-            ClassSessionModel.date < datetime.now(datetime.timezoze.utc)
+            ClassSessionModel.date < DateTimeHandler.now()
         ).order_by(ClassSessionModel.date.desc())
         result = await self.session.execute(stmt)
         return list(result.scalars().all())

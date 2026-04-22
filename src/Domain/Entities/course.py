@@ -4,6 +4,8 @@ from uuid import UUID
 from typing import Optional
 from pydantic import BaseModel, ConfigDict, Field
 
+from src.infrastructure.handlers.datetime_handler import DateTimeHandler
+
 class Course(BaseModel):
     """Course domain entity"""
     
@@ -22,9 +24,9 @@ class Course(BaseModel):
     def deactivate(self) -> None:
         """Deactivate course"""
         self.active = False
-        self.updated_at = datetime.now()
+        self.updated_at = DateTimeHandler.now()
     
     def activate(self) -> None:
         """Activate course"""
         self.active = True
-        self.updated_at = datetime.now()
+        self.updated_at = DateTimeHandler.now()

@@ -5,6 +5,8 @@ from typing import Optional
 from pydantic import BaseModel, EmailStr, ConfigDict, Field, field_validator
 import re
 
+from src.infrastructure.handlers.datetime_handler import DateTimeHandler
+
 class User(BaseModel):
     """User domain entity"""
     
@@ -60,9 +62,9 @@ class User(BaseModel):
     def deactivate(self) -> None:
         """Deactivate user account"""
         self.active = False
-        self.updated_at = datetime.now()
+        self.updated_at = DateTimeHandler.now()
     
     def activate(self) -> None:
         """Activate user account"""
         self.active = True
-        self.updated_at = datetime.now()
+        self.updated_at = DateTimeHandler.now()

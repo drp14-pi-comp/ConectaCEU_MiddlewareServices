@@ -1,5 +1,4 @@
 """All update operations (DTO -> existing Entity)"""
-from datetime import datetime
 from uuid import UUID
 
 # Entities
@@ -35,6 +34,7 @@ from src.domain.dtos.document_type_dto import DocumentTypeUpdateDTO
 from src.domain.dtos.document_validation_status_type_dto import DocumentValidationStatusTypeUpdateDTO
 from src.domain.dtos.shift_type_dto import ShiftTypeUpdateDTO
 from src.domain.dtos.report_type_dto import ReportTypeUpdateDTO
+from src.infrastructure.handlers.datetime_handler import DateTimeHandler
 
 class UpdateMapper:
     """Centralized update operations"""
@@ -46,7 +46,7 @@ class UpdateMapper:
         for field, value in update_data.items():
             if hasattr(entity, field):
                 setattr(entity, field, value)
-        entity.updated_at = datetime.now(datetime.timezone.utc)
+        entity.updated_at = DateTimeHandler.now()
         return entity
     
     # ========== Address ==========
@@ -56,7 +56,7 @@ class UpdateMapper:
         for field, value in update_data.items():
             if hasattr(entity, field):
                 setattr(entity, field, value)
-        entity.updated_at = datetime.now(datetime.timezone.utc)
+        entity.updated_at = DateTimeHandler.now()
         return entity
     
     # ========== Course ==========
@@ -68,7 +68,7 @@ class UpdateMapper:
                 value = UUID(value)
             if hasattr(entity, field):
                 setattr(entity, field, value)
-        entity.updated_at = datetime.now(datetime.timezone.utc)
+        entity.updated_at = DateTimeHandler.now()
         return entity
     
     # ========== Course Component ==========
@@ -78,7 +78,7 @@ class UpdateMapper:
         for field, value in update_data.items():
             if hasattr(entity, field):
                 setattr(entity, field, value)
-        entity.updated_at = datetime.now(datetime.timezone.utc)
+        entity.updated_at = DateTimeHandler.now()
         return entity
     
     # ========== Class ==========
@@ -88,14 +88,14 @@ class UpdateMapper:
         for field, value in update_data.items():
             if hasattr(entity, field):
                 setattr(entity, field, value)
-        entity.updated_at = datetime.now(datetime.timezone.utc)
+        entity.updated_at = DateTimeHandler.now()
         return entity
     
     # ========== Class Attendance ==========
     @staticmethod
     def class_attendance(entity: ClassAttendance, dto: ClassAttendanceUpdateDTO) -> ClassAttendance:
         entity.attended = dto.attended
-        entity.updated_at = datetime.now(datetime.timezone.utc)
+        entity.updated_at = DateTimeHandler.now()
         return entity
     
     # ========== Document Validation ==========
@@ -104,7 +104,7 @@ class UpdateMapper:
         entity.document_validation_status_type_id = dto.document_validation_status_type_id
         if dto.rejection_reason:
             entity.rejection_reason = dto.rejection_reason
-        entity.updated_at = datetime.now(datetime.timezone.utc)
+        entity.updated_at = DateTimeHandler.now()
         return entity
     
     # ========== Legal Representative ==========
@@ -114,7 +114,7 @@ class UpdateMapper:
         for field, value in update_data.items():
             if hasattr(entity, field):
                 setattr(entity, field, value)
-        entity.updated_at = datetime.now(datetime.timezone.utc)
+        entity.updated_at = DateTimeHandler.now()
         return entity
     
     # ========== User Sex Type ==========

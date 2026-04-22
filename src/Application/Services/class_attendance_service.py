@@ -1,7 +1,6 @@
 """Class attendance service - business logic for attendance"""
 from typing import List
 from uuid import UUID, uuid4
-from datetime import datetime
 
 from src.data.repositories.class_attendance_repository import ClassAttendanceRepository
 from src.data.repositories.user_class_repository import UserClassRepository
@@ -12,6 +11,7 @@ from src.application.mappers.model_to_entity_mapper import ModelToEntityMapper
 from src.application.mappers.entity_to_view_model_mapper import EntityToViewModelMapper
 from src.domain.dtos.class_attendance_dto import ClassAttendanceCreateDTO, BulkAttendanceCreateDTO
 from src.domain.entities.class_attendance import ClassAttendance
+from src.infrastructure.handlers.datetime_handler import DateTimeHandler
 
 class ClassAttendanceService(BaseService):
     """Service for Class Attendance business logic"""
@@ -44,7 +44,7 @@ class ClassAttendanceService(BaseService):
         for enrollment in enrollments:
             attendance = ClassAttendance(
                 id=uuid4(),
-                created_at=datetime.now(datetime.timezone.utc),
+                created_at=DateTimeHandler.now(),
                 updated_at=None,
                 attended=False,
                 user_id=enrollment.user_id,
@@ -69,7 +69,7 @@ class ClassAttendanceService(BaseService):
             raise ValueError("Session not found")
         
         # Business rule: Can only take attendance on or after session date
-        if session.date > datetime.now(datetime.timezone.utc):
+        if session.date > DateTimeHandler.now():
             raise ValueError("Cannot take attendance before session date")
         
         updated_count = 0
@@ -119,7 +119,7 @@ class ClassAttendanceService(BaseService):
         
         # Business rule: Can't modify attendance after 7 days
         from datetime import timedelta
-        if attendance.created_at < datetime.now(datetime.timezone.utc) - timedelta(days=7):
+        if attendance.created_at < DateTimeHandler.now() - timedelta(days=7):
             raise ValueError("Cannot modify attendance after 7 days")
         
         await self.repository.mark_attendance(attendance_id, attended)
@@ -127,5 +127,5 @@ class ClassAttendanceService(BaseService):
         return {
             'attendance_id': attendance_id,
             'attended': attended,
-            'updated_at': datetime.now(datetime.timezone.utc)
+            'updated_at': DateTimeHandler.now()
         }

@@ -1,5 +1,4 @@
 """All DTO to Entity conversions"""
-from datetime import datetime
 from uuid import uuid4, UUID
 
 # Entities
@@ -41,6 +40,7 @@ from src.domain.dtos.document_type_dto import DocumentTypeCreateDTO
 from src.domain.dtos.document_validation_status_type_dto import DocumentValidationStatusTypeCreateDTO
 from src.domain.dtos.shift_type_dto import ShiftTypeCreateDTO
 from src.domain.dtos.report_type_dto import ReportTypeCreateDTO
+from src.infrastructure.handlers.datetime_handler import DateTimeHandler
 
 class DtoToEntityMapper:
     """Centralized DTO -> Entity conversions"""
@@ -50,7 +50,7 @@ class DtoToEntityMapper:
     def user(dto: UserCreateDTO) -> User:
         return User(
             id=uuid4(),
-            created_at=datetime.now(datetime.timezone.utc),
+            created_at=DateTimeHandler.now(),
             updated_at=None,
             document=dto.document,
             name=dto.name,
@@ -71,7 +71,7 @@ class DtoToEntityMapper:
     def address(dto: AddressCreateDTO) -> Address:
         return Address(
             id=uuid4(),
-            created_at=datetime.now(datetime.timezone.utc),
+            created_at=DateTimeHandler.now(),
             updated_at=None,
             zip_code=dto.zip_code,
             street=dto.street,
@@ -86,7 +86,7 @@ class DtoToEntityMapper:
     def course(dto: CourseCreateDTO) -> Course:
         return Course(
             id=uuid4(),
-            created_at=datetime.now(datetime.timezone.utc),
+            created_at=DateTimeHandler.now(),
             updated_at=None,
             name=dto.name,
             total_seat_limit=dto.total_seat_limit,
@@ -101,7 +101,7 @@ class DtoToEntityMapper:
     def course_component(dto: CourseComponentCreateDTO) -> CourseComponent:
         return CourseComponent(
             id=uuid4(),
-            created_at=datetime.now(datetime.timezone.utc),
+            created_at=DateTimeHandler.now(),
             updated_at=None,
             name=dto.name,
             description=dto.description,
@@ -115,7 +115,7 @@ class DtoToEntityMapper:
     def class_(dto: ClassCreateDTO) -> Class:
         return Class(
             id=uuid4(),
-            created_at=datetime.now(datetime.timezone.utc),
+            created_at=DateTimeHandler.now(),
             updated_at=None,
             seats_in_use=0,
             active=True,
@@ -128,7 +128,7 @@ class DtoToEntityMapper:
     def class_session(dto: ClassSessionCreateDTO) -> ClassSession:
         return ClassSession(
             id=uuid4(),
-            created_at=datetime.now(datetime.timezone.utc),
+            created_at=DateTimeHandler.now(),
             updated_at=None,
             date=dto.date,
             class_id=UUID(dto.class_id)
@@ -139,7 +139,7 @@ class DtoToEntityMapper:
     def class_attendance(dto: ClassAttendanceCreateDTO) -> ClassAttendance:
         return ClassAttendance(
             id=uuid4(),
-            created_at=datetime.now(datetime.timezone.utc),
+            created_at=DateTimeHandler.now(),
             updated_at=None,
             attended=False,
             user_id=UUID(dto.user_id),
@@ -151,7 +151,7 @@ class DtoToEntityMapper:
     def user_class(dto: UserClassEnrollDTO) -> UserClass:
         return UserClass(
             id=uuid4(),
-            created_at=datetime.now(datetime.timezone.utc),
+            created_at=DateTimeHandler.now(),
             updated_at=None,
             active=True,
             user_id=UUID(dto.user_id),
@@ -163,7 +163,7 @@ class DtoToEntityMapper:
     def document(dto: DocumentCreateDTO) -> Document:
         return Document(
             id=uuid4(),
-            created_at=datetime.now(datetime.timezone.utc),
+            created_at=DateTimeHandler.now(),
             updated_at=None,
             base64=dto.base64,
             is_front=dto.is_front,
@@ -177,7 +177,7 @@ class DtoToEntityMapper:
     def document_validation(dto: DocumentValidationCreateDTO) -> DocumentValidation:
         return DocumentValidation(
             id=uuid4(),
-            created_at=datetime.now(datetime.timezone.utc),
+            created_at=DateTimeHandler.now(),
             updated_at=None,
             rejection_reason=None,
             document_validation_status_type_id=dto.document_validation_status_type_id,
@@ -189,7 +189,7 @@ class DtoToEntityMapper:
     def legal_representative(dto: LegalRepresentativeCreateDTO) -> LegalRepresentative:
         return LegalRepresentative(
             id=uuid4(),
-            created_at=datetime.now(datetime.timezone.utc),
+            created_at=DateTimeHandler.now(),
             updated_at=None,
             name=dto.name,
             document=dto.document,

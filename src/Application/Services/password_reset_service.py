@@ -1,6 +1,5 @@
 """Password reset service - handles forgot password flow"""
-from datetime import datetime, timedelta
-from typing import Optional
+from datetime import timedelta
 from uuid import UUID, uuid4
 import secrets
 
@@ -8,6 +7,7 @@ from src.data.repositories.user_repository import UserRepository
 from src.application.services.user_password_history_service import UserPasswordHistoryService
 from src.infrastructure.email.email_service import EmailService
 from src.infrastructure.configuration.settings import config
+from src.infrastructure.handlers.datetime_handler import DateTimeHandler
 
 class PasswordResetService:
     """Service for password reset flow"""
@@ -45,7 +45,7 @@ class PasswordResetService:
         
         # Generate reset token
         reset_token = secrets.token_urlsafe(32)
-        token_expiry = datetime.now(datetime.timezone.utc) + timedelta(hours=1)
+        token_expiry = DateTimeHandler.now() + timedelta(hours=1)
         
         # Save token to user
         user.password_reset_token = reset_token
@@ -79,7 +79,7 @@ class PasswordResetService:
             return {"valid": False, "reason": "Invalid or expired token"}
         
         # Check if token is expired
-        if user.password_reset_expires and user.password_reset_expires < datetime.now(datetime.timezone.utc):
+        if user.password_reset_expires and user.password_reset_expires < DateTimeHandler.now():
             return {"valid": False, "reason": "Token has expired"}
         
         return {

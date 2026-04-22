@@ -1,7 +1,6 @@
 """User service - business logic for User entity"""
-from typing import Optional, List
+from typing import Optional
 from uuid import UUID
-from datetime import datetime
 import bcrypt
 
 from src.data.repositories.user_repository import UserRepository
@@ -15,6 +14,7 @@ from src.application.mappers.update_mapper import UpdateMapper
 from src.domain.dtos.user_dto import UserCreateDTO, UserUpdateDTO, UserLoginDTO, PasswordChangeDTO
 from src.domain.view_models.user_view_model import UserViewModel
 from src.domain.entities.user import User
+from src.infrastructure.handlers.datetime_handler import DateTimeHandler
 
 class UserService(BaseService):
     """Service for User business logic"""
@@ -258,7 +258,7 @@ class UserService(BaseService):
         
         history = UserPasswordHistory(
             id=uuid4(),
-            created_at=datetime.now(datetime.timezoze.utc),
+            created_at=DateTimeHandler.now(),
             password=hashed_password,
             user_id=user_id
         )

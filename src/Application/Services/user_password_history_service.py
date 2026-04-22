@@ -8,6 +8,7 @@ from src.application.services.base_service import BaseService
 from src.application.mappers.model_to_entity_mapper import ModelToEntityMapper
 from src.application.mappers.entity_to_view_model_mapper import EntityToViewModelMapper
 from src.domain.view_models.user_password_history_view_model import UserPasswordHistoryViewModel
+from src.infrastructure.handlers.datetime_handler import DateTimeHandler
 
 class UserPasswordHistoryService(BaseService):
     """Service for User Password History business logic"""
@@ -100,13 +101,12 @@ class UserPasswordHistoryService(BaseService):
         
         # Create password history entry
         from uuid import uuid4
-        from datetime import datetime
         from src.domain.entities.user_password_history import UserPasswordHistory
         from src.application.mappers.entity_to_model_mapper import EntityToModelMapper
         
         entity = UserPasswordHistory(
             id=uuid4(),
-            created_at=datetime.now(datetime.timezone.utc),
+            created_at=DateTimeHandler.now(),
             password=hashed_password,
             user_id=user_id
         )
@@ -137,13 +137,12 @@ class UserPasswordHistoryService(BaseService):
             The created password history entry
         """
         from uuid import uuid4
-        from datetime import datetime
         from src.domain.entities.user_password_history import UserPasswordHistory
         from src.application.mappers.entity_to_model_mapper import EntityToModelMapper
         
         entity = UserPasswordHistory(
             id=uuid4(),
-            created_at=datetime.now(datetime.timezone.utc),
+            created_at=DateTimeHandler.now(),
             password=hashed_password,
             user_id=user_id
         )
@@ -272,9 +271,8 @@ class UserPasswordHistoryService(BaseService):
                 'total_historical_passwords': 0
             }
         
-        from datetime import datetime
         current_password = recent[0]
-        age = (datetime.now(datetime.timezone.utc) - current_password.created_at).days
+        age = (DateTimeHandler.now() - current_password.created_at).days
         
         total = await self.repository.count_by_user_id(user_id)
         

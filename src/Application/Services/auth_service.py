@@ -1,5 +1,5 @@
 """Authentication service - JWT token management and user authentication"""
-from datetime import datetime, timedelta
+from datetime import timedelta
 from typing import Optional
 from uuid import UUID
 import bcrypt
@@ -9,6 +9,7 @@ from src.infrastructure.configuration.settings import config
 from src.data.repositories.user_repository import UserRepository
 from src.application.mappers.model_to_entity_mapper import ModelToEntityMapper
 from src.domain.entities.user import User
+from src.infrastructure.handlers.datetime_handler import DateTimeHandler
 
 class AuthService:
     """Service for authentication and JWT token management"""
@@ -18,25 +19,25 @@ class AuthService:
     
     def create_access_token(self, user_id: UUID, user_type_id: int) -> str:
         """Create JWT access token"""
-        expire = datetime.now(datetime.timezone.utc) + timedelta(minutes=config.settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+        expire = DateTimeHandler.now() + timedelta(minutes=config.settings.ACCESS_TOKEN_EXPIRE_MINUTES)
         
         payload = {
             "sub": str(user_id),
             "user_type_id": user_type_id,
             "exp": expire,
-            "iat": datetime.now(datetime.timezone.utc)
+            "iat": DateTimeHandler.now()
         }
         
         return jwt.encode(payload, config.settings.SECRET_KEY, algorithm=config.settings.JWT_ALGORITHM)
     
     def create_refresh_token(self, user_id: UUID) -> str:
         """Create JWT refresh token"""
-        expire = datetime.now(datetime.timezone.utc) + timedelta(days=config.settings.REFRESH_TOKEN_EXPIRE_DAYS)
+        expire = DateTimeHandler.now() + timedelta(days=config.settings.REFRESH_TOKEN_EXPIRE_DAYS)
         
         payload = {
             "sub": str(user_id),
             "exp": expire,
-            "iat": datetime.now(datetime.timezone.utc),
+            "iat": DateTimeHandler.now(),
             "type": "refresh"
         }
         
@@ -96,7 +97,7 @@ class AuthService:
         
         # Check if account is locked
         if hasattr(user, 'locked_until') and user.locked_until:
-            if user.locked_until > datetime.now(datetime.timezone.utc):
+            if user.locked_until > DateTimeHandler.now():
                 return None
         
         # Generate tokens

@@ -11,6 +11,7 @@ from src.application.mappers.model_to_entity_mapper import ModelToEntityMapper
 from src.application.mappers.entity_to_view_model_mapper import EntityToViewModelMapper
 from src.domain.dtos.class_session_dto import ClassSessionCreateDTO, ClassSessionFilterDTO
 from src.domain.view_models.class_session_view_model import ClassSessionViewModel
+from src.infrastructure.handlers.datetime_handler import DateTimeHandler
 
 class ClassSessionService(BaseService):
     """Service for Class Session business logic"""
@@ -22,7 +23,7 @@ class ClassSessionService(BaseService):
     async def create_session(self, dto: ClassSessionCreateDTO) -> ClassSessionViewModel:
         """Create a new class session"""
         # Validate date is in the future
-        if dto.date < datetime.now(datetime.timezone.utc):
+        if dto.date < DateTimeHandler.now():
             raise ValueError("Session date must be in the future")
         
         entity = DtoToEntityMapper.class_session(dto)

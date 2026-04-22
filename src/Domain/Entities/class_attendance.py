@@ -4,6 +4,8 @@ from uuid import UUID
 from typing import Optional
 from pydantic import BaseModel, ConfigDict
 
+from src.infrastructure.handlers.datetime_handler import DateTimeHandler
+
 class ClassAttendance(BaseModel):
     """Attendance domain entity"""
     
@@ -19,9 +21,9 @@ class ClassAttendance(BaseModel):
     def mark_attended(self) -> None:
         """Mark user as attended"""
         self.attended = True
-        self.updated_at = datetime.now()
+        self.updated_at = DateTimeHandler.now()
     
     def mark_absent(self) -> None:
         """Mark user as absent"""
         self.attended = False
-        self.updated_at = datetime.now()
+        self.updated_at = DateTimeHandler.now()

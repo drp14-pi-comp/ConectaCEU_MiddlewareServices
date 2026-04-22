@@ -1,7 +1,6 @@
 """Report service - generate reports from data"""
 from typing import List, Dict, Any, Optional
 from uuid import UUID
-from datetime import datetime
 
 from src.data.repositories.log_student_enrollment_repository import LogStudentEnrollmentRepository
 from src.data.repositories.course_repository import CourseRepository
