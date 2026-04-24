@@ -7,6 +7,8 @@ from src.data.repositories.user_repository import UserRepository
 from src.data.db_context.database import get_db
 from sqlalchemy.orm import Session
 
+from src.domain.dtos.auth_dto import LoginDTO
+
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 security = HTTPBearer()
 
@@ -16,12 +18,11 @@ def get_auth_service(db: Session = Depends(get_db)) -> AuthService:
 
 @router.post("/login")
 async def login(
-    document: str,
-    password: str,
+    body: LoginDTO,
     service: AuthService = Depends(get_auth_service)
 ):
     """Authenticate user and return tokens"""
-    result = await service.authenticate(document, password)
+    result = await service.authenticate(body)
     
     if not result:
         raise HTTPException(

@@ -5,6 +5,7 @@ from uuid import UUID
 import bcrypt
 from jose import jwt, JWTError
 
+from src.domain.dtos.auth_dto import LoginDTO
 from src.infrastructure.configuration.settings import config
 from src.data.repositories.user_repository import UserRepository
 from src.application.mappers.model_to_entity_mapper import ModelToEntityMapper
@@ -71,7 +72,7 @@ class AuthService:
         
         return ModelToEntityMapper.user(user_model)
     
-    async def authenticate(self, document: str, password: str) -> Optional[dict]:
+    async def authenticate(self, body: LoginDTO) -> Optional[dict]:
         """
         Authenticate user with document and password.
         
@@ -83,7 +84,7 @@ class AuthService:
             Dict with tokens if authentication successful, None otherwise
         """
         # Find user by document
-        user = await self.user_repo.get_by_document(document)
+        user = await self.user_repo.get_by_document(body.document)
         if not user:
             return None
         
@@ -92,7 +93,7 @@ class AuthService:
             return None
         
         # Verify password
-        if not self._verify_password(password, user.password):
+        if not self._verify_password(body.password, user.password):
             return None
         
         # Check if account is locked
