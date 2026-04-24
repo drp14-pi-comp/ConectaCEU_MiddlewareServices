@@ -5,6 +5,7 @@ import secrets
 
 from src.data.repositories.user_repository import UserRepository
 from src.application.services.user_password_history_service import UserPasswordHistoryService
+from src.domain.dtos.user_dto import PasswordResetRequestDTO
 from src.infrastructure.email.email_service import EmailService
 from src.infrastructure.configuration.settings import config
 from src.infrastructure.handlers.datetime_handler import DateTimeHandler
@@ -22,7 +23,7 @@ class PasswordResetService:
         self.password_history_service = password_history_service
         self.email_service = email_service
     
-    async def request_password_reset(self, email: str) -> dict:
+    async def request_password_reset(self, body: PasswordResetRequestDTO) -> dict:
         """
         Request password reset by email.
         Generates reset token and sends email.
@@ -34,7 +35,7 @@ class PasswordResetService:
             Dict with status message
         """
         # Find user by email
-        user = await self.user_repo.get_by_email(email)
+        user = await self.user_repo.get_by_email(body.email)
         if not user:
             # Don't reveal if user exists or not (security)
             return {"message": "If the information matches, a reset email will be sent"}

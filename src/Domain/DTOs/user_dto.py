@@ -58,7 +58,6 @@ class PasswordChangeDTO(BaseModel):
 
 class PasswordResetRequestDTO(BaseModel):
     """DTO for password reset request"""
-    document: str
     email: EmailStr
 
 class PasswordResetDTO(BaseModel):

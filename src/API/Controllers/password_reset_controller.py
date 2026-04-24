@@ -21,11 +21,11 @@ def get_password_reset_service(db: Session = Depends(get_db)) -> PasswordResetSe
 
 @router.post("/reset/request")
 async def request_password_reset(
-    email: str,
+    body: PasswordResetRequestDTO,
     service: PasswordResetService = Depends(get_password_reset_service)
 ):
     """Request password reset by email."""
-    result = await service.request_password_reset(email)
+    result = await service.request_password_reset(body)
     return result
 
 @router.get("/reset/validate")
