@@ -24,7 +24,7 @@ class PasswordResetService:
     
     async def request_password_reset(self, email: str) -> dict:
         """
-        Request password reset by email and document.
+        Request password reset by email.
         Generates reset token and sends email.
         
         Args:

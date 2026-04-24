@@ -24,7 +24,7 @@ async def request_password_reset(
     email: str,
     service: PasswordResetService = Depends(get_password_reset_service)
 ):
-    """Request password reset by email and document."""
+    """Request password reset by email."""
     result = await service.request_password_reset(email)
     return result
 
