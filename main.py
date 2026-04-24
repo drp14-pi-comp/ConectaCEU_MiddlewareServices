@@ -10,6 +10,27 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
 from src.infrastructure.configuration.settings import config
+from src.data.db_context.database import engine, SessionLocal
+from src.api.middleware.exception_handler import register_exception_handlers
+
+# Import all routers
+from src.api.controllers.auth_controller import router as auth_router
+from src.api.controllers.user_controller import router as user_router
+from src.api.controllers.address_controller import router as address_router
+from src.api.controllers.course_controller import router as course_router
+from src.api.controllers.course_component_controller import router as component_router
+from src.api.controllers.class_controller import router as class_router
+from src.api.controllers.class_session_controller import router as session_router
+from src.api.controllers.class_attendance_controller import router as class_attendance_router
+from src.api.controllers.user_class_controller import router as enrollment_router
+from src.api.controllers.document_controller import router as document_router
+from src.api.controllers.document_validation_controller import router as validation_router
+from src.api.controllers.legal_representative_controller import router as representative_router
+from src.api.controllers.password_reset_controller import router as password_router
+from src.api.controllers.reference_controller import router as reference_router
+from src.api.controllers.report_controller import router as report_router
+from src.api.controllers.health_controller import router as health_router
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -17,23 +38,35 @@ async def lifespan(app: FastAPI):
     # Startup
     print(f"🚀 Starting {config.settings.APP_NAME} v{config.settings.APP_VERSION}")
     print(f"📌 Environment: {config.settings.ENVIRONMENT}")
-    print(f"🗄️  Database: {config.settings.DATABASE_NAME} on {config.settings.DATABASE_HOST}")
+    print(f"🗄️ Database: {config.settings.DATABASE_NAME} on {config.settings.DATABASE_HOST}")
     
     # Initialize database connection pool
-    # db_manager.initialize()  # We'll uncomment this after creating database module
+    try:
+        # Test database connection
+        with engine.connect() as conn:
+            from sqlalchemy import text
+            result = conn.execute(text("SELECT 1"))
+            print(f"✅ Database connection successful")
+    except Exception as e:
+        print(f"❌ Database connection failed: {e}")
+        raise
     
     yield
     
     # Shutdown
     print("👋 Shutting down...")
-    # db_manager.dispose_engine()
+    
+    # Dispose of database engine
+    engine.dispose()
+    print("🗄️ Database connections closed")
+
 
 def create_app() -> FastAPI:
     """Application factory pattern"""
     app = FastAPI(
         title=config.settings.APP_NAME,
         version=config.settings.APP_VERSION,
-        description="FastAPI application with MySQL following .NET architecture",
+        description="ConectaCEU API",
         lifespan=lifespan,
         docs_url="/api/docs",
         redoc_url="/api/redoc",
@@ -49,31 +82,33 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
     
-    # Health check endpoint
-    @app.get("/health", tags=["Health"])
-    async def health_check():
-        """Health check endpoint"""
-        return {
-            "status": "healthy",
-            "app": config.settings.APP_NAME,
-            "version": config.settings.APP_VERSION,
-            "environment": config.settings.ENVIRONMENT
-        }
+    # Register exception handlers
+    register_exception_handlers(app)
     
-    # Root endpoint
-    @app.get("/", tags=["Root"])
-    async def root():
-        """Root endpoint"""
-        return {
-            "message": f"Welcome to {config.settings.APP_NAME}",
-            "docs": "/api/docs",
-            "health": "/health"
-        }
+    # Register API routes
+    app.include_router(health_router)
+    app.include_router(auth_router, prefix="/api")
+    app.include_router(user_router, prefix="/api")
+    app.include_router(address_router, prefix="/api")
+    app.include_router(course_router, prefix="/api")
+    app.include_router(component_router, prefix="/api")
+    app.include_router(class_router, prefix="/api")
+    app.include_router(session_router, prefix="/api")
+    app.include_router(class_attendance_router, prefix="/api")
+    app.include_router(enrollment_router, prefix="/api")
+    app.include_router(document_router, prefix="/api")
+    app.include_router(validation_router, prefix="/api")
+    app.include_router(representative_router, prefix="/api")
+    app.include_router(password_router, prefix="/api")
+    app.include_router(reference_router, prefix="/api")
+    app.include_router(report_router, prefix="/api")
     
     return app
 
+
 # Create app instance
 app = create_app()
+
 
 if __name__ == "__main__":
     import uvicorn
