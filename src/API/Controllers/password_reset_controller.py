@@ -19,6 +19,15 @@ def get_password_reset_service(db: Session = Depends(get_db)) -> PasswordResetSe
     email_service = EmailService()
     return PasswordResetService(user_repo, password_history_service, email_service)
 
+@router.post("/reset/request")
+async def request_password_reset(
+    email: str,
+    service: PasswordResetService = Depends(get_password_reset_service)
+):
+    """Request password reset by email and document."""
+    result = await service.request_password_reset(email)
+    return result
+
 @router.get("/reset/validate")
 async def validate_reset_token(
     token: str,
