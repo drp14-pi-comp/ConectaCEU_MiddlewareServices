@@ -86,22 +86,22 @@ def create_app() -> FastAPI:
     register_exception_handlers(app)
     
     # Register API routes
-    app.include_router(health_router)
     app.include_router(auth_router, prefix="/api")
-    app.include_router(user_router, prefix="/api")
     app.include_router(address_router, prefix="/api")
-    app.include_router(course_router, prefix="/api")
-    app.include_router(component_router, prefix="/api")
-    app.include_router(class_router, prefix="/api")
-    app.include_router(session_router, prefix="/api")
     app.include_router(class_attendance_router, prefix="/api")
-    app.include_router(enrollment_router, prefix="/api")
+    app.include_router(class_router, prefix="/api")
+    app.include_router(component_router, prefix="/api")
+    app.include_router(course_router, prefix="/api")
     app.include_router(document_router, prefix="/api")
-    app.include_router(validation_router, prefix="/api")
-    app.include_router(representative_router, prefix="/api")
+    app.include_router(enrollment_router, prefix="/api")
+    app.include_router(health_router)
     app.include_router(password_router, prefix="/api")
     app.include_router(reference_router, prefix="/api")
     app.include_router(report_router, prefix="/api")
+    app.include_router(representative_router, prefix="/api")
+    app.include_router(session_router, prefix="/api")
+    app.include_router(user_router, prefix="/api")
+    app.include_router(validation_router, prefix="/api")
     
     return app
 
