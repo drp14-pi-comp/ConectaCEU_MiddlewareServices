@@ -1,6 +1,6 @@
 """Student enrollment log repository - Insert only"""
 from sqlalchemy.orm import Session
-from src.data.models.log_student_enrollment_model import LogStudentEnrollment as LogStudentEnrollmentModel
+from src.data.models.log_student_enrollment_model import LogStudentEnrollmentModel
 from src.data.repositories.base.base_repository import BaseRepository
 
 class LogStudentEnrollmentRepository(BaseRepository):

@@ -1,15 +1,28 @@
 """Password reset controller"""
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
 
 from src.application.services.password_reset_service import PasswordResetService
+from src.application.services.user_password_history_service import UserPasswordHistoryService
+from src.data.db_context.database import get_db
+from src.data.repositories.user_password_history_repository import UserPasswordHistoryRepository
+from src.data.repositories.user_repository import UserRepository
 from src.domain.dtos.user_dto import PasswordResetRequestDTO, PasswordResetDTO
+from src.infrastructure.email.email_service import EmailService
 
 router = APIRouter(prefix="/password", tags=["Password Reset"])
+
+def get_password_reset_service(db: Session = Depends(get_db)) -> PasswordResetService:
+    user_repo = UserRepository(db)
+    user_password_history_repository = UserPasswordHistoryRepository(db)
+    password_history_service = UserPasswordHistoryService(user_password_history_repository)
+    email_service = EmailService()
+    return PasswordResetService(user_repo, password_history_service, email_service)
 
 @router.get("/reset/validate")
 async def validate_reset_token(
     token: str,
-    service: PasswordResetService
+    service: PasswordResetService = Depends(get_password_reset_service)
 ):
     """Validate password reset token"""
     result = await service.validate_reset_token(token)
@@ -20,7 +33,7 @@ async def validate_reset_token(
 @router.post("/reset")
 async def reset_password(
     request: PasswordResetDTO,
-    service: PasswordResetService
+    service: PasswordResetService = Depends(get_password_reset_service)
 ):
     """Reset password using token"""
     if request.new_password != request.confirm_password:

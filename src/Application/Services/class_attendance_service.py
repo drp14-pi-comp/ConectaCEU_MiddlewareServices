@@ -9,7 +9,7 @@ from src.application.mappers.dto_to_entity_mapper import DtoToEntityMapper
 from src.application.mappers.entity_to_model_mapper import EntityToModelMapper
 from src.application.mappers.model_to_entity_mapper import ModelToEntityMapper
 from src.application.mappers.entity_to_view_model_mapper import EntityToViewModelMapper
-from src.domain.dtos.class_attendance_dto import ClassAttendanceCreateDTO, BulkAttendanceCreateDTO
+from src.domain.dtos.class_attendance_dto import ClassAttendanceCreateDTO, BulkClassAttendanceCreateDTO
 from src.domain.entities.class_attendance import ClassAttendance
 from src.infrastructure.handlers.datetime_handler import DateTimeHandler
 
@@ -59,7 +59,7 @@ class ClassAttendanceService(BaseService):
         saved_entities = [ModelToEntityMapper.class_attendance(m) for m in saved_models]
         return [EntityToViewModelMapper.class_attendance(e) for e in saved_entities]
     
-    async def take_attendance(self, dto: BulkAttendanceCreateDTO) -> dict:
+    async def take_attendance(self, dto: BulkClassAttendanceCreateDTO) -> dict:
         """Take attendance for a session"""
         # Validate session exists
         from src.data.repositories.class_session_repository import ClassSessionRepository

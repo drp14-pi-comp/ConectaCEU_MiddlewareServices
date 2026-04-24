@@ -3,7 +3,7 @@ from typing import Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 
-from src.data.models.user_type_model import UserType as UserTypeModel
+from src.data.models.user_type_model import UserTypeModel
 from src.data.repositories.base.base_repository import BaseRepository
 
 class UserTypeRepository(BaseRepository[UserTypeModel]):

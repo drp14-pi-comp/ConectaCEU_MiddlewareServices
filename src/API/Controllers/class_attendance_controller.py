@@ -7,7 +7,7 @@ from src.application.services.class_attendance_service import ClassAttendanceSer
 from src.data.repositories.class_attendance_repository import ClassAttendanceRepository
 from src.data.repositories.user_class_repository import UserClassRepository
 from src.data.db_context.database import get_db
-from src.domain.dtos.class_attendance_dto import ClassAttendanceCreateDTO, ClassAttendanceUpdateDTO, BulkAttendanceCreateDTO
+from src.domain.dtos.class_attendance_dto import (ClassAttendanceCreateDTO, ClassAttendanceUpdateDTO, BulkClassAttendanceCreateDTO)
 from src.domain.view_models.class_attendance_view_model import ClassAttendanceViewModel
 
 router = APIRouter(prefix="/attendance", tags=["Attendance"])
@@ -30,7 +30,7 @@ async def initialize_attendance(
 
 @router.post("/session/take")
 async def take_attendance(
-    dto: BulkAttendanceCreateDTO,
+    dto: BulkClassAttendanceCreateDTO,
     service: ClassAttendanceService = Depends(get_attendance_service)
 ):
     """Take attendance for a session"""

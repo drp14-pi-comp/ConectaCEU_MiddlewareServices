@@ -4,7 +4,7 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 
-from src.data.models.document_model import Document as DocumentModel
+from src.data.models.document_model import DocumentModel
 from src.data.repositories.base.base_repository import BaseRepository
 
 class DocumentRepository(BaseRepository):

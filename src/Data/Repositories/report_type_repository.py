@@ -3,7 +3,7 @@ from typing import Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 
-from src.data.models.report_type_model import ReportType as ReportTypeModel
+from src.data.models.report_type_model import ReportTypeModel
 from src.data.repositories.base.base_repository import BaseRepository
 
 class ReportTypeRepository(BaseRepository):
