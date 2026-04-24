@@ -178,6 +178,8 @@ class UserService(BaseService):
         self,
         name: Optional[str] = None,
         document: Optional[str] = None,
+        email: Optional[str] = None,
+        phoneNumber: Optional[str] = None,
         user_type_id: Optional[int] = None,
         active: Optional[bool] = None,
         page: int = 1,
@@ -189,6 +191,8 @@ class UserService(BaseService):
         models = await self.repository.find_by_filters(
             name=name,
             document=document,
+            email=email,
+            phoneNumber=phoneNumber,
             user_type_id=user_type_id,
             active=active,
             skip=skip,

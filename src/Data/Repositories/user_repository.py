@@ -40,6 +40,7 @@ class UserRepository(BaseRepository[UserModel]):
         name: Optional[str] = None,
         document: Optional[str] = None,
         email: Optional[str] = None,
+        phoneNumber: Optional[str] = None,
         user_type_id: Optional[int] = None,
         sex_id: Optional[int] = None,
         gender_id: Optional[int] = None,
@@ -56,6 +57,8 @@ class UserRepository(BaseRepository[UserModel]):
             conditions.append(UserModel.document == document)
         if email:
             conditions.append(UserModel.email == email)
+        if phoneNumber:
+            conditions.append(UserModel.cellphone_number == phoneNumber)
         if user_type_id:
             conditions.append(UserModel.user_type_id == user_type_id)
         if sex_id:

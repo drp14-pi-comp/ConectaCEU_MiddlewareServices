@@ -39,11 +39,12 @@ async def create_user(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get("/", response_model=dict)
+@router.get("/list", response_model=dict)
 async def list_users(
     name: Optional[str] = Query(None),
     document: Optional[str] = Query(None),
     email: Optional[str] = Query(None),
+    phoneNumber: Optional[str] = Query(None),
     user_type_id: Optional[int] = Query(None),
     active: Optional[bool] = Query(None),
     page: int = Query(1, ge=1),
@@ -55,6 +56,7 @@ async def list_users(
         name=name,
         document=document,
         email=email,
+        phoneNumber=phoneNumber,
         user_type_id=user_type_id,
         active=active,
         page=page,
