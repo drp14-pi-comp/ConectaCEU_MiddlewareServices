@@ -1,8 +1,8 @@
 """Reference data controller for lookup tables"""
-from typing import List
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
+from src.data.repositories.legal_representative_degree_repository import LegalRepresentativeDegreeRepository
 from src.data.repositories.user_sex_type_repository import UserSexTypeRepository
 from src.data.repositories.user_gender_type_repository import UserGenderTypeRepository
 from src.data.repositories.user_type_repository import UserTypeRepository
@@ -36,6 +36,14 @@ async def get_gender_types(db: Session = Depends(get_db)):
 async def get_user_types(db: Session = Depends(get_db)):
     """Get all user types"""
     repo = UserTypeRepository(db)
+    models = await repo.get_all()
+    return [ModelToViewModelMapper.user_type(m) for m in models]
+
+# Legal representative degrees
+@router.get("/legal-representative-degrees")
+async def get_user_types(db: Session = Depends(get_db)):
+    """Get all legal representative degrees"""
+    repo = LegalRepresentativeDegreeRepository(db)
     models = await repo.get_all()
     return [ModelToViewModelMapper.user_type(m) for m in models]
 
