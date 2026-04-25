@@ -1,18 +1,17 @@
 """All SQLAlchemy Model to Entity conversions"""
 from uuid import UUID
+from xml.dom.minidom import DocumentType
 
+from src.data.models.document_type_model import DocumentTypeModel
+from src.data.models.document_validation_model import DocumentValidationModel
+from src.data.models.document_validation_status_type_model import DocumentValidationStatusTypeModel
+from src.data.models.legal_representative_degree_model import LegalRepresentativeDegreeModel
+from src.data.models.report_type_model import ReportTypeModel
+from src.data.models.shift_type_model import ShiftTypeModel
+from src.data.models.user_gender_type_model import UserGenderTypeModel
 from src.data.models.user_password_history_model import UserPasswordHistoryModel
-from src.domain.entities.user import User
-from src.domain.entities.address import Address
-from src.domain.entities.course import Course
-from src.domain.entities.course_component import CourseComponent
-from src.domain.entities.class_ import Class
-from src.domain.entities.class_session import ClassSession
-from src.domain.entities.class_attendance import ClassAttendance
-from src.domain.entities.user_class import UserClass
-from src.domain.entities.document import Document
-from src.domain.entities.legal_representative import LegalRepresentative
-
+from src.data.models.user_sex_type_model import UserSexTypeModel
+from src.data.models.user_type_model import UserTypeModel
 from src.data.models.user_model import UserModel
 from src.data.models.address_model import AddressModel
 from src.data.models.course_model import CourseModel
@@ -23,7 +22,26 @@ from src.data.models.class_attendance_model import ClassAttendanceModel
 from src.data.models.user_class_model import UserClassModel
 from src.data.models.document_model import DocumentModel
 from src.data.models.legal_representative_model import LegalRepresentativeModel
+
+from src.domain.entities.document_validation import DocumentValidation
+from src.domain.entities.document_validation_status_type import DocumentValidationStatusType
+from src.domain.entities.legal_representative_degree import LegalRepresentativeDegree
+from src.domain.entities.report_type import ReportType
+from src.domain.entities.shift_type import ShiftType
+from src.domain.entities.user import User
+from src.domain.entities.address import Address
+from src.domain.entities.course import Course
+from src.domain.entities.course_component import CourseComponent
+from src.domain.entities.class_ import Class
+from src.domain.entities.class_session import ClassSession
+from src.domain.entities.class_attendance import ClassAttendance
+from src.domain.entities.user_class import UserClass
+from src.domain.entities.document import Document
+from src.domain.entities.legal_representative import LegalRepresentative
+from src.domain.entities.user_gender_type import UserGenderType
 from src.domain.entities.user_password_history import UserPasswordHistory
+from src.domain.entities.user_sex_type import UserSexType
+from src.domain.entities.user_type import UserType
 
 class ModelToEntityMapper:
     """Centralized Model to Entity conversions"""
@@ -179,4 +197,90 @@ class ModelToEntityMapper:
             created_at=model.created_at,
             password=model.password,
             user_id=UUID(bytes=model.user_id)
+        )
+    
+    # ========== Reference Entities ==========
+    @staticmethod
+    def user_sex_type(model: UserSexTypeModel) -> UserSexType:
+        """Convert UserSexType Model → Entity"""
+        return UserSexType(
+            id=model.id,
+            description=model.description
+        )
+
+    @staticmethod
+    def user_gender_type(model: UserGenderTypeModel) -> UserGenderType:
+        """Convert UserGenderType Model → Entity"""
+        return UserGenderType(
+            id=model.id,
+            description=model.description
+        )
+
+    @staticmethod
+    def user_type(model: UserTypeModel) -> UserType:
+        """Convert UserType Model → Entity"""
+        return UserType(
+            id=model.id,
+            description=model.description,
+            register_user=model.register_user,
+            validate_user_documents=model.validate_user_documents,
+            list_secretaries=model.list_secretaries,
+            list_educators=model.list_educators,
+            list_students=model.list_students,
+            send_broadcast_message=model.send_broadcast_message,
+            add_courses=model.add_courses,
+            add_classes=model.add_classes,
+            emit_user_documents=model.emit_user_documents
+        )
+
+    @staticmethod
+    def document_type(model: DocumentTypeModel) -> DocumentType:
+        """Convert DocumentType Model → Entity"""
+        return DocumentType(
+            id=model.id,
+            description=model.description
+        )
+
+    @staticmethod
+    def document_validation_status_type(model: DocumentValidationStatusTypeModel) -> DocumentValidationStatusType:
+        """Convert DocumentValidationStatusType Model → Entity"""
+        return DocumentValidationStatusType(
+            id=model.id,
+            description=model.description
+        )
+
+    @staticmethod
+    def document_validation(model: DocumentValidationModel) -> DocumentValidation:
+        """Convert DocumentValidation Model → Entity"""
+        return DocumentValidation(
+            id=UUID(bytes=model.id),
+            created_at=model.created_at,
+            updated_at=model.updated_at,
+            rejection_reason=model.rejection_reason,
+            document_validation_status_type_id=model.document_validation_status_type_id,
+            document_id=UUID(bytes=model.document_id)
+        )
+
+    @staticmethod
+    def shift_type(model: ShiftTypeModel) -> ShiftType:
+        """Convert ShiftType Model → Entity"""
+        return ShiftType(
+            id=model.id,
+            description=model.description
+        )
+
+    @staticmethod
+    def report_type(model: ReportTypeModel) -> ReportType:
+        """Convert ReportType Model → Entity"""
+        return ReportType(
+            id=model.id,
+            description=model.description
+        )
+
+    @staticmethod
+    def legal_representative_degree(model: LegalRepresentativeDegreeModel) -> LegalRepresentativeDegree:
+        """Convert LegalRepresentativeDegree Model → Entity"""
+        return LegalRepresentativeDegree(
+            id=model.id,
+            description=model.description
         )
