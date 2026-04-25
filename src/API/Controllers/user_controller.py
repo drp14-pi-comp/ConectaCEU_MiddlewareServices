@@ -6,6 +6,9 @@ from sqlalchemy.orm import Session
 
 from src.application.services.user_service import UserService
 from src.application.services.user_password_history_service import UserPasswordHistoryService
+from src.data.repositories.address_repository import AddressRepository
+from src.data.repositories.document_repository import DocumentRepository
+from src.data.repositories.legal_representative_repository import LegalRepresentativeRepository
 from src.data.repositories.user_repository import UserRepository
 from src.data.repositories.user_password_history_repository import UserPasswordHistoryRepository
 from src.data.db_context.database import get_db
@@ -24,7 +27,16 @@ def get_user_service(db: Session = Depends(get_db)) -> UserService:
     user_repo = UserRepository(db)
     password_history_repo = UserPasswordHistoryRepository(db)
     password_history_service = UserPasswordHistoryService(password_history_repo)
-    return UserService(user_repo, password_history_service)
+    document_repo = DocumentRepository(db)
+    address_repo = AddressRepository(db)
+    legal_rep_repo = LegalRepresentativeRepository(db)
+    return UserService(
+        user_repo,
+        password_history_service,
+        document_repo,
+        address_repo,
+        legal_rep_repo
+    )
 
 
 @router.post("/", response_model=UserViewModel, status_code=status.HTTP_201_CREATED)

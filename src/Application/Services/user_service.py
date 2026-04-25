@@ -3,6 +3,10 @@ from typing import Optional
 from uuid import UUID
 import bcrypt
 
+from src.application.services.user_password_history_service import UserPasswordHistoryService
+from src.data.repositories.address_repository import AddressRepository
+from src.data.repositories.document_repository import DocumentRepository
+from src.data.repositories.legal_representative_repository import LegalRepresentativeRepository
 from src.data.repositories.user_repository import UserRepository
 from src.data.repositories.user_password_history_repository import UserPasswordHistoryRepository
 from src.application.services.base_service import BaseService
@@ -19,10 +23,20 @@ from src.infrastructure.handlers.datetime_handler import DateTimeHandler
 class UserService(BaseService):
     """Service for User business logic"""
     
-    def __init__(self, repository: UserRepository, password_history_repo: UserPasswordHistoryRepository):
+    def __init__(
+        self,
+        repository: UserRepository,
+        password_history_service: UserPasswordHistoryService,
+        document_repo: DocumentRepository,
+        address_repo: AddressRepository,
+        legal_rep_repo: LegalRepresentativeRepository
+    ):
         super().__init__(repository)
         self.repository = repository
-        self.password_history_repo = password_history_repo
+        self.password_history_service = password_history_service
+        self.document_repo = document_repo
+        self.address_repo = address_repo
+        self.legal_rep_repo = legal_rep_repo
     
     async def create_user(self, dto: UserCreateDTO) -> UserViewModel:
         """Create a new user with all related entities in a single transaction"""
