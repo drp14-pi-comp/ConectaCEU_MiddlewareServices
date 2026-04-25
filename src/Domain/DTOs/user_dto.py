@@ -16,7 +16,8 @@ class UserCreateDTO(BaseModel):
     email: Optional[EmailStr] = None
     cellphone_number: Optional[str] = Field(None, pattern=r'^\d{9}$')
     contact_cellphone_number: Optional[str] = Field(None, pattern=r'^\d{9}$')
-    password: str = Field(..., min_length=8, max_length=100)
+    password: str = Field(..., min_length=8, max_length=128)
+    confirm_password: str = Field(..., min_length=8, max_length=128)
     birthdate: date
     school: Optional[str] = Field(None, max_length=200)
     sex_id: int

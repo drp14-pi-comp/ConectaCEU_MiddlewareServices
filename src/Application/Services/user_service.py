@@ -26,11 +26,14 @@ class UserService(BaseService):
     
     async def create_user(self, dto: UserCreateDTO) -> UserViewModel:
         """Create a new user with all related entities in a single transaction"""
-        # Hash password
-        hashed_password = self._hash_password(dto.password)
-        entity.password = hashed_password
+        # Hash passwords
+        entity.password = self._hash_password(dto.password)
+        entity.confirm_password = self._hash_password(dto.confirm_password)
 
         # ========== Validations ==========
+        # Validate passwords
+        self._validate_passwords(dto.password, dto.confirm_password)
+        
         # Check if document already exists
         existing = await self.repository.get_by_document(dto.document)
         if existing:
@@ -47,10 +50,6 @@ class UserService(BaseService):
             existing_phone = await self.repository.get_by_cellphone(dto.cellphone_number)
             if existing_phone:
                 raise ValueError("Número de celular pertence a outra pessoa")
-        
-        # Validate password strength
-        if self._validate_password_strength(dto.password):
-            raise ValueError("A senha deve conter pelo menos 8 caracteres")
         
         # ========== Business Rules ==========
         is_student = dto.user_type_id == 5 # Student
@@ -81,7 +80,7 @@ class UserService(BaseService):
         # ========== Save Password History ==========
         await self.password_history_service.add_password_hash_to_history(
             user_id=user_id,
-            hashed_password=hashed_password
+            hashed_password=dto.password
         )
         
         # ========== Create Documents ==========
@@ -347,9 +346,9 @@ class UserService(BaseService):
         history_model = EntityToModelMapper.user_password_history(history)
         await self.password_history_repo.create(history_model)
 
-    def _validate_password_strength(self, password: str) -> None:
+    def _validate_passwords(self, password: str, confirm_password: str) -> None:
         """
-        Validate password strength requirements:
+        Validate if passwords match and password strength requirements:
         - 8 to 128 characters
         - At least one lowercase letter
         - At least one uppercase letter
@@ -357,6 +356,9 @@ class UserService(BaseService):
         - At least one special character
         """
         import re
+
+        if password != confirm_password:
+            raise ValueError("As senhas são diferentes")
         
         # Check length
         if len(password) < 8:
