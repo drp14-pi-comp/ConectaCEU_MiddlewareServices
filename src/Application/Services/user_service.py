@@ -25,28 +25,46 @@ class UserService(BaseService):
         self.password_history_repo = password_history_repo
     
     async def create_user(self, dto: UserCreateDTO) -> UserViewModel:
-        """Create a new user with business validation"""
+        """Create a new user with all related entities in a single transaction"""
+        # Hash password
+        hashed_password = self._hash_password(dto.password)
+        entity.password = hashed_password
+
+        # ========== Validations ==========
         # Check if document already exists
         existing = await self.repository.get_by_document(dto.document)
         if existing:
-            raise ValueError("Document already registered")
+            raise ValueError("Documento pertence a outra pessoa")
         
         # Check if email already exists
         if dto.email:
             existing_email = await self.repository.get_by_email(dto.email)
             if existing_email:
-                raise ValueError("Email already registered")
+                raise ValueError("E-mail pertence a outra pessoa")
         
         # Check if cellphone already exists
         if dto.cellphone_number:
             existing_phone = await self.repository.get_by_cellphone(dto.cellphone_number)
             if existing_phone:
-                raise ValueError("Cellphone already registered")
+                raise ValueError("Número de celular pertence a outra pessoa")
         
         # Validate password strength
-        if len(dto.password) < 8:
-            raise ValueError("Password must be at least 8 characters")
+        if self._validate_password_strength(dto.password):
+            raise ValueError("A senha deve conter pelo menos 8 caracteres")
         
+        # ========== Business Rules ==========
+        is_student = dto.user_type_id == 5 # Student
+        is_over_70 = (DateTimeHandler.now().date() - dto.birthdate).days > 70 * 365
+        
+        # Rule 1: Students must have legal_representative_1
+        if is_student and not dto.legal_representative_1:
+            raise ValueError("Students must have at least one legal representative")
+        
+        # Rule 2: Users over 70 must have health certificate
+        if is_over_70 and not dto.health_certificate:
+            raise ValueError("Users over 70 must provide a health certificate")
+        
+        # ========== Create User ==========
         # Convert DTO -> Entity
         entity = DtoToEntityMapper.user(dto)
         
@@ -54,22 +72,81 @@ class UserService(BaseService):
         if entity.age < 16:
             raise ValueError("User must be at least 16 years old")
         
-        # Hash password
-        hashed_password = self._hash_password(dto.password)
-        entity.password = hashed_password
-        
         # Convert Entity -> Model and save
         model = EntityToModelMapper.user(entity)
         saved_model = await self.repository.create(model)
+        user_id = UUID(bytes=saved_model.id)
+        user_id_bytes = saved_model.id
         
-        # Save to password history
+        # ========== Save Password History ==========
         await self.password_history_service.add_password_hash_to_history(
-            user_id=UUID(bytes=saved_model.id),
+            user_id=user_id,
             hashed_password=hashed_password
         )
         
-        # Convert back to ViewModel
+        # ========== Create Documents ==========
+        # Helper to create document
+        async def _create_document(doc_dto, user_id_bytes, legal_rep_id_bytes=None):
+            """Create a document record"""
+            doc_entity = DtoToEntityMapper.document(doc_dto)
+            doc_entity.user_id = UUID(bytes=user_id_bytes)
+            if legal_rep_id_bytes:
+                doc_entity.legal_representative_id = UUID(bytes=legal_rep_id_bytes)
+            doc_model = EntityToModelMapper.document(doc_entity)
+            return await self.document_repo.create(doc_model)
+        
+        # ID Document Front
+        await _create_document(dto.id_document_front, user_id_bytes)
+        
+        # ID Document Back
+        await _create_document(dto.id_document_back, user_id_bytes)
+        
+        # User Photo
+        await _create_document(dto.user_photo, user_id_bytes)
+        
+        # Health Certificate (if over 70 or provided)
+        if dto.health_certificate:
+            await _create_document(dto.health_certificate, user_id_bytes)
+        
+        # ========== Create Address ==========
+        address_entity = DtoToEntityMapper.address(dto.address)
+        address_entity.user_id = user_id
+        address_model = EntityToModelMapper.address(address_entity)
+        await self.address_repo.create(address_model)
+        
+        # ========== Create Legal Representatives (for students) ==========
+        async def _create_legal_representative(rep_dto, student_user_id_bytes):
+            """Create a legal representative with documents"""
+            # Create representative
+            rep_entity = DtoToEntityMapper.legal_representative(rep_dto)
+            rep_entity.user_id = UUID(bytes=student_user_id_bytes)
+            
+            # Check if representative document already exists
+            existing_rep = await self.legal_rep_repo.get_by_document(rep_dto.document)
+            if existing_rep:
+                raise ValueError(f"Legal representative document {rep_dto.document} already registered")
+            
+            rep_model = EntityToModelMapper.legal_representative(rep_entity)
+            saved_rep = await self.legal_rep_repo.create(rep_model)
+            rep_id_bytes = saved_rep.id
+            
+            # Create ID document for representative
+            await _create_document(rep_dto.id_document, user_id_bytes, rep_id_bytes)
+            
+            # Create student registry authorization (document_type_id = 5)
+            await _create_document(rep_dto.student_registry_authorization, user_id_bytes, rep_id_bytes)
+            
+            return saved_rep
+        
+        if dto.legal_representative_1:
+            await _create_legal_representative(dto.legal_representative_1, user_id_bytes)
+        
+        if dto.legal_representative_2:
+            await _create_legal_representative(dto.legal_representative_2, user_id_bytes)
+        
+        # ========== Return ViewModel ==========
         saved_entity = ModelToEntityMapper.user(saved_model)
+
         return EntityToViewModelMapper.user(saved_entity)
     
     async def update_user(self, user_id: UUID, dto: UserUpdateDTO) -> UserViewModel:
@@ -269,3 +346,37 @@ class UserService(BaseService):
         
         history_model = EntityToModelMapper.user_password_history(history)
         await self.password_history_repo.create(history_model)
+
+    def _validate_password_strength(self, password: str) -> None:
+        """
+        Validate password strength requirements:
+        - 8 to 128 characters
+        - At least one lowercase letter
+        - At least one uppercase letter
+        - At least one number
+        - At least one special character
+        """
+        import re
+        
+        # Check length
+        if len(password) < 8:
+            raise ValueError("A senha deve conter pelo menos 8 caracteres")
+        
+        if len(password) > 128:
+            raise ValueError("A senha deve conter no máximo 128 caracteres")
+        
+        # Check lowercase
+        if not re.search(r'[a-z]', password):
+            raise ValueError("A senha deve conter pelo menos uma letra minúscula")
+        
+        # Check uppercase
+        if not re.search(r'[A-Z]', password):
+            raise ValueError("A senha deve conter pelo menos uma letra maiúscula")
+        
+        # Check number
+        if not re.search(r'\d', password):
+            raise ValueError("A senha deve conter pelo menos um número")
+        
+        # Check special character
+        if not re.search(r'[!@#$%^&*(),.?":{}|<>_\-+=\[\]\\;/\'`~]', password):
+            raise ValueError("A senha deve conter pelo menos um caractere especial")

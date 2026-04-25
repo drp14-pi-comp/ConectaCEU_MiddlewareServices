@@ -4,8 +4,13 @@ from datetime import date
 from pydantic import BaseModel, EmailStr, Field, field_validator
 import re
 
+from src.domain.dtos.address_dto import AddressCreateDTO
+from src.domain.dtos.document_dto import DocumentCreateDTO
+from src.domain.dtos.legal_representative_dto import LegalRepresentativeCreateDTO
+
 class UserCreateDTO(BaseModel):
     """DTO for creating a new user"""
+    # User
     document: str = Field(..., min_length=11, max_length=11)
     name: str = Field(..., min_length=3, max_length=200)
     email: Optional[EmailStr] = None
@@ -17,6 +22,19 @@ class UserCreateDTO(BaseModel):
     sex_id: int
     gender_id: int
     user_type_id: int
+    
+    # Uploaded documents
+    id_document_front: DocumentCreateDTO
+    id_document_back: DocumentCreateDTO
+    user_photo: DocumentCreateDTO
+    health_certificate: Optional[DocumentCreateDTO]
+
+    # Address
+    address: AddressCreateDTO
+
+    # Legal representatives
+    legal_representative_1: Optional[LegalRepresentativeCreateDTO]
+    legal_representative_2: Optional[LegalRepresentativeCreateDTO]
     
     @field_validator('document')
     def validate_cpf(cls, v: str) -> str:

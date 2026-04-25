@@ -202,7 +202,7 @@ class ModelToEntityMapper:
     # ========== Reference Entities ==========
     @staticmethod
     def user_sex_type(model: UserSexTypeModel) -> UserSexType:
-        """Convert UserSexType Model → Entity"""
+        """Convert UserSexType Model -> Entity"""
         return UserSexType(
             id=model.id,
             description=model.description
@@ -210,7 +210,7 @@ class ModelToEntityMapper:
 
     @staticmethod
     def user_gender_type(model: UserGenderTypeModel) -> UserGenderType:
-        """Convert UserGenderType Model → Entity"""
+        """Convert UserGenderType Model -> Entity"""
         return UserGenderType(
             id=model.id,
             description=model.description
@@ -218,7 +218,7 @@ class ModelToEntityMapper:
 
     @staticmethod
     def user_type(model: UserTypeModel) -> UserType:
-        """Convert UserType Model → Entity"""
+        """Convert UserType Model -> Entity"""
         return UserType(
             id=model.id,
             description=model.description,
@@ -235,7 +235,7 @@ class ModelToEntityMapper:
 
     @staticmethod
     def document_type(model: DocumentTypeModel) -> DocumentType:
-        """Convert DocumentType Model → Entity"""
+        """Convert DocumentType Model -> Entity"""
         return DocumentType(
             id=model.id,
             description=model.description
@@ -243,7 +243,7 @@ class ModelToEntityMapper:
 
     @staticmethod
     def document_validation_status_type(model: DocumentValidationStatusTypeModel) -> DocumentValidationStatusType:
-        """Convert DocumentValidationStatusType Model → Entity"""
+        """Convert DocumentValidationStatusType Model -> Entity"""
         return DocumentValidationStatusType(
             id=model.id,
             description=model.description
@@ -251,7 +251,7 @@ class ModelToEntityMapper:
 
     @staticmethod
     def document_validation(model: DocumentValidationModel) -> DocumentValidation:
-        """Convert DocumentValidation Model → Entity"""
+        """Convert DocumentValidation Model -> Entity"""
         return DocumentValidation(
             id=UUID(bytes=model.id),
             created_at=model.created_at,
@@ -263,7 +263,7 @@ class ModelToEntityMapper:
 
     @staticmethod
     def shift_type(model: ShiftTypeModel) -> ShiftType:
-        """Convert ShiftType Model → Entity"""
+        """Convert ShiftType Model -> Entity"""
         return ShiftType(
             id=model.id,
             description=model.description
@@ -271,7 +271,7 @@ class ModelToEntityMapper:
 
     @staticmethod
     def report_type(model: ReportTypeModel) -> ReportType:
-        """Convert ReportType Model → Entity"""
+        """Convert ReportType Model -> Entity"""
         return ReportType(
             id=model.id,
             description=model.description
@@ -279,7 +279,7 @@ class ModelToEntityMapper:
 
     @staticmethod
     def legal_representative_degree(model: LegalRepresentativeDegreeModel) -> LegalRepresentativeDegree:
-        """Convert LegalRepresentativeDegree Model → Entity"""
+        """Convert LegalRepresentativeDegree Model -> Entity"""
         return LegalRepresentativeDegree(
             id=model.id,
             description=model.description
