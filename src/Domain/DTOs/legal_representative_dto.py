@@ -8,6 +8,7 @@ class LegalRepresentativeCreateDTO(BaseModel):
     name: str = Field(..., min_length=3, max_length=200)
     document: str = Field(..., min_length=11, max_length=11)
     user_id: str  # UUID as string
+    legal_representative_degree_id: int
     
     @field_validator('document')
     def validate_cpf(cls, v: str) -> str:
@@ -20,6 +21,7 @@ class LegalRepresentativeUpdateDTO(BaseModel):
     """DTO for updating a legal representative"""
     name: Optional[str] = Field(None, min_length=3, max_length=200)
     document: Optional[str] = Field(None, min_length=11, max_length=11)
+    legal_representative_degree_id: int
     
     @field_validator('document')
     def validate_cpf(cls, v: Optional[str]) -> Optional[str]:

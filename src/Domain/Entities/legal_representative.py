@@ -14,6 +14,7 @@ class LegalRepresentative(BaseModel):
     name: str = Field(..., min_length=3, max_length=200)
     document: str = Field(..., min_length=11, max_length=11)
     user_id: UUID
+    legal_representative_degree_id: int
     
     model_config = ConfigDict(from_attributes=True)
     

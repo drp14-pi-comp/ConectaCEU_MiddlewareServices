@@ -1,5 +1,5 @@
 """Legal representative model for minor users"""
-from sqlalchemy import Column, String, ForeignKey
+from sqlalchemy import Column, Integer, String, ForeignKey
 from sqlalchemy.dialects.mysql import BINARY
 from src.data.db_context.base import UuidPkUpdatableBaseModel
 
@@ -11,3 +11,4 @@ class LegalRepresentativeModel(UuidPkUpdatableBaseModel):
     
     # Foreign keys
     user_id = Column(BINARY(16), ForeignKey('user.id'), nullable=False)
+    legal_representative_degree_id = Column(Integer, ForeignKey('legal_representative_degree.id'), nullable=False)

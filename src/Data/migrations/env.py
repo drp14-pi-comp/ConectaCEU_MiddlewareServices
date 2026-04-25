@@ -28,6 +28,7 @@ from src.data.models.document_type_model import DocumentTypeModel
 from src.data.models.document_validation_model import DocumentValidationModel
 from src.data.models.document_validation_status_type_model import DocumentValidationStatusTypeModel
 from src.data.models.legal_representative_model import LegalRepresentativeModel
+from src.data.models.legal_representative_degree_model import LegalRepresentativeDegreeModel
 from src.data.models.user_sex_type_model import UserSexTypeModel
 from src.data.models.user_gender_type_model import UserGenderTypeModel
 from src.data.models.user_type_model import UserTypeModel

@@ -3,6 +3,7 @@ from typing import AsyncGenerator, Optional
 from sqlalchemy.orm import Session
 
 from src.data.db_context.database import SessionLocal, engine
+from src.data.repositories.legal_representative_degree_repository import LegalRepresentativeDegreeRepository
 from src.data.repositories.user_repository import UserRepository
 from src.data.repositories.address_repository import AddressRepository
 from src.data.repositories.course_repository import CourseRepository
@@ -38,7 +39,6 @@ from src.data.db_context.base import Base
 class DatabaseContext:
     """
     Central database context managing sessions and repositories.
-    Equivalent to .NET's DbContext with DbSet properties.
     """
     
     def __init__(self, session: Optional[Session] = None):
@@ -65,6 +65,7 @@ class DatabaseContext:
         self.password_histories = UserPasswordHistoryRepository(self.session)
         self.shift_types = ShiftTypeRepository(self.session)
         self.report_types = ReportTypeRepository(self.session)
+        self.legal_representative_degrees = LegalRepresentativeDegreeRepository(self.session)
         
         # Log repositories (write-only)
         self.log_application_errors = LogApplicationErrorRepository(self.session)
@@ -84,7 +85,7 @@ class DatabaseContext:
         return self._session
     
     async def save_changes(self) -> None:
-        """Commit all changes to database (equivalent to SaveChangesAsync)"""
+        """Commit all changes to database"""
         await self.session.commit()
     
     async def rollback(self) -> None:
@@ -92,7 +93,7 @@ class DatabaseContext:
         await self.session.rollback()
     
     async def close(self) -> None:
-        """Close the session if we own it"""
+        """Close the session if open"""
         if self._owns_session and self._session:
             self._session.close()
             self._session = None
@@ -108,16 +109,6 @@ class DatabaseContext:
         else:
             await self.save_changes()
         await self.close()
-    
-    @staticmethod
-    def create_tables():
-        """Create all tables (for development/testing only)"""
-        Base.metadata.create_all(bind=engine)
-    
-    @staticmethod
-    def drop_tables():
-        """Drop all tables (for development/testing only)"""
-        Base.metadata.drop_all(bind=engine)
 
 
 # Dependency for FastAPI
