@@ -2,6 +2,8 @@
 from typing import Optional
 from pydantic import BaseModel, Field
 
+from src.domain.dtos.course_component_dto import CourseComponentCreateDTO
+
 class CourseCreateDTO(BaseModel):
     """DTO for creating a new course"""
     name: str = Field(..., min_length=3, max_length=100)
@@ -9,6 +11,7 @@ class CourseCreateDTO(BaseModel):
     workload: int = Field(..., ge=1)
     responsible_educator_1: str  # UUID as string
     responsible_educator_2: Optional[str] = None  # UUID as string
+    components: list[CourseComponentCreateDTO]
 
 class CourseUpdateDTO(BaseModel):
     """DTO for updating a course"""

@@ -26,38 +26,76 @@ class CourseService(BaseService):
         self.component_repo = component_repo
     
     async def create_course(self, dto: CourseCreateDTO) -> CourseViewModel:
-        """Create a new course with validation"""
+        """Create a new course with components"""
         # Check if name already exists
         existing = await self.repository.get_by_name(dto.name)
         if existing:
-            raise ValueError("Course name already exists")
+            raise ValueError("Nome de curso já existe")
+        
+        # Validate components count (1 to 30)
+        if not dto.components or len(dto.components) == 0:
+            raise ValueError("Curso deve conter pelo menos 1 (um) componente")
+        
+        if len(dto.components) > 30:
+            raise ValueError("Curso não pode ter mais que 30 (trinta) componentes")
+        
+        # Validate component names are unique within the course
+        component_names = [c.name for c in dto.components]
+        if len(component_names) != len(set(component_names)):
+            raise ValueError("Nomes de componentes devem ser únicos dentro de um mesmo curso")
+        
+        # Business rule: Validate workload
+        if dto.workload < 1:
+            raise ValueError("Carga horária deve ser de pelo menos 1 (uma) hora")
         
         # Convert DTO -> Entity
         entity = DtoToEntityMapper.course(dto)
         
-        # Business rule: Validate workload
-        if entity.workload < 10:
-            raise ValueError("Course workload must be at least 10 hours")
+        # Validate seat limits logic
+        total_component_seats = sum(c.seat_limit_per_class for c in dto.components)
+        if total_component_seats > dto.total_seat_limit:
+            raise ValueError(
+                f"Sum of component seat limits ({total_component_seats}) "
+                f"cannot exceed total course seat limit ({dto.total_seat_limit})"
+            )
         
         # Convert Entity -> Model and save
         model = EntityToModelMapper.course(entity)
         saved_model = await self.repository.create(model)
+        course_id = saved_model.id  # UUID bytes
+        course_uuid = UUID(bytes=course_id)
+        
+        # Create all components
+        for component_dto in dto.components:
+            # Check if component name already exists for this course
+            existing_component = await self.component_repo.get_by_name(component_dto.name)
+            if existing_component:
+                raise ValueError(f"Component name '{component_dto.name}' already exists")
+            
+            # Convert DTO -> Entity with course_id
+            component_entity = DtoToEntityMapper.course_component(component_dto)
+            component_entity.course_id = course_uuid
+            
+            # Convert Entity -> Model and save
+            component_model = EntityToModelMapper.course_component(component_entity)
+            await self.component_repo.create(component_model)
         
         # Convert back to ViewModel
         saved_entity = ModelToEntityMapper.course(saved_model)
+
         return EntityToViewModelMapper.course(saved_entity)
     
     async def update_course(self, course_id: UUID, dto: CourseUpdateDTO) -> CourseViewModel:
         """Update course with validation"""
         model = await self.repository.get_by_id(course_id)
         if not model:
-            raise ValueError("Course not found")
+            raise ValueError("Curso não encontrado")
         
         # Check name uniqueness if being updated
         if dto.name:
             existing = await self.repository.get_by_name(dto.name)
             if existing and existing.id != model.id:
-                raise ValueError("Course name already exists")
+                raise ValueError("Nome de curso já existe")
         
         # Convert to entity and apply updates
         entity = ModelToEntityMapper.course(model)
@@ -70,50 +108,49 @@ class CourseService(BaseService):
         saved_entity = ModelToEntityMapper.course(saved_model)
         return EntityToViewModelMapper.course(saved_entity)
     
-    async def deactivate_course(self, course_id: UUID) -> bool:
+    async def deactivate_course(self, course_id: UUID) -> dict:
         """Deactivate a course, its components, and classes"""
         course = await self.repository.get_by_id(course_id)
         if not course:
-            raise ValueError("Course not found")
+            raise ValueError("Curso não encontrado")
         
         if not course.active:
-            raise ValueError("Course already deactivated")
+            raise ValueError("Curso já está desativado")
         
         # Get all components for this course
         components = await self.component_repo.get_by_course_id(course_id)
         
+        deactivated_count = 0
         for component in components:
             if component.active:
-                # Get all classes for this component
-                classes = await self.class_repo.get_by_component_id(UUID(bytes=component.id))
-                
-                for class_ in classes:
-                    if class_.active:
-                        # Deactivate all enrollments for this class
-                        active_enrollments = await self.user_class_repo.get_active_by_class_id(UUID(bytes=class_.id))
-                        for enrollment in active_enrollments:
-                            enrollment.active = False
-                            await self.user_class_repo.update(enrollment)
-                        
-                        # Deactivate the class
-                        await self.class_repo.deactivate(UUID(bytes=class_.id))
-                
-                # Deactivate the component
                 await self.component_repo.deactivate(UUID(bytes=component.id))
+                deactivated_count += 1
         
         # Deactivate the course
-        return await self.repository.deactivate(course_id)
+        await self.repository.deactivate(course_id)
+        
+        return {
+            "success": True,
+            "course_id": course_id,
+            "deactivated_components": deactivated_count
+        }
     
-    async def activate_course(self, course_id: UUID) -> bool:
-        """Activate course"""
+    async def activate_course(self, course_id: UUID) -> dict:
+        """Activate a course"""
         course = await self.repository.get_by_id(course_id)
         if not course:
-            raise ValueError("Course not found")
+            raise ValueError("Curso não encontrado")
         
         if course.active:
-            raise ValueError("Course already active")
+            raise ValueError("Curso já está ativado")
         
-        return await self.repository.activate(course_id)
+        await self.repository.activate(course_id)
+        
+        return {
+            "success": True,
+            "course_id": course_id,
+            "message": "Curso ativado com sucesso"
+        }
     
     async def find_courses(
         self,
@@ -160,5 +197,6 @@ class CourseService(BaseService):
         
         return {
             'course': EntityToViewModelMapper.course(course_entity),
-            'components': [EntityToViewModelMapper.course_component(c) for c in component_entities]
+            'components': [EntityToViewModelMapper.course_component(c) for c in component_entities],
+            'total_components': len(components)
         }
