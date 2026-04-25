@@ -1,6 +1,5 @@
 """Generic reference service for all reference entities"""
-from typing import List, Optional, Type, Any
-from uuid import UUID
+from typing import List, Any
 
 from src.data.repositories.base.base_repository import BaseRepository
 from src.application.services.base_service import BaseService
@@ -14,23 +13,24 @@ class ReferenceService(BaseService):
         self.entity_name = entity_name
     
     async def get_all_active(self) -> List[Any]:
-        """Get all active reference items"""
         models = await self.repository.get_all()
-        entities = []
-        for model in models:
-            # Use dynamic import or registry pattern
-            from src.application.mappers.model_to_entity_mapper import ModelToEntityMapper
-            mapper_method = getattr(ModelToEntityMapper, self.entity_name.lower().replace('_', ''), None)
-            if mapper_method:
-                entities.append(mapper_method(model))
-        return entities
+        from src.application.mappers.model_to_entity_mapper import ModelToEntityMapper
+        
+        mapper_method = self._get_mapper_method(ModelToEntityMapper)
+        if mapper_method:
+            return [mapper_method(model) for model in models]
+        return []
     
-    async def get_by_description(self, description: str) -> Optional[Any]:
-        """Get reference item by description"""
-        model = await self.repository.get_by_description(description)
-        if model:
-            from src.application.mappers.model_to_entity_mapper import ModelToEntityMapper
-            mapper_method = getattr(ModelToEntityMapper, self.entity_name.lower().replace('_', ''), None)
-            if mapper_method:
-                return mapper_method(model)
-        return None
+    def _get_mapper_method(self, mapper):
+        """Get the mapper method by converting entity name to snake_case"""
+        method_name = self._camel_to_snake(self.entity_name)
+        return getattr(mapper, method_name, None)
+    
+    @staticmethod
+    def _camel_to_snake(name: str) -> str:
+        """Convert CamelCase to snake_case"""
+        import re
+        # Insert underscore between lowercase and uppercase
+        s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
+        # Insert underscore between lowercase/number and uppercase
+        return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
