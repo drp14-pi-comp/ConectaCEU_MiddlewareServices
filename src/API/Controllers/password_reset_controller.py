@@ -8,7 +8,7 @@ from src.data.db_context.database import get_db
 from src.data.repositories.user_password_history_repository import UserPasswordHistoryRepository
 from src.data.repositories.user_repository import UserRepository
 from src.domain.dtos.user_dto import PasswordResetRequestDTO, PasswordResetDTO
-from src.infrastructure.email.email_service import EmailService
+from src.infrastructure.messaging.email.email_service import EmailService
 
 router = APIRouter(prefix="/password", tags=["Password Reset"])
 

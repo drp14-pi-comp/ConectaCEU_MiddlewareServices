@@ -6,7 +6,7 @@ import secrets
 from src.data.repositories.user_repository import UserRepository
 from src.application.services.user_password_history_service import UserPasswordHistoryService
 from src.domain.dtos.user_dto import PasswordResetRequestDTO
-from src.infrastructure.email.email_service import EmailService
+from src.infrastructure.messaging.email.email_service import EmailService
 from src.infrastructure.configuration.settings import config
 from src.infrastructure.handlers.datetime_handler import DateTimeHandler
 
