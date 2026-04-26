@@ -16,7 +16,7 @@ from src.application.mappers.model_to_entity_mapper import ModelToEntityMapper
 from src.application.mappers.entity_to_view_model_mapper import EntityToViewModelMapper
 from src.application.mappers.update_mapper import UpdateMapper
 from src.domain.dtos.user_dto import UserCreateDTO, UserUpdateDTO, UserLoginDTO, PasswordChangeDTO
-from src.domain.view_models.user_view_model import UserViewModel
+from src.domain.view_models.user_view_model import StudentUserViewModel, UserViewModel
 from src.domain.entities.user import User
 from src.infrastructure.handlers.datetime_handler import DateTimeHandler
 
@@ -302,7 +302,48 @@ class UserService(BaseService):
             'total': total,
             'page': page,
             'page_size': page_size,
-            'total_pages': (total + page_size - 1) // page_size
+            'total_pages': (total + page_size - 1)
+        }
+    
+    async def find_students(
+        self,
+        name: Optional[str] = None,
+        document: Optional[str] = None,
+        email: Optional[str] = None,
+        phoneNumber: Optional[str] = None,
+        active: Optional[bool] = None,
+        page: int = 1,
+        page_size: int = 10
+    ) -> dict:
+        """Find students with all related data"""
+        skip = (page - 1) * page_size
+        
+        # Get students
+        models = await self.repository.find_by_filters(
+            name=name,
+            document=document,
+            email=email,
+            phoneNumber=phoneNumber,
+            user_type_id=5,
+            active=active,
+            skip=skip,
+            limit=page_size
+        )
+        
+        total = await self.repository.count({
+            'active': active,
+            'user_type_id': 5
+        })
+        
+        # Build student items with all related data
+        items = []
+        for model in models:
+            user_id = UUID(bytes=model.id)
+            student = await self._build_student_view_model(user_id, model)
+            items.append(student)
+        
+        return {
+            'items': items
         }
     
     def _hash_password(self, password: str) -> str:
@@ -368,3 +409,69 @@ class UserService(BaseService):
         # Check special character
         if not re.search(r'[!@#$%^&*(),.?":{}|<>_\-+=\[\]\\;/\'`~]', password):
             raise ValueError("A senha deve conter pelo menos um caractere especial")
+
+    async def _build_student_view_model(self, user_id: UUID, user_model) -> StudentUserViewModel:
+        """Build complete student view model with all related data"""
+        from src.application.mappers.model_to_entity_mapper import ModelToEntityMapper
+        from src.application.mappers.entity_to_view_model_mapper import EntityToViewModelMapper
+        
+        # Basic user data
+        user_entity = ModelToEntityMapper.user(user_model)
+        user_dict = EntityToViewModelMapper.user(user_entity).model_dump()
+        
+        # Get address
+        address_models = await self.address_repo.get_by_user_id(user_id)
+        address = None
+        if address_models:
+            address_entity = ModelToEntityMapper.address(address_models[0])
+            address = EntityToViewModelMapper.address(address_entity).model_dump()
+        
+        # Get documents by type
+        documents = await self.document_repo.get_by_user_id(user_id)
+        
+        id_document_front = None
+        id_document_back = None
+        user_photo = None
+        health_certificate = None
+        
+        for doc in documents:
+            doc_entity = ModelToEntityMapper.document(doc)
+            doc_vm = EntityToViewModelMapper.document(doc_entity).model_dump()
+            
+            # ID Document Front
+            if doc.document_type_id == 2 and doc.is_front:
+                id_document_front = doc_vm
+            # ID Document Back
+            elif doc.document_type_id == 2 and not doc.is_front:
+                id_document_back = doc_vm
+            # User Photo
+            elif doc.document_type_id == 4:
+                user_photo = doc_vm
+            # Health Certificate
+            elif doc.document_type_id == 6:
+                health_certificate = doc_vm
+        
+        # Get legal representatives
+        legal_reps = await self.legal_rep_repo.get_by_user_id(user_id)
+        
+        legal_representative_1 = None
+        legal_representative_2 = None
+        
+        if len(legal_reps) > 0:
+            rep_entity = ModelToEntityMapper.legal_representative(legal_reps[0])
+            legal_representative_1 = EntityToViewModelMapper.legal_representative(rep_entity).model_dump()
+        
+        if len(legal_reps) > 1:
+            rep_entity = ModelToEntityMapper.legal_representative(legal_reps[1])
+            legal_representative_2 = EntityToViewModelMapper.legal_representative(rep_entity).model_dump()
+        
+        return StudentUserViewModel(
+            **user_dict,
+            id_document_front=id_document_front,
+            id_document_back=id_document_back,
+            user_photo=user_photo,
+            health_certificate=health_certificate,
+            address=address,
+            legal_representative_1=legal_representative_1,
+            legal_representative_2=legal_representative_2
+        )

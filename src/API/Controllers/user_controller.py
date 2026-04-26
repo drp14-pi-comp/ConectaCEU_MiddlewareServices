@@ -75,6 +75,27 @@ async def list_users(
         page_size=page_size
     )
 
+@router.get("/students", response_model=dict)
+async def list_students(
+    name: Optional[str] = Query(None),
+    document: Optional[str] = Query(None),
+    email: Optional[str] = Query(None),
+    phoneNumber: Optional[str] = Query(None),
+    active: Optional[bool] = Query(None),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(10, ge=1, le=100),
+    service: UserService = Depends(get_user_service)
+):
+    """List students with all related data"""
+    return await service.find_students(
+        name=name,
+        document=document,
+        email=email,
+        phoneNumber=phoneNumber,
+        active=active,
+        page=page,
+        page_size=page_size
+    )
 
 @router.get("/{user_id}", response_model=UserViewModel)
 async def get_user(
