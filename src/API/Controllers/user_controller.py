@@ -76,26 +76,6 @@ async def list_users(
     )
 
 
-@router.get("/educators", response_model=dict)
-async def get_educators(
-    page: int = Query(1, ge=1),
-    page_size: int = Query(10, ge=1, le=100),
-    service: UserService = Depends(get_user_service)
-):
-    """Get all educators"""
-    return await service.get_educators(page, page_size)
-
-
-@router.get("/students", response_model=dict)
-async def get_students(
-    page: int = Query(1, ge=1),
-    page_size: int = Query(10, ge=1, le=100),
-    service: UserService = Depends(get_user_service)
-):
-    """Get all students"""
-    return await service.get_students(page, page_size)
-
-
 @router.get("/{user_id}", response_model=UserViewModel)
 async def get_user(
     user_id: UUID,

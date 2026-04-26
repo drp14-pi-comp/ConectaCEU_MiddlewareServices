@@ -305,34 +305,6 @@ class UserService(BaseService):
             'total_pages': (total + page_size - 1) // page_size
         }
     
-    async def get_educators(self, page: int = 1, page_size: int = 10) -> dict:
-        """Get all educators"""
-        skip = (page - 1) * page_size
-        models = await self.repository.get_educators(skip, page_size)
-        
-        entities = [ModelToEntityMapper.user(model) for model in models]
-        view_models = [EntityToViewModelMapper.user(entity) for entity in entities]
-        
-        return {
-            'items': view_models,
-            'page': page,
-            'page_size': page_size
-        }
-    
-    async def get_students(self, page: int = 1, page_size: int = 10) -> dict:
-        """Get all students"""
-        skip = (page - 1) * page_size
-        models = await self.repository.get_students(skip, page_size)
-        
-        entities = [ModelToEntityMapper.user(model) for model in models]
-        view_models = [EntityToViewModelMapper.user(entity) for entity in entities]
-        
-        return {
-            'items': view_models,
-            'page': page,
-            'page_size': page_size
-        }
-    
     def _hash_password(self, password: str) -> str:
         """Hash password using bcrypt"""
         salt = bcrypt.gensalt()
