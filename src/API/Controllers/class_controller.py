@@ -5,19 +5,30 @@ from sqlalchemy.orm import Session
 
 from src.application.services.class_service import ClassService
 from src.data.repositories.class_repository import ClassRepository
+from src.data.repositories.class_session_repository import ClassSessionRepository
 from src.data.repositories.course_component_repository import CourseComponentRepository
+from src.data.repositories.course_repository import CourseRepository
 from src.data.repositories.user_class_repository import UserClassRepository
 from src.data.db_context.database import get_db
-from src.domain.dtos.class_dto import ClassCreateDTO, ClassUpdateDTO, ClassFilterDTO
+from src.domain.dtos.class_dto import ClassBulkCreateDTO, ClassCreateDTO, ClassUpdateDTO, ClassFilterDTO
 from src.domain.view_models.class_view_model import ClassViewModel
 
 router = APIRouter(prefix="/class", tags=["Class"])
 
 def get_class_service(db: Session = Depends(get_db)) -> ClassService:
+    """Dependency injection for ClassService"""
     class_repo = ClassRepository(db)
     component_repo = CourseComponentRepository(db)
     user_class_repo = UserClassRepository(db)
-    return ClassService(class_repo, component_repo, user_class_repo)
+    course_repo = CourseRepository(db)
+    session_repo = ClassSessionRepository(db)
+    return ClassService(
+        class_repo,
+        component_repo,
+        user_class_repo,
+        course_repo,
+        session_repo
+    )
 
 @router.post("/", response_model=ClassViewModel, status_code=status.HTTP_201_CREATED)
 async def create_class(
@@ -27,6 +38,17 @@ async def create_class(
     """Create a new class"""
     try:
         return await service.create_class(dto)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    
+@router.post("/bulk", status_code=status.HTTP_201_CREATED)
+async def bulk_create_classes(
+    dto: ClassBulkCreateDTO,
+    service: ClassService = Depends(get_class_service)
+):
+    """Create multiple classes with sessions from form submission"""
+    try:
+        return await service.bulk_create_classes_with_sessions(dto)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 

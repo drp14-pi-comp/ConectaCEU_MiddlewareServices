@@ -1,9 +1,12 @@
 """Class service - business logic for Class entity"""
+from datetime import date, datetime
 from typing import List, Optional
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from src.data.repositories.class_repository import ClassRepository
+from src.data.repositories.class_session_repository import ClassSessionRepository
 from src.data.repositories.course_component_repository import CourseComponentRepository
+from src.data.repositories.course_repository import CourseRepository
 from src.data.repositories.user_class_repository import UserClassRepository
 from src.application.services.base_service import BaseService
 from src.application.mappers.dto_to_entity_mapper import DtoToEntityMapper
@@ -11,8 +14,11 @@ from src.application.mappers.entity_to_model_mapper import EntityToModelMapper
 from src.application.mappers.model_to_entity_mapper import ModelToEntityMapper
 from src.application.mappers.entity_to_view_model_mapper import EntityToViewModelMapper
 from src.application.mappers.update_mapper import UpdateMapper
-from src.domain.dtos.class_dto import ClassCreateDTO, ClassUpdateDTO, ClassFilterDTO
+from src.domain.dtos.class_dto import ClassBulkCreateDTO, ClassCreateDTO, ClassUpdateDTO, ClassFilterDTO
+from src.domain.entities.class_ import Class
+from src.domain.entities.class_session import ClassSession
 from src.domain.view_models.class_view_model import ClassViewModel
+from src.infrastructure.handlers.datetime_handler import DateTimeHandler
 
 class ClassService(BaseService):
     """Service for Class business logic"""
@@ -21,12 +27,16 @@ class ClassService(BaseService):
         self,
         repository: ClassRepository,
         component_repo: CourseComponentRepository,
-        user_class_repo: UserClassRepository
+        user_class_repo: UserClassRepository,
+        course_repo: CourseRepository,
+        class_session_repo: ClassSessionRepository
     ):
         super().__init__(repository)
         self.repository = repository
         self.component_repo = component_repo
         self.user_class_repo = user_class_repo
+        self.course_repo = course_repo
+        self.class_session_repo = class_session_repo
     
     async def create_class(self, dto: ClassCreateDTO) -> ClassViewModel:
         """Create a new class"""
@@ -42,6 +52,140 @@ class ClassService(BaseService):
         saved_model = await self.repository.create(model)
         saved_entity = ModelToEntityMapper.class_(saved_model)
         return EntityToViewModelMapper.class_(saved_entity)
+    
+    async def bulk_create_classes_with_sessions(self, dto: ClassBulkCreateDTO) -> dict:
+        """
+        Create multiple classes (one per shift) with sessions based on date range.
+        This handles the form submission from the class/session creation page.
+        """
+        from datetime import timedelta
+        
+        course_id = UUID(dto.course_id)
+        component_id = UUID(dto.course_component_id)
+        
+        # Validate course exists
+        course = await self.course_repo.get_by_id(course_id)
+        if not course:
+            raise ValueError("Course not found")
+        
+        # Validate component exists and belongs to course
+        component = await self.component_repo.get_by_id(component_id)
+        if not component:
+            raise ValueError("Component not found")
+        if UUID(bytes=component.course_id) != course_id:
+            raise ValueError("Component does not belong to this course")
+        
+        # Validate component is active
+        if not component.active:
+            raise ValueError("Component is not active")
+        
+        # Validate seat limits against component
+        if dto.total_seat_limit_per_class > component.seat_limit_per_class:
+            raise ValueError(
+                f"Total seat limit ({dto.total_seat_limit_per_class}) "
+                f"exceeds component seat limit ({component.seat_limit_per_class})"
+            )
+        
+        # Generate session dates based on date range and days of week
+        session_dates = self._generate_session_dates(
+            dto.start_date,
+            dto.end_date,
+            dto.days_of_week
+        )
+        
+        if not session_dates:
+            raise ValueError("No valid session dates found in the given range and days")
+        
+        created_classes = []
+        created_sessions = []
+        
+        # Create one class per shift type
+        for shift_type_id in dto.shift_type_ids:
+            # Create the class
+            class_entity = Class(
+                id=uuid4(),
+                created_at=DateTimeHandler.now(),
+                updated_at=None,
+                seats_in_use=0,
+                active=True,
+                component_id=component_id,
+                shift_type_id=shift_type_id
+            )
+            
+            class_model = EntityToModelMapper.class_(class_entity)
+            saved_class = await self.repository.create(class_model)
+            class_id = UUID(bytes=saved_class.id)
+            
+            class_info = {
+                'class_id': class_id,
+                'shift_type_id': shift_type_id,
+                'total_seats': dto.total_seat_limit_per_class,
+                'enrollment_limit': dto.enrollment_seat_limit,
+                'sessions_created': 0
+            }
+            
+            # Create sessions for this class
+            for session_date in session_dates:
+                session_entity = ClassSession(
+                    id=uuid4(),
+                    created_at=DateTimeHandler.now(),
+                    updated_at=None,
+                    date=datetime.combine(session_date, datetime.min.time()),
+                    class_id=class_id
+                )
+                
+                session_model = EntityToModelMapper.class_session(session_entity)
+                saved_session = await self.class_session_repo.create(session_model)
+                
+                created_sessions.append({
+                    'session_id': UUID(bytes=saved_session.id),
+                    'date': session_date.isoformat(),
+                    'class_id': class_id
+                })
+                
+                class_info['sessions_created'] += 1
+            
+            created_classes.append(class_info)
+        
+        return {
+            'course_id': course_id,
+            'component_id': component_id,
+            'component_name': component.name,
+            'total_classes_created': len(created_classes),
+            'total_sessions_created': len(created_sessions),
+            'session_dates': [d.isoformat() for d in session_dates],
+            'classes': created_classes,
+            'sessions': created_sessions
+        }
+
+    def _generate_session_dates(
+        self,
+        start_date: date,
+        end_date: date,
+        days_of_week: List[int]
+    ) -> List[date]:
+        """
+        Generate session dates within a range for specific days of week.
+        
+        Args:
+            start_date: Start of date range
+            end_date: End of date range
+            days_of_week: List of days (0=Monday, 6=Sunday)
+        
+        Returns:
+            List of dates that match the criteria
+        """
+        from datetime import timedelta
+        
+        session_dates = []
+        current_date = start_date
+        
+        while current_date <= end_date:
+            if current_date.weekday() in days_of_week:
+                session_dates.append(current_date)
+            current_date += timedelta(days=1)
+        
+        return session_dates
     
     async def update_class(self, class_id: UUID, dto: ClassUpdateDTO) -> ClassViewModel:
         """Update a class"""
