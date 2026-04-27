@@ -42,11 +42,18 @@ def get_user_service(db: Session = Depends(get_db)) -> UserService:
 @router.post("/", response_model=UserViewModel, status_code=status.HTTP_201_CREATED)
 async def create_user(
     dto: UserCreateDTO,
+    created_by_user_id: str,
     service: UserService = Depends(get_user_service)
 ):
-    """Create a new user"""
+    """
+    Create a new user (Admin/Secretary only).
+    Created by the currently logged-in user.
+    """
     try:
-        return await service.create_user(dto)
+        return await service.create_user(
+            dto, 
+            UUID(created_by_user_id)
+        )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 

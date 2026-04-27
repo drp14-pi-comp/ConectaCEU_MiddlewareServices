@@ -6,6 +6,7 @@ import bcrypt
 from src.application.services.user_password_history_service import UserPasswordHistoryService
 from src.data.repositories.address_repository import AddressRepository
 from src.data.repositories.document_repository import DocumentRepository
+from src.data.repositories.document_validation_repository import DocumentValidationRepository
 from src.data.repositories.legal_representative_repository import LegalRepresentativeRepository
 from src.data.repositories.user_repository import UserRepository
 from src.data.repositories.user_password_history_repository import UserPasswordHistoryRepository
@@ -29,7 +30,8 @@ class UserService(BaseService):
         password_history_service: UserPasswordHistoryService,
         document_repo: DocumentRepository,
         address_repo: AddressRepository,
-        legal_rep_repo: LegalRepresentativeRepository
+        legal_rep_repo: LegalRepresentativeRepository,
+        doc_validation_repo: DocumentValidationRepository,
     ):
         super().__init__(repository)
         self.repository = repository
@@ -37,70 +39,100 @@ class UserService(BaseService):
         self.document_repo = document_repo
         self.address_repo = address_repo
         self.legal_rep_repo = legal_rep_repo
+        self.doc_validation_repo = doc_validation_repo
     
-    async def create_user(self, dto: UserCreateDTO) -> UserViewModel:
-        """Create a new user with all related entities in a single transaction"""
+    async def create_user(
+        self, 
+        dto: UserCreateDTO, 
+        created_by_user_id: Optional[UUID] = None
+    ) -> UserViewModel:
+        """
+        Create a new user with different flows based on who creates them.
+        
+        Args:
+            dto: User creation data
+            created_by_user_id: ID of the user creating this account (None for public registration)
+        """
         # Hash passwords
-        entity.password = self._hash_password(dto.password)
-        entity.confirm_password = self._hash_password(dto.confirm_password)
-
+        dto.password = self._hash_password(dto.password)
+        dto.confirm_password = self._hash_password(dto.confirm_password)
+        
         # ========== Validations ==========
         # Validate passwords
         self._validate_passwords(dto.password, dto.confirm_password)
-        
+
         # Check if document already exists
         existing = await self.repository.get_by_document(dto.document)
         if existing:
             raise ValueError("Documento pertence a outra pessoa")
         
-        # Check if email already exists
         if dto.email:
             existing_email = await self.repository.get_by_email(dto.email)
             if existing_email:
                 raise ValueError("E-mail pertence a outra pessoa")
         
-        # Check if cellphone already exists
         if dto.cellphone_number:
             existing_phone = await self.repository.get_by_cellphone(dto.cellphone_number)
             if existing_phone:
                 raise ValueError("Número de celular pertence a outra pessoa")
         
+        # ========== Determine Creation Path ==========
+        is_public = created_by_user_id is None
+        
+        # Validate creator if not public
+        if is_public:
+            is_admin_or_secretary = False
+        else:
+            creator = await self.repository.get_by_id(created_by_user_id)
+            if not creator:
+                raise ValueError("Usuário criador não encontrado")
+            
+            if not creator.active:
+                raise ValueError("Usuário criador não está ativo")
+            
+            # Only Admin (1) and Secretary (2) can create users
+            if creator.user_type_id not in [1, 2]:
+                raise ValueError("Este usuário não pode criar outros usuários")
+            
+            is_admin_or_secretary = True
+        
         # ========== Business Rules ==========
-        is_student = dto.user_type_id == 5 # Student
+        is_minor = (DateTimeHandler.now().date() - dto.birthdate).days < 18 * 365
         is_over_70 = (DateTimeHandler.now().date() - dto.birthdate).days > 70 * 365
+
+        # Minors must have legal representative (regardless of user type)
+        if is_minor and not dto.legal_representative_1:
+            raise ValueError("Menores de idade devem ter pelo menos 1 (um) representante legal")
         
-        # Rule 1: Students must have legal_representative_1
-        if is_student and not dto.legal_representative_1:
-            raise ValueError("Students must have at least one legal representative")
-        
-        # Rule 2: Users over 70 must have health certificate
-        if is_over_70 and not dto.health_certificate:
-            raise ValueError("Users over 70 must provide a health certificate")
+        # Over 70 must have health certificate
+        if is_public and is_over_70 and not dto.health_certificate:
+            raise ValueError("Usuários com mais de 70 (setenta) anos precisam de atestados de saúde")
         
         # ========== Create User ==========
-        # Convert DTO -> Entity
         entity = DtoToEntityMapper.user(dto)
         
-        # Business rule: Validate age (must be at least 16)
-        if entity.age < 16:
-            raise ValueError("User must be at least 16 years old")
+        # Set user status based on creation path
+        if is_admin_or_secretary:
+            entity.active = True
+            entity.email_verified = True
+        else:
+            entity.active = False
+            entity.email_verified = False
         
-        # Convert Entity -> Model and save
+        # Save user
         model = EntityToModelMapper.user(entity)
         saved_model = await self.repository.create(model)
         user_id = UUID(bytes=saved_model.id)
         user_id_bytes = saved_model.id
         
-        # ========== Save Password History ==========
+        # Save password history
         await self.password_history_service.add_password_hash_to_history(
             user_id=user_id,
-            hashed_password=dto.password
+            hashed_password=entity.password
         )
         
         # ========== Create Documents ==========
-        # Helper to create document
         async def _create_document(doc_dto, user_id_bytes, legal_rep_id_bytes=None):
-            """Create a document record"""
             doc_entity = DtoToEntityMapper.document(doc_dto)
             doc_entity.user_id = UUID(bytes=user_id_bytes)
             if legal_rep_id_bytes:
@@ -108,18 +140,22 @@ class UserService(BaseService):
             doc_model = EntityToModelMapper.document(doc_entity)
             return await self.document_repo.create(doc_model)
         
-        # ID Document Front
-        await _create_document(dto.id_document_front, user_id_bytes)
+        saved_doc_front = await _create_document(dto.id_document_front, user_id_bytes)
+        saved_doc_back = await _create_document(dto.id_document_back, user_id_bytes)
+        saved_photo = await _create_document(dto.user_photo, user_id_bytes)
         
-        # ID Document Back
-        await _create_document(dto.id_document_back, user_id_bytes)
-        
-        # User Photo
-        await _create_document(dto.user_photo, user_id_bytes)
-        
-        # Health Certificate (if over 70 or provided)
         if dto.health_certificate:
             await _create_document(dto.health_certificate, user_id_bytes)
+        
+        # ========== Create Document Validations ==========
+        if is_admin_or_secretary:
+            await self._auto_approve_documents([
+                saved_doc_front, saved_doc_back, saved_photo
+            ])
+        else:
+            await self._create_pending_validations([
+                saved_doc_front, saved_doc_back, saved_photo
+            ])
         
         # ========== Create Address ==========
         address_entity = DtoToEntityMapper.address(dto.address)
@@ -127,26 +163,15 @@ class UserService(BaseService):
         address_model = EntityToModelMapper.address(address_entity)
         await self.address_repo.create(address_model)
         
-        # ========== Create Legal Representatives (for students) ==========
+        # ========== Create Legal Representatives ==========
         async def _create_legal_representative(rep_dto, student_user_id_bytes):
-            """Create a legal representative with documents"""
-            # Create representative
             rep_entity = DtoToEntityMapper.legal_representative(rep_dto)
             rep_entity.user_id = UUID(bytes=student_user_id_bytes)
-            
-            # Check if representative document already exists
-            existing_rep = await self.legal_rep_repo.get_by_document(rep_dto.document)
-            if existing_rep:
-                raise ValueError(f"Legal representative document {rep_dto.document} already registered")
-            
             rep_model = EntityToModelMapper.legal_representative(rep_entity)
             saved_rep = await self.legal_rep_repo.create(rep_model)
             rep_id_bytes = saved_rep.id
             
-            # Create ID document for representative
             await _create_document(rep_dto.id_document, user_id_bytes, rep_id_bytes)
-            
-            # Create student registry authorization (document_type_id = 5)
             await _create_document(rep_dto.student_registry_authorization, user_id_bytes, rep_id_bytes)
             
             return saved_rep
@@ -161,6 +186,44 @@ class UserService(BaseService):
         saved_entity = ModelToEntityMapper.user(saved_model)
 
         return EntityToViewModelMapper.user(saved_entity)
+
+    async def _auto_approve_documents(self, documents: list) -> None:
+        """Auto-approve documents for admin/secretary created users"""
+        from uuid import uuid4
+        from datetime import datetime
+        from src.domain.entities.document_validation import DocumentValidation
+        from src.application.mappers.entity_to_model_mapper import EntityToModelMapper
+        
+        for doc in documents:
+            validation = DocumentValidation(
+                id=uuid4(),
+                created_at=datetime.utcnow(),
+                updated_at=None,
+                rejection_reason=None,
+                document_validation_status_type_id=2,  # Approved
+                document_id=UUID(bytes=doc.id)
+            )
+            validation_model = EntityToModelMapper.document_validation(validation)
+            await self.doc_validation_repo.create(validation_model)
+
+    async def _create_pending_validations(self, documents: list) -> None:
+        """Create pending validations for secretary review"""
+        from uuid import uuid4
+        from datetime import datetime
+        from src.domain.entities.document_validation import DocumentValidation
+        from src.application.mappers.entity_to_model_mapper import EntityToModelMapper
+        
+        for doc in documents:
+            validation = DocumentValidation(
+                id=uuid4(),
+                created_at=datetime.utcnow(),
+                updated_at=None,
+                rejection_reason=None,
+                document_validation_status_type_id=1,  # Pending
+                document_id=UUID(bytes=doc.id)
+            )
+            validation_model = EntityToModelMapper.document_validation(validation)
+            await self.doc_validation_repo.create(validation_model)
     
     async def update_user(self, user_id: UUID, dto: UserUpdateDTO) -> UserViewModel:
         """Update user with business validation"""

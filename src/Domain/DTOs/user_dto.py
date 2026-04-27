@@ -36,6 +36,9 @@ class UserCreateDTO(BaseModel):
     # Legal representatives
     legal_representative_1: Optional[LegalRepresentativeCreateDTO]
     legal_representative_2: Optional[LegalRepresentativeCreateDTO]
+
+    # Flag to indicate if this is a public registration
+    is_public_registration: bool = False
     
     @field_validator('document')
     def validate_cpf(cls, v: str) -> str:
