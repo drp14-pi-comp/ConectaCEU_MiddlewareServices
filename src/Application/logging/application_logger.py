@@ -1,6 +1,5 @@
 """Application-level logging"""
 import traceback
-from typing import Optional
 
 from src.data.repositories.log_application_error_repository import LogApplicationErrorRepository
 from src.data.db_context.database import SessionLocal
@@ -12,7 +11,7 @@ class ApplicationLogger:
     @staticmethod
     async def log_error(
         exception: Exception,
-        context: Optional[str] = None
+        reraise: bool = False
     ) -> None:
         """
         Log an exception to the database.
@@ -22,16 +21,16 @@ class ApplicationLogger:
             exception: The exception that occurred
             context: Optional additional context (e.g., "UserService.create_user")
         """
+
+        # Re-throws exception without logging if it is of ValueError type
+        if isinstance(exception, ValueError):
+            raise
+        
         session = SessionLocal()
         try:
             repo = LogApplicationErrorRepository(session)
-            
             stacktrace = traceback.format_exc()
-            
             error_detail = str(exception)
-            if context:
-                error_detail = f"[{context}] {error_detail}"
-            
             await repo.log_error(
                 exception=error_detail,
                 stacktrace=stacktrace
@@ -41,3 +40,5 @@ class ApplicationLogger:
             pass  # Don't let logging failure break the app
         finally:
             session.close()
+            if reraise:
+                raise exception
