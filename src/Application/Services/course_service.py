@@ -25,7 +25,12 @@ class CourseService(BaseService):
         self.repository = repository
         self.component_repo = component_repo
     
-    async def create_course(self, dto: CourseCreateDTO) -> CourseViewModel:
+    async def create_course(
+        self, 
+        dto: CourseCreateDTO,
+        created_by_user_id: Optional[UUID] = None,
+        user_ip_address: Optional[str] = None
+    ) -> CourseViewModel:
         """Create a new course with components"""
         # Check if name already exists
         existing = await self.repository.get_by_name(dto.name)
@@ -79,6 +84,16 @@ class CourseService(BaseService):
             # Convert Entity -> Model and save
             component_model = EntityToModelMapper.course_component(component_entity)
             await self.component_repo.create(component_model)
+
+        if created_by_user_id:
+            from src.data.repositories.log_course_creation_repository import LogCourseCreationRepository
+            
+            log_repo = LogCourseCreationRepository(self.repository.session)
+            await log_repo.log_course_creation(
+                user_id=created_by_user_id.bytes,
+                user_ip_address=user_ip_address or "unknown",
+                course_id=saved_model.id
+            )
         
         # Convert back to ViewModel
         saved_entity = ModelToEntityMapper.course(saved_model)

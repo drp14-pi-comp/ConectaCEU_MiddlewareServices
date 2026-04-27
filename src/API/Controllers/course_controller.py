@@ -1,6 +1,6 @@
 """Course controller"""
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, Request, status, Query
 from sqlalchemy.orm import Session
 
 from src.application.services.course_service import CourseService
@@ -23,12 +23,19 @@ def get_course_service(db: Session = Depends(get_db)) -> CourseService:
 
 @router.post("/", response_model=CourseViewModel, status_code=status.HTTP_201_CREATED)
 async def create_course(
+    request: Request,
     dto: CourseCreateDTO,
+    created_by_user_id: str,
     service: CourseService = Depends(get_course_service)
 ):
-    """Create a new course"""
+    """Create a new course with components"""
     try:
-        return await service.create_course(dto)
+        user_ip = request.client.host if request.client else "unknown"
+        return await service.create_course(
+            dto,
+            UUID(created_by_user_id),
+            user_ip_address=user_ip
+        )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 

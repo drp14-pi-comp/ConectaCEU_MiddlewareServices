@@ -186,44 +186,6 @@ class UserService(BaseService):
         saved_entity = ModelToEntityMapper.user(saved_model)
 
         return EntityToViewModelMapper.user(saved_entity)
-
-    async def _auto_approve_documents(self, documents: list) -> None:
-        """Auto-approve documents for admin/secretary created users"""
-        from uuid import uuid4
-        from datetime import datetime
-        from src.domain.entities.document_validation import DocumentValidation
-        from src.application.mappers.entity_to_model_mapper import EntityToModelMapper
-        
-        for doc in documents:
-            validation = DocumentValidation(
-                id=uuid4(),
-                created_at=datetime.utcnow(),
-                updated_at=None,
-                rejection_reason=None,
-                document_validation_status_type_id=2,  # Approved
-                document_id=UUID(bytes=doc.id)
-            )
-            validation_model = EntityToModelMapper.document_validation(validation)
-            await self.doc_validation_repo.create(validation_model)
-
-    async def _create_pending_validations(self, documents: list) -> None:
-        """Create pending validations for secretary review"""
-        from uuid import uuid4
-        from datetime import datetime
-        from src.domain.entities.document_validation import DocumentValidation
-        from src.application.mappers.entity_to_model_mapper import EntityToModelMapper
-        
-        for doc in documents:
-            validation = DocumentValidation(
-                id=uuid4(),
-                created_at=datetime.utcnow(),
-                updated_at=None,
-                rejection_reason=None,
-                document_validation_status_type_id=1,  # Pending
-                document_id=UUID(bytes=doc.id)
-            )
-            validation_model = EntityToModelMapper.document_validation(validation)
-            await self.doc_validation_repo.create(validation_model)
     
     async def update_user(self, user_id: UUID, dto: UserUpdateDTO) -> UserViewModel:
         """Update user with business validation"""
@@ -302,7 +264,13 @@ class UserService(BaseService):
         
         return success
     
-    async def deactivate_user(self, user_id: UUID, reason: Optional[str] = None) -> bool:
+    async def deactivate_user(
+        self, 
+        user_id: UUID, 
+        reason: Optional[str] = None,
+        performed_by_user_id: Optional[UUID] = None,
+        user_ip_address: Optional[str] = None
+    ) -> bool:
         """Deactivate user account"""
         user = await self.repository.get_by_id(user_id)
         if not user:
@@ -311,12 +279,28 @@ class UserService(BaseService):
         if not user.active:
             raise ValueError("User already deactivated")
         
-        # Business rule: Check if user has active enrollments
-        # This would require enrollment repository
+        result = await self.repository.deactivate(user_id)
         
-        return await self.repository.deactivate(user_id)
+        # Log activation change
+        if result and performed_by_user_id:
+            from src.data.repositories.log_user_activation_repository import LogUserActivationRepository
+            log_repo = LogUserActivationRepository(self.repository.session)
+            await log_repo.log_activation(
+                deactivation_reason=reason,
+                activated=False,
+                user_id=user_id.bytes,
+                performed_by_user_id=performed_by_user_id.bytes,
+                performed_by_user_ip_address=user_ip_address or "unknown"
+            )
+        
+        return result
     
-    async def activate_user(self, user_id: UUID) -> bool:
+    async def activate_user(
+        self, 
+        user_id: UUID,
+        performed_by_user_id: Optional[UUID] = None,
+        user_ip_address: Optional[str] = None
+    ) -> bool:
         """Activate user account"""
         user = await self.repository.get_by_id(user_id)
         if not user:
@@ -325,7 +309,21 @@ class UserService(BaseService):
         if user.active:
             raise ValueError("User already active")
         
-        return await self.repository.activate(user_id)
+        result = await self.repository.activate(user_id)
+        
+        # Log activation change
+        if result and performed_by_user_id:
+            from src.data.repositories.log_user_activation_repository import LogUserActivationRepository
+            log_repo = LogUserActivationRepository(self.repository.session)
+            await log_repo.log_activation(
+                deactivation_reason=None,
+                activated=True,
+                user_id=user_id.bytes,
+                performed_by_user_id=performed_by_user_id.bytes,
+                performed_by_user_ip_address=user_ip_address or "unknown"
+            )
+        
+        return result
     
     async def find_users(
         self,
@@ -538,3 +536,41 @@ class UserService(BaseService):
             legal_representative_1=legal_representative_1,
             legal_representative_2=legal_representative_2
         )
+
+    async def _auto_approve_documents(self, documents: list) -> None:
+        """Auto-approve documents for admin/secretary created users"""
+        from uuid import uuid4
+        from datetime import datetime
+        from src.domain.entities.document_validation import DocumentValidation
+        from src.application.mappers.entity_to_model_mapper import EntityToModelMapper
+        
+        for doc in documents:
+            validation = DocumentValidation(
+                id=uuid4(),
+                created_at=datetime.utcnow(),
+                updated_at=None,
+                rejection_reason=None,
+                document_validation_status_type_id=2,  # Approved
+                document_id=UUID(bytes=doc.id)
+            )
+            validation_model = EntityToModelMapper.document_validation(validation)
+            await self.doc_validation_repo.create(validation_model)
+
+    async def _create_pending_validations(self, documents: list) -> None:
+        """Create pending validations for secretary review"""
+        from uuid import uuid4
+        from datetime import datetime
+        from src.domain.entities.document_validation import DocumentValidation
+        from src.application.mappers.entity_to_model_mapper import EntityToModelMapper
+        
+        for doc in documents:
+            validation = DocumentValidation(
+                id=uuid4(),
+                created_at=datetime.utcnow(),
+                updated_at=None,
+                rejection_reason=None,
+                document_validation_status_type_id=1,  # Pending
+                document_id=UUID(bytes=doc.id)
+            )
+            validation_model = EntityToModelMapper.document_validation(validation)
+            await self.doc_validation_repo.create(validation_model)

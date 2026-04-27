@@ -1,6 +1,7 @@
 """User class enrollment controller"""
+from typing import Optional
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, Request, HTTPException, status
 from sqlalchemy.orm import Session
 
 from src.application.services.user_class_service import UserClassService
@@ -21,12 +22,18 @@ def get_user_class_service(db: Session = Depends(get_db)) -> UserClassService:
 
 @router.post("/", response_model=UserClassViewModel, status_code=status.HTTP_201_CREATED)
 async def enroll_user(
+    request: Request,
     dto: UserClassEnrollDTO,
+    enrolled_by_user_id: Optional[UUID] = None,
     service: UserClassService = Depends(get_user_class_service)
 ):
     """Enroll a user in a class"""
     try:
-        return await service.enroll_user(dto)
+        user_ip = request.client.host if request.client else "unknown"
+        return await service.enroll_user(
+            dto,
+            enrolled_by_user_id,
+            user_ip)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -73,12 +80,18 @@ async def get_class_enrollments(
 
 @router.patch("/{enrollment_id}/deactivate")
 async def unenroll_user(
+    request: Request,
     enrollment_id: UUID,
+    unenrolled_by_user_id: Optional[UUID] = None,
     service: UserClassService = Depends(get_user_class_service)
 ):
     """Unenroll a user from a class"""
     try:
-        result = await service.unenroll_user(enrollment_id)
+        user_ip = request.client.host if request.client else "unknown"
+        result = await service.unenroll_user(
+            enrollment_id,
+            unenrolled_by_user_id,
+            user_ip)
         return {"message": "User unenrolled successfully", "success": result}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

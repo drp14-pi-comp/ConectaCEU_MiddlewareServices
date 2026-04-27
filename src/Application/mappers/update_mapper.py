@@ -25,7 +25,7 @@ from src.domain.dtos.course_dto import CourseUpdateDTO
 from src.domain.dtos.course_component_dto import CourseComponentUpdateDTO
 from src.domain.dtos.class_dto import ClassUpdateDTO
 from src.domain.dtos.class_attendance_dto import ClassAttendanceUpdateDTO
-from src.domain.dtos.document_validation_dto import DocumentValidationUpdateDTO
+from src.domain.dtos.document_validation_dto import DocumentValidationDTO
 from src.domain.dtos.legal_representative_dto import LegalRepresentativeUpdateDTO
 from src.domain.dtos.user_sex_type_dto import UserSexTypeUpdateDTO
 from src.domain.dtos.user_gender_type_dto import UserGenderTypeUpdateDTO
@@ -100,7 +100,7 @@ class UpdateMapper:
     
     # ========== Document Validation ==========
     @staticmethod
-    def document_validation(entity: DocumentValidation, dto: DocumentValidationUpdateDTO) -> DocumentValidation:
+    def document_validation(entity: DocumentValidation, dto: DocumentValidationDTO) -> DocumentValidation:
         entity.document_validation_status_type_id = dto.document_validation_status_type_id
         if dto.rejection_reason:
             entity.rejection_reason = dto.rejection_reason

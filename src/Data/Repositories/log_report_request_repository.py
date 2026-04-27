@@ -1,6 +1,6 @@
 """Report request log repository - Insert only"""
 from sqlalchemy.orm import Session
-from src.data.models.log_report_request_model import LogReportRequest as LogReportRequestModel
+from src.data.models.log_report_request_model import LogReportRequestModel
 from src.data.repositories.base.base_repository import BaseRepository
 
 class LogReportRequestRepository(BaseRepository):

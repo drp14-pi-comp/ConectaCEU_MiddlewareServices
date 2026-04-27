@@ -1,5 +1,5 @@
 """Document validation service - business logic for Document Validation entity"""
-from typing import List
+from typing import List, Optional
 from uuid import UUID
 
 from src.data.repositories.document_validation_repository import DocumentValidationRepository
@@ -9,7 +9,7 @@ from src.application.mappers.entity_to_model_mapper import EntityToModelMapper
 from src.application.mappers.model_to_entity_mapper import ModelToEntityMapper
 from src.application.mappers.entity_to_view_model_mapper import EntityToViewModelMapper
 from src.application.mappers.update_mapper import UpdateMapper
-from src.domain.dtos.document_validation_dto import DocumentValidationCreateDTO, DocumentValidationUpdateDTO
+from src.domain.dtos.document_validation_dto import DocumentValidationDTO
 from src.domain.view_models.document_validation_view_model import DocumentValidationViewModel
 
 class DocumentValidationService(BaseService):
@@ -19,21 +19,74 @@ class DocumentValidationService(BaseService):
         super().__init__(repository)
         self.repository = repository
     
-    async def create_validation(self, dto: DocumentValidationCreateDTO) -> DocumentValidationViewModel:
-        """Create a document validation (pending status)"""
-        existing = await self.repository.get_by_document_id(UUID(dto.document_id))
-        if existing:
-            raise ValueError("Validation already exists for this document")
+    async def create_or_update_validation(
+        self, 
+        dto: DocumentValidationDTO,
+        performed_by_user_id: Optional[UUID] = None,
+        user_ip_address: Optional[str] = None
+    ) -> DocumentValidationViewModel:
+        """
+        Create or update a document validation.
+        If validation exists for this document, update it.
+        If not, create a new one.
+        """
+        document_uuid = UUID(dto.document_id) if dto.document_id is not None else ""
         
-        entity = DtoToEntityMapper.document_validation(dto)
-        model = EntityToModelMapper.document_validation(entity)
-        saved_model = await self.repository.create(model)
+        # Try to find existing validation
+        existing_model = await self.repository.get_by_document_id(document_uuid)
+        
+        if existing_model:
+            # Update existing validation
+            entity = ModelToEntityMapper.document_validation(existing_model)
+            updated_entity = UpdateMapper.document_validation(entity, dto)
+            updated_model = EntityToModelMapper.document_validation(updated_entity)
+            saved_model = await self.repository.update(updated_model)
+        else:
+            # Create new validation
+            from src.domain.dtos.document_validation_dto import DocumentValidationDTO
+            
+            create_dto = DocumentValidationDTO(
+                document_id=str(document_uuid),
+                document_validation_status_type_id=dto.document_validation_status_type_id
+            )
+            
+            entity = DtoToEntityMapper.document_validation(create_dto)
+            entity.rejection_reason = dto.rejection_reason
+            
+            model = EntityToModelMapper.document_validation(entity)
+            saved_model = await self.repository.create(model)
+        
+        # Log validation
+        if performed_by_user_id:
+            from src.data.repositories.log_document_validation_repository import LogDocumentValidationRepository
+            log_repo = LogDocumentValidationRepository(self.repository.session)
+            
+            # Get document owner
+            from src.data.repositories.document_repository import DocumentRepository
+            doc_repo = DocumentRepository(self.repository.session)
+            document = await doc_repo.get_by_id(document_uuid)
+            
+            await log_repo.log_validation(
+                rejection_reason=dto.rejection_reason,
+                activated=(dto.document_validation_status_type_id == 2),  # Approved
+                user_id=document.user_id if document else document_uuid.bytes,
+                performed_by_user_id=performed_by_user_id,
+                performed_user_ip_address=user_ip_address or "unknown"
+            )
+        
         saved_entity = ModelToEntityMapper.document_validation(saved_model)
         return EntityToViewModelMapper.document_validation(saved_entity)
     
-    async def update_validation(self, validation_id: UUID, dto: DocumentValidationUpdateDTO) -> DocumentValidationViewModel:
-        """Update a document validation (approve/reject)"""
+    async def update_validation(
+        self, 
+        validation_id: UUID, 
+        dto: DocumentValidationDTO,
+        performed_by_user_id: UUID,
+        user_ip_address: str
+    ) -> DocumentValidationViewModel:
+        """Update a document validation and log it"""
         model = await self.repository.get_by_id(validation_id)
+
         if not model:
             raise ValueError("Validation not found")
         
@@ -41,24 +94,21 @@ class DocumentValidationService(BaseService):
         updated_entity = UpdateMapper.document_validation(entity, dto)
         updated_model = EntityToModelMapper.document_validation(updated_entity)
         saved_model = await self.repository.update(updated_model)
+        
+        # Log validation
+        from src.data.repositories.log_document_validation_repository import LogDocumentValidationRepository
+        log_repo = LogDocumentValidationRepository(self.repository.session)
+        await log_repo.log_validation(
+            rejection_reason=dto.rejection_reason,
+            activated=(dto.document_validation_status_type_id == 2),  # Approved
+            user_id=UUID(bytes=saved_model.document_id),  # User who owns the document
+            performed_by_user_id=performed_by_user_id,
+            performed_user_ip_address=user_ip_address
+        )
+        
         saved_entity = ModelToEntityMapper.document_validation(saved_model)
+        
         return EntityToViewModelMapper.document_validation(saved_entity)
-    
-    async def approve_document(self, validation_id: UUID) -> DocumentValidationViewModel:
-        """Approve a document"""
-        dto = DocumentValidationUpdateDTO(
-            document_validation_status_type_id=2,  # Approved
-            rejection_reason=None
-        )
-        return await self.update_validation(validation_id, dto)
-    
-    async def reject_document(self, validation_id: UUID, reason: str) -> DocumentValidationViewModel:
-        """Reject a document with reason"""
-        dto = DocumentValidationUpdateDTO(
-            document_validation_status_type_id=3,  # Rejected
-            rejection_reason=reason
-        )
-        return await self.update_validation(validation_id, dto)
     
     async def get_pending_validations(self, skip: int = 0, limit: int = 100) -> List[DocumentValidationViewModel]:
         """Get pending document validations"""

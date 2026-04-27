@@ -38,6 +38,30 @@ class DocumentService(BaseService):
         entities = [ModelToEntityMapper.document(model) for model in models]
         return [EntityToViewModelMapper.document(entity) for entity in entities]
     
+    async def get_document_for_download(
+        self, 
+        document_id: UUID,
+        user_id: UUID,
+        user_ip_address: str
+    ) -> dict:
+        """Get document for download and log the request"""
+        document = await self.repository.get_by_id(document_id)
+        if not document:
+            raise ValueError("Document not found")
+        
+        # Log document request
+        from src.data.repositories.log_document_request_repository import LogDocumentRequestRepository
+        log_repo = LogDocumentRequestRepository(self.repository.session)
+        await log_repo.log_document_request(
+            document_type_id=document.document_type_id,
+            user_id=user_id.bytes,
+            user_ip_address=user_ip_address
+        )
+        
+        entity = ModelToEntityMapper.document(document)
+
+        return EntityToViewModelMapper.document(entity).model_dump()
+    
     async def delete_document(self, document_id: UUID) -> bool:
         """Delete a document"""
         document = await self.repository.get_by_id(document_id)

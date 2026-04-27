@@ -1,7 +1,7 @@
 """Document controller"""
 from typing import List
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile
+from fastapi import APIRouter, Depends, HTTPException, Request, status, File
 from sqlalchemy.orm import Session
 
 from src.application.services.document_service import DocumentService
@@ -54,3 +54,22 @@ async def get_document(
     if not document:
         raise HTTPException(status_code=404, detail="Document not found")
     return document
+
+@router.get("/{document_id}/download")
+async def download_document(
+    request: Request,
+    document_id: UUID,
+    current_user_id: str,
+    service: DocumentService = Depends(get_document_service)
+):
+    """Download a document (logs the request)"""
+    try:
+        user_ip = request.client.host if request.client else "unknown"
+        result = await service.get_document_for_download(
+            document_id,
+            UUID(current_user_id),
+            user_ip
+        )
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))

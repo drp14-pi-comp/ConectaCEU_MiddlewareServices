@@ -31,7 +31,7 @@ from src.domain.dtos.class_session_dto import ClassSessionCreateDTO
 from src.domain.dtos.class_attendance_dto import ClassAttendanceCreateDTO
 from src.domain.dtos.user_class_dto import UserClassEnrollDTO
 from src.domain.dtos.document_dto import DocumentCreateDTO
-from src.domain.dtos.document_validation_dto import DocumentValidationCreateDTO
+from src.domain.dtos.document_validation_dto import DocumentValidationDTO
 from src.domain.dtos.legal_representative_dto import LegalRepresentativeCreateDTO
 from src.domain.dtos.user_sex_type_dto import UserSexTypeCreateDTO
 from src.domain.dtos.user_gender_type_dto import UserGenderTypeCreateDTO
@@ -174,7 +174,7 @@ class DtoToEntityMapper:
     
     # ========== Document Validation ==========
     @staticmethod
-    def document_validation(dto: DocumentValidationCreateDTO) -> DocumentValidation:
+    def document_validation(dto: DocumentValidationDTO) -> DocumentValidation:
         return DocumentValidation(
             id=uuid4(),
             created_at=DateTimeHandler.now(),

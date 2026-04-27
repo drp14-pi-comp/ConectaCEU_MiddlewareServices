@@ -1,12 +1,12 @@
 """Document validation controller"""
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from src.application.services.document_validation_service import DocumentValidationService
 from src.data.repositories.document_validation_repository import DocumentValidationRepository
 from src.data.db_context.database import get_db
-from src.domain.dtos.document_validation_dto import DocumentValidationCreateDTO, DocumentValidationUpdateDTO
+from src.domain.dtos.document_validation_dto import DocumentValidationDTO, DocumentValidationDTO
 from src.domain.view_models.document_validation_view_model import DocumentValidationViewModel
 
 router = APIRouter(prefix="/validation", tags=["Document Validation"])
@@ -17,7 +17,7 @@ def get_validation_service(db: Session = Depends(get_db)) -> DocumentValidationS
 
 @router.post("/", response_model=DocumentValidationViewModel, status_code=status.HTTP_201_CREATED)
 async def create_validation(
-    dto: DocumentValidationCreateDTO,
+    dto: DocumentValidationDTO,
     service: DocumentValidationService = Depends(get_validation_service)
 ):
     """Create a document validation (pending status)"""
@@ -46,37 +46,71 @@ async def get_validation_by_document(
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
 
-@router.put("/{validation_id}", response_model=DocumentValidationViewModel)
-async def update_validation(
-    validation_id: UUID,
-    dto: DocumentValidationUpdateDTO,
+@router.put("/document/{document_id}", response_model=DocumentValidationViewModel)
+async def validate_document(
+    request: Request,
+    document_id: UUID,
+    dto: DocumentValidationDTO,
+    current_user_id: str,
     service: DocumentValidationService = Depends(get_validation_service)
 ):
-    """Update a document validation (approve/reject)"""
+    """Validate a document (create or update validation)"""
     try:
-        return await service.update_validation(validation_id, dto)
+        user_ip = request.client.host if request.client else "unknown"
+        return await service.create_or_update_validation(
+            dto=dto,
+            document_id=document_id,
+            performed_by_user_id=UUID(current_user_id),
+            user_ip_address=user_ip
+        )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-@router.patch("/{validation_id}/approve")
+
+@router.patch("/document/{document_id}/approve")
 async def approve_document(
-    validation_id: UUID,
+    request: Request,
+    document_id: UUID,
+    current_user_id: str,
     service: DocumentValidationService = Depends(get_validation_service)
 ):
     """Approve a document"""
     try:
-        return await service.approve_document(validation_id)
+        user_ip = request.client.host if request.client else "unknown"
+        dto = DocumentValidationDTO(
+            document_validation_status_type_id=2,
+            rejection_reason=None
+        )
+        return await service.create_or_update_validation(
+            dto=dto,
+            document_id=document_id,
+            performed_by_user_id=UUID(current_user_id),
+            user_ip_address=user_ip
+        )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-@router.patch("/{validation_id}/reject")
+
+@router.patch("/document/{document_id}/reject")
 async def reject_document(
-    validation_id: UUID,
+    request: Request,
+    document_id: UUID,
     reason: str,
+    current_user_id: str,
     service: DocumentValidationService = Depends(get_validation_service)
 ):
     """Reject a document with reason"""
     try:
-        return await service.reject_document(validation_id, reason)
+        user_ip = request.client.host if request.client else "unknown"
+        dto = DocumentValidationDTO(
+            document_validation_status_type_id=3,
+            rejection_reason=reason
+        )
+        return await service.create_or_update_validation(
+            dto=dto,
+            document_id=document_id,
+            performed_by_user_id=UUID(current_user_id),
+            user_ip_address=user_ip
+        )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

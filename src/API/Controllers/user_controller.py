@@ -1,7 +1,7 @@
 """User controller"""
 from typing import Optional
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, Request, status, Query
 from sqlalchemy.orm import Session
 
 from src.application.services.user_service import UserService
@@ -134,13 +134,21 @@ async def update_user(
 
 @router.patch("/{user_id}/deactivate")
 async def deactivate_user(
+    request: Request,
     user_id: UUID,
+    current_user_id: str,
     reason: Optional[str] = None,
     service: UserService = Depends(get_user_service)
 ):
     """Deactivate a user account"""
     try:
-        result = await service.deactivate_user(user_id, reason)
+        user_ip = request.client.host if request.client else "unknown"
+        result = await service.deactivate_user(
+            user_id,
+            reason=reason,
+            performed_by_user_id=UUID(current_user_id),
+            user_ip_address=user_ip
+        )
         return {"message": "User deactivated successfully", "success": result}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -148,12 +156,19 @@ async def deactivate_user(
 
 @router.patch("/{user_id}/activate")
 async def activate_user(
+    request: Request,
     user_id: UUID,
+    current_user_id: str,
     service: UserService = Depends(get_user_service)
 ):
     """Activate a user account"""
     try:
-        result = await service.activate_user(user_id)
+        user_ip = request.client.host if request.client else "unknown"
+        result = await service.activate_user(
+            user_id,
+            performed_by_user_id=UUID(current_user_id),
+            user_ip_address=user_ip
+        )
         return {"message": "User activated successfully", "success": result}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -171,37 +186,3 @@ async def change_password(
         return {"message": "Password changed successfully", "success": result}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-
-
-@router.get("/document/{document}", response_model=UserViewModel)
-async def get_user_by_document(
-    document: str,
-    service: UserService = Depends(get_user_service)
-):
-    """Get user by document (CPF)"""
-    user = await service.repository.get_by_document(document)
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    
-    from src.application.mappers.model_to_entity_mapper import ModelToEntityMapper
-    from src.application.mappers.entity_to_view_model_mapper import EntityToViewModelMapper
-    
-    entity = ModelToEntityMapper.user(user)
-    return EntityToViewModelMapper.user(entity)
-
-
-@router.get("/email/{email}", response_model=UserViewModel)
-async def get_user_by_email(
-    email: str,
-    service: UserService = Depends(get_user_service)
-):
-    """Get user by email"""
-    user = await service.repository.get_by_email(email)
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    
-    from src.application.mappers.model_to_entity_mapper import ModelToEntityMapper
-    from src.application.mappers.entity_to_view_model_mapper import EntityToViewModelMapper
-    
-    entity = ModelToEntityMapper.user(user)
-    return EntityToViewModelMapper.user(entity)

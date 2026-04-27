@@ -14,7 +14,7 @@ from src.data.db_context.database import get_db
 from src.domain.dtos.broadcast_message_dto import BroadcastMessageCreateDTO
 from src.domain.entities.user import User
 
-router = APIRouter(prefix="/broadcasts", tags=["Broadcasts"])
+router = APIRouter(prefix="/broadcast", tags=["Broadcasts"])
 
 
 def get_broadcast_service(db: Session = Depends(get_db)) -> BroadcastService:
@@ -45,8 +45,8 @@ async def send_broadcast(
 ):
     """Send a broadcast message via selected channels"""
     try:
-        sender_ip = request.client.host if request.client else "unknown"
-        result = await service.send_broadcast(dto, UUID(current_user_id), sender_ip)
+        user_ip = request.client.host if request.client else "unknown"
+        result = await service.send_broadcast(dto, UUID(current_user_id), user_ip)
         return result
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

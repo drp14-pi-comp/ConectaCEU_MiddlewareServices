@@ -1,5 +1,5 @@
 """User class enrollment service - business logic for User Class entity"""
-from typing import List
+from typing import List, Optional
 from uuid import UUID
 
 from src.data.repositories.user_class_repository import UserClassRepository
@@ -27,7 +27,12 @@ class UserClassService(BaseService):
         self.class_repo = class_repo
         self.class_session_repo = class_session_repo
     
-    async def enroll_user(self, dto: UserClassEnrollDTO) -> UserClassViewModel:
+    async def enroll_user(
+        self,
+        dto: UserClassEnrollDTO,
+        enrolled_by_user_id: Optional[UUID] = None,
+        user_ip_address: Optional[str] = None
+    ) -> UserClassViewModel:
         """Enroll a user in a class with validation"""
         user_id = UUID(dto.user_id)
         class_id = UUID(dto.class_id)
@@ -54,57 +59,19 @@ class UserClassService(BaseService):
         
         # Increment seats in use
         await self.class_repo.increment_seats(class_id)
+
+        if enrolled_by_user_id:
+            from src.data.repositories.log_student_enrollment_repository import LogStudentEnrollmentRepository
+            log_repo = LogStudentEnrollmentRepository(self.repository.session)
+            await log_repo.log_enrollment(
+                enrolled=True,
+                user_id=enrolled_by_user_id.bytes,
+                user_ip_address=user_ip_address or "unknown",
+                course_id=self._get_course_id_for_class(class_id).bytes
+            )
         
         saved_entity = ModelToEntityMapper.user_class(saved_model)
         return EntityToViewModelMapper.user_class(saved_entity)
-    
-    async def _validate_enrollment_rules(self, user_id: UUID, new_class_id: UUID) -> None:
-        """
-        Validate enrollment business rules:
-        1. Maximum 3 enrollments per user
-        2. Cannot enroll in multiple classes with the same shift
-        """
-        # Get user's active enrollments
-        active_enrollments = await self.repository.get_active_by_user_id(user_id)
-        
-        # Rule 1: Maximum 3 enrollments
-        if len(active_enrollments) >= 3:
-            raise ValueError("User already enrolled in 3 classes (maximum limit reached)")
-        
-        # Get the shift of the new class
-        new_class = await self.class_repo.get_by_id(new_class_id)
-        if not new_class:
-            raise ValueError("Class not found")
-        
-        if not new_class.active:
-            raise ValueError("Cannot enroll in an inactive class")
-        
-        new_class_shift = new_class.shift_type_id
-        
-        # Rule 2: Check for shift conflicts with existing enrollments
-        for enrollment in active_enrollments:
-            existing_class = await self.class_repo.get_by_id(UUID(bytes=enrollment.class_id))
-            if existing_class and existing_class.shift_type_id == new_class_shift:
-                shift_names = {1: "morning", 2: "afternoon", 3: "evening"}
-                shift_name = shift_names.get(new_class_shift, "same")
-                raise ValueError(f"User already enrolled in a {shift_name} shift class")
-        
-        # Check if class has available seats
-        component = await self._get_component_for_class(new_class_id)
-        if component:
-            if new_class.seats_in_use >= component.seat_limit_per_class:
-                raise ValueError("Class has no available seats")
-    
-    async def _get_component_for_class(self, class_id: UUID):
-        """Get the component for a class"""
-        from src.data.repositories.course_component_repository import CourseComponentRepository
-        
-        class_ = await self.class_repo.get_by_id(class_id)
-        if class_:
-            component_repo = CourseComponentRepository(self.class_repo.session)
-            component = await component_repo.get_by_id(UUID(bytes=class_.component_id))
-            return component
-        return None
     
     async def validate_bulk_enrollment(self, class_id: UUID, user_ids: List[str]) -> dict:
         """
@@ -185,7 +152,12 @@ class UserClassService(BaseService):
             'enrolled': enrolled
         }
     
-    async def unenroll_user(self, enrollment_id: UUID) -> bool:
+    async def unenroll_user(
+        self,
+        enrollment_id: UUID,
+        unenrolled_by_user_id: Optional[UUID] = None,
+        user_ip_address: Optional[str] = None
+    ) -> bool:
         """Unenroll a user from a class"""
         enrollment = await self.repository.get_by_id(enrollment_id)
         if not enrollment:
@@ -199,6 +171,16 @@ class UserClassService(BaseService):
         if result:
             # Decrement seats in use
             await self.class_repo.decrement_seats(UUID(bytes=enrollment.class_id))
+
+        if unenrolled_by_user_id:
+            from src.data.repositories.log_student_enrollment_repository import LogStudentEnrollmentRepository
+            log_repo = LogStudentEnrollmentRepository(self.repository.session)
+            await log_repo.log_enrollment(
+                enrolled=False,
+                user_id=unenrolled_by_user_id.bytes,
+                user_ip_address=user_ip_address or "unknown",
+                course_id=self._get_course_id_for_class(enrollment.class_id).bytes
+            )
         
         return result
     
@@ -287,3 +269,51 @@ class UserClassService(BaseService):
             'available_shifts': [s for s in shift_names.values() if s not in enrolled_shifts],
             'enrollments': active_enrollments
         }
+    
+    async def _validate_enrollment_rules(self, user_id: UUID, new_class_id: UUID) -> None:
+        """
+        Validate enrollment business rules:
+        1. Maximum 3 enrollments per user
+        2. Cannot enroll in multiple classes with the same shift
+        """
+        # Get user's active enrollments
+        active_enrollments = await self.repository.get_active_by_user_id(user_id)
+        
+        # Rule 1: Maximum 3 enrollments
+        if len(active_enrollments) >= 3:
+            raise ValueError("User already enrolled in 3 classes (maximum limit reached)")
+        
+        # Get the shift of the new class
+        new_class = await self.class_repo.get_by_id(new_class_id)
+        if not new_class:
+            raise ValueError("Class not found")
+        
+        if not new_class.active:
+            raise ValueError("Cannot enroll in an inactive class")
+        
+        new_class_shift = new_class.shift_type_id
+        
+        # Rule 2: Check for shift conflicts with existing enrollments
+        for enrollment in active_enrollments:
+            existing_class = await self.class_repo.get_by_id(UUID(bytes=enrollment.class_id))
+            if existing_class and existing_class.shift_type_id == new_class_shift:
+                shift_names = {1: "morning", 2: "afternoon", 3: "evening"}
+                shift_name = shift_names.get(new_class_shift, "same")
+                raise ValueError(f"User already enrolled in a {shift_name} shift class")
+        
+        # Check if class has available seats
+        component = await self._get_component_for_class(new_class_id)
+        if component:
+            if new_class.seats_in_use >= component.seat_limit_per_class:
+                raise ValueError("Class has no available seats")
+    
+    async def _get_component_for_class(self, class_id: UUID):
+        """Get the component for a class"""
+        from src.data.repositories.course_component_repository import CourseComponentRepository
+        
+        class_ = await self.class_repo.get_by_id(class_id)
+        if class_:
+            component_repo = CourseComponentRepository(self.class_repo.session)
+            component = await component_repo.get_by_id(UUID(bytes=class_.component_id))
+            return component
+        return None
