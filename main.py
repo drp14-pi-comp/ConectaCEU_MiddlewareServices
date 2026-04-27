@@ -9,6 +9,7 @@ from pathlib import Path
 # Add src to Python path
 sys.path.insert(0, str(Path(__file__).parent))
 
+from src.api.middleware.error_logging_middleware import ErrorLoggingMiddleware
 from src.infrastructure.configuration.settings import config
 from src.data.db_context.database import engine, SessionLocal
 from src.api.middleware.exception_handler import register_exception_handlers
@@ -81,6 +82,9 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    
+    # Register error logging middleware
+    app.add_middleware(ErrorLoggingMiddleware)
     
     # Register exception handlers
     register_exception_handlers(app)
