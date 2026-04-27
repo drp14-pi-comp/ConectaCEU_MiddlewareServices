@@ -2,6 +2,7 @@
 from typing import Optional
 from uuid import UUID
 
+from src.application.logging.application_logger import ApplicationLogger
 from src.data.repositories.course_repository import CourseRepository
 from src.data.repositories.course_component_repository import CourseComponentRepository
 from src.application.services.base_service import BaseService
@@ -32,140 +33,152 @@ class CourseService(BaseService):
         user_ip_address: Optional[str] = None
     ) -> CourseViewModel:
         """Create a new course with components"""
-        # Check if name already exists
-        existing = await self.repository.get_by_name(dto.name)
-        if existing:
-            raise ValueError("Nome de curso já existe")
-        
-        # Validate components count (1 to 30)
-        if not dto.components or len(dto.components) == 0:
-            raise ValueError("Curso deve conter pelo menos 1 (um) componente")
-        
-        if len(dto.components) > 30:
-            raise ValueError("Curso não pode ter mais que 30 (trinta) componentes")
-        
-        # Validate component names are unique within the course
-        component_names = [c.name for c in dto.components]
-        if len(component_names) != len(set(component_names)):
-            raise ValueError("Nomes de componentes devem ser únicos dentro de um mesmo curso")
-        
-        # Business rule: Validate workload
-        if dto.workload < 1:
-            raise ValueError("Carga horária deve ser de pelo menos 1 (uma) hora")
-        
-        # Convert DTO -> Entity
-        entity = DtoToEntityMapper.course(dto)
-        
-        # Validate seat limits logic
-        total_component_seats = sum(c.seat_limit_per_class for c in dto.components)
-        if total_component_seats > dto.total_seat_limit:
-            raise ValueError(
-                f"Sum of component seat limits ({total_component_seats}) "
-                f"cannot exceed total course seat limit ({dto.total_seat_limit})"
-            )
-        
-        # Convert Entity -> Model and save
-        model = EntityToModelMapper.course(entity)
-        saved_model = await self.repository.create(model)
-        course_id = saved_model.id  # UUID bytes
-        course_uuid = UUID(bytes=course_id)
-        
-        # Create all components
-        for component_dto in dto.components:
-            # Check if component name already exists for this course
-            existing_component = await self.component_repo.get_by_name(component_dto.name)
-            if existing_component:
-                raise ValueError(f"Component name '{component_dto.name}' already exists")
+        try:
+            # Check if name already exists
+            existing = await self.repository.get_by_name(dto.name)
+            if existing:
+                raise ValueError("Nome de curso já existe")
             
-            # Convert DTO -> Entity with course_id
-            component_entity = DtoToEntityMapper.course_component(component_dto)
-            component_entity.course_id = course_uuid
+            # Validate components count (1 to 30)
+            if not dto.components or len(dto.components) == 0:
+                raise ValueError("Curso deve conter pelo menos 1 (um) componente")
+            
+            if len(dto.components) > 30:
+                raise ValueError("Curso não pode ter mais que 30 (trinta) componentes")
+            
+            # Validate component names are unique within the course
+            component_names = [c.name for c in dto.components]
+            if len(component_names) != len(set(component_names)):
+                raise ValueError("Nomes de componentes devem ser únicos dentro de um mesmo curso")
+            
+            # Business rule: Validate workload
+            if dto.workload < 1:
+                raise ValueError("Carga horária deve ser de pelo menos 1 (uma) hora")
+            
+            # Convert DTO -> Entity
+            entity = DtoToEntityMapper.course(dto)
+            
+            # Validate seat limits logic
+            total_component_seats = sum(c.seat_limit_per_class for c in dto.components)
+            if total_component_seats > dto.total_seat_limit:
+                raise ValueError(
+                    f"Sum of component seat limits ({total_component_seats}) "
+                    f"cannot exceed total course seat limit ({dto.total_seat_limit})"
+                )
             
             # Convert Entity -> Model and save
-            component_model = EntityToModelMapper.course_component(component_entity)
-            await self.component_repo.create(component_model)
-
-        if created_by_user_id:
-            from src.data.repositories.log_course_creation_repository import LogCourseCreationRepository
+            model = EntityToModelMapper.course(entity)
+            saved_model = await self.repository.create(model)
+            course_id = saved_model.id  # UUID bytes
+            course_uuid = UUID(bytes=course_id)
             
-            log_repo = LogCourseCreationRepository(self.repository.session)
-            await log_repo.log_course_creation(
-                user_id=created_by_user_id.bytes,
-                user_ip_address=user_ip_address or "unknown",
-                course_id=saved_model.id
-            )
-        
-        # Convert back to ViewModel
-        saved_entity = ModelToEntityMapper.course(saved_model)
+            # Create all components
+            for component_dto in dto.components:
+                # Check if component name already exists for this course
+                existing_component = await self.component_repo.get_by_name(component_dto.name)
+                if existing_component:
+                    raise ValueError(f"Component name '{component_dto.name}' already exists")
+                
+                # Convert DTO -> Entity with course_id
+                component_entity = DtoToEntityMapper.course_component(component_dto)
+                component_entity.course_id = course_uuid
+                
+                # Convert Entity -> Model and save
+                component_model = EntityToModelMapper.course_component(component_entity)
+                await self.component_repo.create(component_model)
 
-        return EntityToViewModelMapper.course(saved_entity)
+            if created_by_user_id:
+                from src.data.repositories.log_course_creation_repository import LogCourseCreationRepository
+                
+                log_repo = LogCourseCreationRepository(self.repository.session)
+                await log_repo.log_course_creation(
+                    user_id=created_by_user_id.bytes,
+                    user_ip_address=user_ip_address or "unknown",
+                    course_id=saved_model.id
+                )
+            
+            # Convert back to ViewModel
+            saved_entity = ModelToEntityMapper.course(saved_model)
+
+            return EntityToViewModelMapper.course(saved_entity)
+        except Exception as e:
+            await ApplicationLogger.log_error(e, reraise=True)
     
     async def update_course(self, course_id: UUID, dto: CourseUpdateDTO) -> CourseViewModel:
         """Update course with validation"""
-        model = await self.repository.get_by_id(course_id)
-        if not model:
-            raise ValueError("Curso não encontrado")
-        
-        # Check name uniqueness if being updated
-        if dto.name:
-            existing = await self.repository.get_by_name(dto.name)
-            if existing and existing.id != model.id:
-                raise ValueError("Nome de curso já existe")
-        
-        # Convert to entity and apply updates
-        entity = ModelToEntityMapper.course(model)
-        updated_entity = UpdateMapper.course(entity, dto)
-        
-        # Save changes
-        updated_model = EntityToModelMapper.course(updated_entity)
-        saved_model = await self.repository.update(updated_model)
-        
-        saved_entity = ModelToEntityMapper.course(saved_model)
-        return EntityToViewModelMapper.course(saved_entity)
+        try:
+            model = await self.repository.get_by_id(course_id)
+            if not model:
+                raise ValueError("Curso não encontrado")
+            
+            # Check name uniqueness if being updated
+            if dto.name:
+                existing = await self.repository.get_by_name(dto.name)
+                if existing and existing.id != model.id:
+                    raise ValueError("Nome de curso já existe")
+            
+            # Convert to entity and apply updates
+            entity = ModelToEntityMapper.course(model)
+            updated_entity = UpdateMapper.course(entity, dto)
+            
+            # Save changes
+            updated_model = EntityToModelMapper.course(updated_entity)
+            saved_model = await self.repository.update(updated_model)
+            
+            saved_entity = ModelToEntityMapper.course(saved_model)
+            return EntityToViewModelMapper.course(saved_entity)
+        except Exception as e:
+            await ApplicationLogger.log_error(e, reraise=True)
     
     async def deactivate_course(self, course_id: UUID) -> dict:
         """Deactivate a course, its components, and classes"""
-        course = await self.repository.get_by_id(course_id)
-        if not course:
-            raise ValueError("Curso não encontrado")
-        
-        if not course.active:
-            raise ValueError("Curso já está desativado")
-        
-        # Get all components for this course
-        components = await self.component_repo.get_by_course_id(course_id)
-        
-        deactivated_count = 0
-        for component in components:
-            if component.active:
-                await self.component_repo.deactivate(UUID(bytes=component.id))
-                deactivated_count += 1
-        
-        # Deactivate the course
-        await self.repository.deactivate(course_id)
-        
-        return {
-            "success": True,
-            "course_id": course_id,
-            "deactivated_components": deactivated_count
-        }
+        try:
+            course = await self.repository.get_by_id(course_id)
+            if not course:
+                raise ValueError("Curso não encontrado")
+            
+            if not course.active:
+                raise ValueError("Curso já está desativado")
+            
+            # Get all components for this course
+            components = await self.component_repo.get_by_course_id(course_id)
+            
+            deactivated_count = 0
+            for component in components:
+                if component.active:
+                    await self.component_repo.deactivate(UUID(bytes=component.id))
+                    deactivated_count += 1
+            
+            # Deactivate the course
+            await self.repository.deactivate(course_id)
+            
+            return {
+                "success": True,
+                "course_id": course_id,
+                "deactivated_components": deactivated_count
+            }
+        except Exception as e:
+            await ApplicationLogger.log_error(e, reraise=True)
     
     async def activate_course(self, course_id: UUID) -> dict:
         """Activate a course"""
-        course = await self.repository.get_by_id(course_id)
-        if not course:
-            raise ValueError("Curso não encontrado")
-        
-        if course.active:
-            raise ValueError("Curso já está ativado")
-        
-        await self.repository.activate(course_id)
-        
-        return {
-            "success": True,
-            "course_id": course_id,
-            "message": "Curso ativado com sucesso"
-        }
+        try:
+            course = await self.repository.get_by_id(course_id)
+            if not course:
+                raise ValueError("Curso não encontrado")
+            
+            if course.active:
+                raise ValueError("Curso já está ativado")
+            
+            await self.repository.activate(course_id)
+            
+            return {
+                "success": True,
+                "course_id": course_id,
+                "message": "Curso ativado com sucesso"
+            }
+        except Exception as e:
+            await ApplicationLogger.log_error(e, reraise=True)
     
     async def find_courses(
         self,
@@ -176,42 +189,48 @@ class CourseService(BaseService):
         page_size: int = 10
     ) -> dict:
         """Find courses with filters"""
-        skip = (page - 1) * page_size
-        
-        models = await self.repository.find_by_filters(
-            name=name,
-            active=active,
-            educator_id=educator_id,
-            skip=skip,
-            limit=page_size
-        )
-        
-        total = await self.repository.count({'active': active})
-        
-        entities = [ModelToEntityMapper.course(model) for model in models]
-        view_models = [EntityToViewModelMapper.course(entity) for entity in entities]
-        
-        return {
-            'items': view_models,
-            'total': total,
-            'page': page,
-            'page_size': page_size,
-            'total_pages': (total + page_size - 1) // page_size
-        }
+        try:
+            skip = (page - 1) * page_size
+            
+            models = await self.repository.find_by_filters(
+                name=name,
+                active=active,
+                educator_id=educator_id,
+                skip=skip,
+                limit=page_size
+            )
+            
+            total = await self.repository.count({'active': active})
+            
+            entities = [ModelToEntityMapper.course(model) for model in models]
+            view_models = [EntityToViewModelMapper.course(entity) for entity in entities]
+            
+            return {
+                'items': view_models,
+                'total': total,
+                'page': page,
+                'page_size': page_size,
+                'total_pages': (total + page_size - 1) // page_size
+            }
+        except Exception as e:
+            await ApplicationLogger.log_error(e, reraise=True)
     
     async def get_course_with_components(self, course_id: UUID) -> dict:
         """Get course with its components"""
-        course_model = await self.repository.get_by_id(course_id)
-        if not course_model:
-            raise ValueError("Course not found")
-        
-        components = await self.component_repo.get_by_course_id(course_id)
-        
-        course_entity = ModelToEntityMapper.course(course_model)
-        component_entities = [ModelToEntityMapper.course_component(c) for c in components]
-        
-        return {
-            'course': EntityToViewModelMapper.course(course_entity),
-            'components': [EntityToViewModelMapper.course_component(c) for c in component_entities],
-            'total_components': len(components)
-        }
+        try:
+            course_model = await self.repository.get_by_id(course_id)
+            if not course_model:
+                raise ValueError("Course not found")
+            
+            components = await self.component_repo.get_by_course_id(course_id)
+            
+            course_entity = ModelToEntityMapper.course(course_model)
+            component_entities = [ModelToEntityMapper.course_component(c) for c in components]
+            
+            return {
+                'course': EntityToViewModelMapper.course(course_entity),
+                'components': [EntityToViewModelMapper.course_component(c) for c in component_entities],
+                'total_components': len(components)
+            }
+        except Exception as e:
+            await ApplicationLogger.log_error(e, reraise=True)

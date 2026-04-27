@@ -1,8 +1,8 @@
 """Broadcast message service - sends messages to multiple recipients"""
 from typing import List, Optional
 from uuid import UUID
-from datetime import datetime
 
+from src.application.logging.application_logger import ApplicationLogger
 from src.data.repositories.user_repository import UserRepository
 from src.data.repositories.user_class_repository import UserClassRepository
 from src.data.repositories.log_broadcast_message_repository import LogBroadcastMessageRepository
@@ -39,95 +39,98 @@ class BroadcastService:
         """
         Send broadcast message to recipients via selected channels.
         """
-        # Extract documents from list (max 2)
-        document_1 = dto.documents[0] if len(dto.documents) > 0 else None
-        document_2 = dto.documents[1] if len(dto.documents) > 1 else None
-        
-        results = {
-            'email_sent': 0,
-            'email_failed': 0,
-            'whatsapp_sent': 0,
-            'whatsapp_failed': 0,
-            'sms_sent': 0,
-            'sms_failed': 0,
-            'total_processed': 0,
-            'total_errors': 0
-        }
-        
-        async for user in self._stream_recipients(
-            dto.recipient_user_ids,
-            dto.recipient_course_id,
-            dto.recipient_user_type_id
-        ):
-            try:
-                results['total_processed'] += 1
-                
-                # Send email
-                if dto.send_email and user.email:
-                    try:
-                        email_sent = await self.email_service.send_broadcast_email(
-                            to_email=user.email,
-                            subject="ConectaCEU - Comunicado",
-                            message=self._format_html_message(dto.message),
-                            document_1_base64=document_1,
-                            document_2_base64=document_2
-                        )
-                        
-                        if email_sent:
-                            results['email_sent'] += 1
-                        else:
+        try:
+            # Extract documents from list (max 2)
+            document_1 = dto.documents[0] if len(dto.documents) > 0 else None
+            document_2 = dto.documents[1] if len(dto.documents) > 1 else None
+            
+            results = {
+                'email_sent': 0,
+                'email_failed': 0,
+                'whatsapp_sent': 0,
+                'whatsapp_failed': 0,
+                'sms_sent': 0,
+                'sms_failed': 0,
+                'total_processed': 0,
+                'total_errors': 0
+            }
+            
+            async for user in self._stream_recipients(
+                dto.recipient_user_ids,
+                dto.recipient_course_id,
+                dto.recipient_user_type_id
+            ):
+                try:
+                    results['total_processed'] += 1
+                    
+                    # Send email
+                    if dto.send_email and user.email:
+                        try:
+                            email_sent = await self.email_service.send_broadcast_email(
+                                to_email=user.email,
+                                subject="ConectaCEU - Comunicado",
+                                message=self._format_html_message(dto.message),
+                                document_1_base64=document_1,
+                                document_2_base64=document_2
+                            )
+                            
+                            if email_sent:
+                                results['email_sent'] += 1
+                            else:
+                                results['email_failed'] += 1
+                        except Exception:
                             results['email_failed'] += 1
-                    except Exception:
-                        results['email_failed'] += 1
-                
-                # Send WhatsApp
-                if dto.send_whatsapp and user.cellphone_number:
-                    try:
-                        whatsapp_sent = await self.whatsapp_service.send_whatsapp(
-                            to_phone=user.cellphone_number,
-                            message=dto.message,
-                            document_1_base64=document_1,
-                            document_2_base64=document_2
-                        )
-                        
-                        if whatsapp_sent:
-                            results['whatsapp_sent'] += 1
-                        else:
+                    
+                    # Send WhatsApp
+                    if dto.send_whatsapp and user.cellphone_number:
+                        try:
+                            whatsapp_sent = await self.whatsapp_service.send_whatsapp(
+                                to_phone=user.cellphone_number,
+                                message=dto.message,
+                                document_1_base64=document_1,
+                                document_2_base64=document_2
+                            )
+                            
+                            if whatsapp_sent:
+                                results['whatsapp_sent'] += 1
+                            else:
+                                results['whatsapp_failed'] += 1
+                        except Exception:
                             results['whatsapp_failed'] += 1
-                    except Exception:
-                        results['whatsapp_failed'] += 1
-                
-                # Send SMS
-                if dto.send_sms and user.cellphone_number:
-                    try:
-                        sms_sent = await self.sms_service.send_sms(
-                            to_phone=user.cellphone_number,
-                            message=dto.message[:160]
-                        )
-                        
-                        if sms_sent:
-                            results['sms_sent'] += 1
-                        else:
+                    
+                    # Send SMS
+                    if dto.send_sms and user.cellphone_number:
+                        try:
+                            sms_sent = await self.sms_service.send_sms(
+                                to_phone=user.cellphone_number,
+                                message=dto.message[:160]
+                            )
+                            
+                            if sms_sent:
+                                results['sms_sent'] += 1
+                            else:
+                                results['sms_failed'] += 1
+                        except Exception:
                             results['sms_failed'] += 1
-                    except Exception:
-                        results['sms_failed'] += 1
-                        
-            except Exception:
-                results['total_errors'] += 1
-        
-        # Log the broadcast
-        await self.log_repo.log_broadcast(
-            message=dto.message,
-            document_1_base64=document_1 or "",
-            document_2_base64=document_2 or "",
-            sent_whatsapp=dto.send_whatsapp and results['whatsapp_sent'] > 0,
-            sent_email=dto.send_email and results['email_sent'] > 0,
-            sent_sms=dto.send_sms and results['sms_sent'] > 0,
-            user_id=sender_user_id.bytes,
-            user_ip_address=sender_ip_address
-        )
-        
-        return results
+                            
+                except Exception:
+                    results['total_errors'] += 1
+            
+            # Log the broadcast
+            await self.log_repo.log_broadcast(
+                message=dto.message,
+                document_1_base64=document_1 or "",
+                document_2_base64=document_2 or "",
+                sent_whatsapp=dto.send_whatsapp and results['whatsapp_sent'] > 0,
+                sent_email=dto.send_email and results['email_sent'] > 0,
+                sent_sms=dto.send_sms and results['sms_sent'] > 0,
+                user_id=sender_user_id.bytes,
+                user_ip_address=sender_ip_address
+            )
+            
+            return results
+        except Exception as e:
+            await ApplicationLogger.log_error(e, reraise=True)
     
     async def _get_recipients(
         self,

@@ -3,13 +3,13 @@ from typing import Optional
 from uuid import UUID
 import bcrypt
 
+from src.application.logging.application_logger import ApplicationLogger
 from src.application.services.user_password_history_service import UserPasswordHistoryService
 from src.data.repositories.address_repository import AddressRepository
 from src.data.repositories.document_repository import DocumentRepository
 from src.data.repositories.document_validation_repository import DocumentValidationRepository
 from src.data.repositories.legal_representative_repository import LegalRepresentativeRepository
 from src.data.repositories.user_repository import UserRepository
-from src.data.repositories.user_password_history_repository import UserPasswordHistoryRepository
 from src.application.services.base_service import BaseService
 from src.application.mappers.dto_to_entity_mapper import DtoToEntityMapper
 from src.application.mappers.entity_to_model_mapper import EntityToModelMapper
@@ -18,7 +18,6 @@ from src.application.mappers.entity_to_view_model_mapper import EntityToViewMode
 from src.application.mappers.update_mapper import UpdateMapper
 from src.domain.dtos.user_dto import UserCreateDTO, UserUpdateDTO, UserLoginDTO, PasswordChangeDTO
 from src.domain.view_models.user_view_model import StudentUserViewModel, UserViewModel
-from src.domain.entities.user import User
 from src.infrastructure.handlers.datetime_handler import DateTimeHandler
 
 class UserService(BaseService):
@@ -53,216 +52,228 @@ class UserService(BaseService):
             dto: User creation data
             created_by_user_id: ID of the user creating this account (None for public registration)
         """
-        # Hash passwords
-        dto.password = self._hash_password(dto.password)
-        dto.confirm_password = self._hash_password(dto.confirm_password)
-        
-        # ========== Validations ==========
-        # Validate passwords
-        self._validate_passwords(dto.password, dto.confirm_password)
+        try:
+            # Hash passwords
+            dto.password = self._hash_password(dto.password)
+            dto.confirm_password = self._hash_password(dto.confirm_password)
+            
+            # ========== Validations ==========
+            # Validate passwords
+            self._validate_passwords(dto.password, dto.confirm_password)
 
-        # Check if document already exists
-        existing = await self.repository.get_by_document(dto.document)
-        if existing:
-            raise ValueError("Documento pertence a outra pessoa")
-        
-        if dto.email:
-            existing_email = await self.repository.get_by_email(dto.email)
-            if existing_email:
-                raise ValueError("E-mail pertence a outra pessoa")
-        
-        if dto.cellphone_number:
-            existing_phone = await self.repository.get_by_cellphone(dto.cellphone_number)
-            if existing_phone:
-                raise ValueError("Número de celular pertence a outra pessoa")
-        
-        # ========== Determine Creation Path ==========
-        is_public = created_by_user_id is None
-        
-        # Validate creator if not public
-        if is_public:
-            is_admin_or_secretary = False
-        else:
-            creator = await self.repository.get_by_id(created_by_user_id)
-            if not creator:
-                raise ValueError("Usuário criador não encontrado")
+            # Check if document already exists
+            existing = await self.repository.get_by_document(dto.document)
+            if existing:
+                raise ValueError("Documento pertence a outra pessoa")
             
-            if not creator.active:
-                raise ValueError("Usuário criador não está ativo")
+            if dto.email:
+                existing_email = await self.repository.get_by_email(dto.email)
+                if existing_email:
+                    raise ValueError("E-mail pertence a outra pessoa")
             
-            # Only Admin (1) and Secretary (2) can create users
-            if creator.user_type_id not in [1, 2]:
-                raise ValueError("Este usuário não pode criar outros usuários")
+            if dto.cellphone_number:
+                existing_phone = await self.repository.get_by_cellphone(dto.cellphone_number)
+                if existing_phone:
+                    raise ValueError("Número de celular pertence a outra pessoa")
             
-            is_admin_or_secretary = True
-        
-        # ========== Business Rules ==========
-        is_minor = (DateTimeHandler.now().date() - dto.birthdate).days < 18 * 365
-        is_over_70 = (DateTimeHandler.now().date() - dto.birthdate).days > 70 * 365
+            # ========== Determine Creation Path ==========
+            is_public = created_by_user_id is None
+            
+            # Validate creator if not public
+            if is_public:
+                is_admin_or_secretary = False
+            else:
+                creator = await self.repository.get_by_id(created_by_user_id)
+                if not creator:
+                    raise ValueError("Usuário criador não encontrado")
+                
+                if not creator.active:
+                    raise ValueError("Usuário criador não está ativo")
+                
+                # Only Admin (1) and Secretary (2) can create users
+                if creator.user_type_id not in [1, 2]:
+                    raise ValueError("Este usuário não pode criar outros usuários")
+                
+                is_admin_or_secretary = True
+            
+            # ========== Business Rules ==========
+            is_minor = (DateTimeHandler.now().date() - dto.birthdate).days < 18 * 365
+            is_over_70 = (DateTimeHandler.now().date() - dto.birthdate).days > 70 * 365
 
-        # Minors must have legal representative (regardless of user type)
-        if is_minor and not dto.legal_representative_1:
-            raise ValueError("Menores de idade devem ter pelo menos 1 (um) representante legal")
-        
-        # Over 70 must have health certificate
-        if is_public and is_over_70 and not dto.health_certificate:
-            raise ValueError("Usuários com mais de 70 (setenta) anos precisam de atestados de saúde")
-        
-        # ========== Create User ==========
-        entity = DtoToEntityMapper.user(dto)
-        
-        # Set user status based on creation path
-        if is_admin_or_secretary:
-            entity.active = True
-            entity.email_verified = True
-        else:
-            entity.active = False
-            entity.email_verified = False
-        
-        # Save user
-        model = EntityToModelMapper.user(entity)
-        saved_model = await self.repository.create(model)
-        user_id = UUID(bytes=saved_model.id)
-        user_id_bytes = saved_model.id
-        
-        # Save password history
-        await self.password_history_service.add_password_hash_to_history(
-            user_id=user_id,
-            hashed_password=entity.password
-        )
-        
-        # ========== Create Documents ==========
-        async def _create_document(doc_dto, user_id_bytes, legal_rep_id_bytes=None):
-            doc_entity = DtoToEntityMapper.document(doc_dto)
-            doc_entity.user_id = UUID(bytes=user_id_bytes)
-            if legal_rep_id_bytes:
-                doc_entity.legal_representative_id = UUID(bytes=legal_rep_id_bytes)
-            doc_model = EntityToModelMapper.document(doc_entity)
-            return await self.document_repo.create(doc_model)
-        
-        saved_doc_front = await _create_document(dto.id_document_front, user_id_bytes)
-        saved_doc_back = await _create_document(dto.id_document_back, user_id_bytes)
-        saved_photo = await _create_document(dto.user_photo, user_id_bytes)
-        
-        if dto.health_certificate:
-            await _create_document(dto.health_certificate, user_id_bytes)
-        
-        # ========== Create Document Validations ==========
-        if is_admin_or_secretary:
-            await self._auto_approve_documents([
-                saved_doc_front, saved_doc_back, saved_photo
-            ])
-        else:
-            await self._create_pending_validations([
-                saved_doc_front, saved_doc_back, saved_photo
-            ])
-        
-        # ========== Create Address ==========
-        address_entity = DtoToEntityMapper.address(dto.address)
-        address_entity.user_id = user_id
-        address_model = EntityToModelMapper.address(address_entity)
-        await self.address_repo.create(address_model)
-        
-        # ========== Create Legal Representatives ==========
-        async def _create_legal_representative(rep_dto, student_user_id_bytes):
-            rep_entity = DtoToEntityMapper.legal_representative(rep_dto)
-            rep_entity.user_id = UUID(bytes=student_user_id_bytes)
-            rep_model = EntityToModelMapper.legal_representative(rep_entity)
-            saved_rep = await self.legal_rep_repo.create(rep_model)
-            rep_id_bytes = saved_rep.id
+            # Minors must have legal representative (regardless of user type)
+            if is_minor and not dto.legal_representative_1:
+                raise ValueError("Menores de idade devem ter pelo menos 1 (um) representante legal")
             
-            await _create_document(rep_dto.id_document, user_id_bytes, rep_id_bytes)
-            await _create_document(rep_dto.student_registry_authorization, user_id_bytes, rep_id_bytes)
+            # Over 70 must have health certificate
+            if is_public and is_over_70 and not dto.health_certificate:
+                raise ValueError("Usuários com mais de 70 (setenta) anos precisam de atestados de saúde")
             
-            return saved_rep
-        
-        if dto.legal_representative_1:
-            await _create_legal_representative(dto.legal_representative_1, user_id_bytes)
-        
-        if dto.legal_representative_2:
-            await _create_legal_representative(dto.legal_representative_2, user_id_bytes)
-        
-        # ========== Return ViewModel ==========
-        saved_entity = ModelToEntityMapper.user(saved_model)
+            # ========== Create User ==========
+            entity = DtoToEntityMapper.user(dto)
+            
+            # Set user status based on creation path
+            if is_admin_or_secretary:
+                entity.active = True
+                entity.email_verified = True
+            else:
+                entity.active = False
+                entity.email_verified = False
+            
+            # Save user
+            model = EntityToModelMapper.user(entity)
+            saved_model = await self.repository.create(model)
+            user_id = UUID(bytes=saved_model.id)
+            user_id_bytes = saved_model.id
+            
+            # Save password history
+            await self.password_history_service.add_password_hash_to_history(
+                user_id=user_id,
+                hashed_password=entity.password
+            )
+            
+            # ========== Create Documents ==========
+            async def _create_document(doc_dto, user_id_bytes, legal_rep_id_bytes=None):
+                doc_entity = DtoToEntityMapper.document(doc_dto)
+                doc_entity.user_id = UUID(bytes=user_id_bytes)
+                if legal_rep_id_bytes:
+                    doc_entity.legal_representative_id = UUID(bytes=legal_rep_id_bytes)
+                doc_model = EntityToModelMapper.document(doc_entity)
+                return await self.document_repo.create(doc_model)
+            
+            saved_doc_front = await _create_document(dto.id_document_front, user_id_bytes)
+            saved_doc_back = await _create_document(dto.id_document_back, user_id_bytes)
+            saved_photo = await _create_document(dto.user_photo, user_id_bytes)
+            
+            if dto.health_certificate:
+                await _create_document(dto.health_certificate, user_id_bytes)
+            
+            # ========== Create Document Validations ==========
+            if is_admin_or_secretary:
+                await self._auto_approve_documents([
+                    saved_doc_front, saved_doc_back, saved_photo
+                ])
+            else:
+                await self._create_pending_validations([
+                    saved_doc_front, saved_doc_back, saved_photo
+                ])
+            
+            # ========== Create Address ==========
+            address_entity = DtoToEntityMapper.address(dto.address)
+            address_entity.user_id = user_id
+            address_model = EntityToModelMapper.address(address_entity)
+            await self.address_repo.create(address_model)
+            
+            # ========== Create Legal Representatives ==========
+            async def _create_legal_representative(rep_dto, student_user_id_bytes):
+                rep_entity = DtoToEntityMapper.legal_representative(rep_dto)
+                rep_entity.user_id = UUID(bytes=student_user_id_bytes)
+                rep_model = EntityToModelMapper.legal_representative(rep_entity)
+                saved_rep = await self.legal_rep_repo.create(rep_model)
+                rep_id_bytes = saved_rep.id
+                
+                await _create_document(rep_dto.id_document, user_id_bytes, rep_id_bytes)
+                await _create_document(rep_dto.student_registry_authorization, user_id_bytes, rep_id_bytes)
+                
+                return saved_rep
+            
+            if dto.legal_representative_1:
+                await _create_legal_representative(dto.legal_representative_1, user_id_bytes)
+            
+            if dto.legal_representative_2:
+                await _create_legal_representative(dto.legal_representative_2, user_id_bytes)
+            
+            # ========== Return ViewModel ==========
+            saved_entity = ModelToEntityMapper.user(saved_model)
 
-        return EntityToViewModelMapper.user(saved_entity)
+            return EntityToViewModelMapper.user(saved_entity)
+        except Exception as e:
+            await ApplicationLogger.log_error(e, reraise=True)
     
     async def update_user(self, user_id: UUID, dto: UserUpdateDTO) -> UserViewModel:
         """Update user with business validation"""
-        model = await self.repository.get_by_id(user_id)
-        if not model:
-            raise ValueError("User not found")
-        
-        # Check email uniqueness if being updated
-        if dto.email:
-            existing = await self.repository.get_by_email(dto.email)
-            if existing and existing.id != model.id:
-                raise ValueError("Email already registered")
-        
-        # Check cellphone uniqueness if being updated
-        if dto.cellphone_number:
-            existing = await self.repository.get_by_cellphone(dto.cellphone_number)
-            if existing and existing.id != model.id:
-                raise ValueError("Cellphone already registered")
-        
-        # Convert to entity and apply updates
-        entity = ModelToEntityMapper.user(model)
-        updated_entity = UpdateMapper.user(entity, dto)
-        
-        # Save changes
-        updated_model = EntityToModelMapper.user(updated_entity)
-        saved_model = await self.repository.update(updated_model)
-        
-        saved_entity = ModelToEntityMapper.user(saved_model)
-        return EntityToViewModelMapper.user(saved_entity)
+        try:
+            model = await self.repository.get_by_id(user_id)
+            if not model:
+                raise ValueError("User not found")
+            
+            # Check email uniqueness if being updated
+            if dto.email:
+                existing = await self.repository.get_by_email(dto.email)
+                if existing and existing.id != model.id:
+                    raise ValueError("Email already registered")
+            
+            # Check cellphone uniqueness if being updated
+            if dto.cellphone_number:
+                existing = await self.repository.get_by_cellphone(dto.cellphone_number)
+                if existing and existing.id != model.id:
+                    raise ValueError("Cellphone already registered")
+            
+            # Convert to entity and apply updates
+            entity = ModelToEntityMapper.user(model)
+            updated_entity = UpdateMapper.user(entity, dto)
+            
+            # Save changes
+            updated_model = EntityToModelMapper.user(updated_entity)
+            saved_model = await self.repository.update(updated_model)
+            
+            saved_entity = ModelToEntityMapper.user(saved_model)
+            return EntityToViewModelMapper.user(saved_entity)
+        except Exception as e:
+            await ApplicationLogger.log_error(e, reraise=True)
     
     async def authenticate(self, dto: UserLoginDTO) -> Optional[UserViewModel]:
         """Authenticate user with document and password"""
-        user = await self.repository.get_by_document(dto.document)
-        if not user:
-            return None
-        
-        if not user.active:
-            raise ValueError("User account is deactivated")
-        
-        if not self._verify_password(dto.password, user.password):
-            return None
-        
-        entity = ModelToEntityMapper.user(user)
-        return EntityToViewModelMapper.user(entity)
+        try:
+            user = await self.repository.get_by_document(dto.document)
+            if not user:
+                return None
+            
+            if not user.active:
+                raise ValueError("User account is deactivated")
+            
+            if not self._verify_password(dto.password, user.password):
+                return None
+            
+            entity = ModelToEntityMapper.user(user)
+            return EntityToViewModelMapper.user(entity)
+        except Exception as e:
+            await ApplicationLogger.log_error(e, reraise=True)
     
     async def change_password(self, user_id: UUID, dto: PasswordChangeDTO) -> bool:
         """Change user password with validation"""
-        user = await self.repository.get_by_id(user_id)
-        if not user:
-            raise ValueError("User not found")
-        
-        # Verify current password
-        if not self._verify_password(dto.current_password, user.password):
-            raise ValueError("Current password is incorrect")
-        
-        # Validate new password against history
-        validation = await self.password_history_service.validate_password_change(
-            user_id=user_id,
-            new_plain_password=dto.new_password,
-            history_check_count=5
-        )
-        
-        if not validation['valid']:
-            raise ValueError(validation['reason'])
-        
-        # Hash and update password
-        hashed_password = self._hash_password(dto.new_password)
-        success = await self.repository.update_password(user_id, hashed_password)
-        
-        if success:
-            # Add to password history
-            await self.password_history_service.add_password_hash_to_history(
+        try:
+            user = await self.repository.get_by_id(user_id)
+            if not user:
+                raise ValueError("User not found")
+            
+            # Verify current password
+            if not self._verify_password(dto.current_password, user.password):
+                raise ValueError("Current password is incorrect")
+            
+            # Validate new password against history
+            validation = await self.password_history_service.validate_password_change(
                 user_id=user_id,
-                hashed_password=hashed_password
+                new_plain_password=dto.new_password,
+                history_check_count=5
             )
-        
-        return success
+            
+            if not validation['valid']:
+                raise ValueError(validation['reason'])
+            
+            # Hash and update password
+            hashed_password = self._hash_password(dto.new_password)
+            success = await self.repository.update_password(user_id, hashed_password)
+            
+            if success:
+                # Add to password history
+                await self.password_history_service.add_password_hash_to_history(
+                    user_id=user_id,
+                    hashed_password=hashed_password
+                )
+            
+            return success
+        except Exception as e:
+            await ApplicationLogger.log_error(e, reraise=True)
     
     async def deactivate_user(
         self, 
@@ -272,29 +283,32 @@ class UserService(BaseService):
         user_ip_address: Optional[str] = None
     ) -> bool:
         """Deactivate user account"""
-        user = await self.repository.get_by_id(user_id)
-        if not user:
-            raise ValueError("User not found")
+        try:
+            user = await self.repository.get_by_id(user_id)
+            if not user:
+                raise ValueError("User not found")
+            
+            if not user.active:
+                raise ValueError("User already deactivated")
+            
+            result = await self.repository.deactivate(user_id)
+            
+            # Log activation change
+            if result and performed_by_user_id:
+                from src.data.repositories.log_user_activation_repository import LogUserActivationRepository
+                log_repo = LogUserActivationRepository(self.repository.session)
+                await log_repo.log_activation(
+                    deactivation_reason=reason,
+                    activated=False,
+                    user_id=user_id.bytes,
+                    performed_by_user_id=performed_by_user_id.bytes,
+                    performed_by_user_ip_address=user_ip_address or "unknown"
+                )
+            
+            return result
+        except Exception as e:
+            await ApplicationLogger.log_error(e, reraise=True)
         
-        if not user.active:
-            raise ValueError("User already deactivated")
-        
-        result = await self.repository.deactivate(user_id)
-        
-        # Log activation change
-        if result and performed_by_user_id:
-            from src.data.repositories.log_user_activation_repository import LogUserActivationRepository
-            log_repo = LogUserActivationRepository(self.repository.session)
-            await log_repo.log_activation(
-                deactivation_reason=reason,
-                activated=False,
-                user_id=user_id.bytes,
-                performed_by_user_id=performed_by_user_id.bytes,
-                performed_by_user_ip_address=user_ip_address or "unknown"
-            )
-        
-        return result
-    
     async def activate_user(
         self, 
         user_id: UUID,
@@ -302,28 +316,31 @@ class UserService(BaseService):
         user_ip_address: Optional[str] = None
     ) -> bool:
         """Activate user account"""
-        user = await self.repository.get_by_id(user_id)
-        if not user:
-            raise ValueError("User not found")
-        
-        if user.active:
-            raise ValueError("User already active")
-        
-        result = await self.repository.activate(user_id)
-        
-        # Log activation change
-        if result and performed_by_user_id:
-            from src.data.repositories.log_user_activation_repository import LogUserActivationRepository
-            log_repo = LogUserActivationRepository(self.repository.session)
-            await log_repo.log_activation(
-                deactivation_reason=None,
-                activated=True,
-                user_id=user_id.bytes,
-                performed_by_user_id=performed_by_user_id.bytes,
-                performed_by_user_ip_address=user_ip_address or "unknown"
-            )
-        
-        return result
+        try:
+            user = await self.repository.get_by_id(user_id)
+            if not user:
+                raise ValueError("User not found")
+            
+            if user.active:
+                raise ValueError("User already active")
+            
+            result = await self.repository.activate(user_id)
+            
+            # Log activation change
+            if result and performed_by_user_id:
+                from src.data.repositories.log_user_activation_repository import LogUserActivationRepository
+                log_repo = LogUserActivationRepository(self.repository.session)
+                await log_repo.log_activation(
+                    deactivation_reason=None,
+                    activated=True,
+                    user_id=user_id.bytes,
+                    performed_by_user_id=performed_by_user_id.bytes,
+                    performed_by_user_ip_address=user_ip_address or "unknown"
+                )
+            
+            return result
+        except Exception as e:
+            await ApplicationLogger.log_error(e, reraise=True)
     
     async def find_users(
         self,
@@ -337,34 +354,37 @@ class UserService(BaseService):
         page_size: int = 10
     ) -> dict:
         """Find users with filters and pagination"""
-        skip = (page - 1) * page_size
-        
-        models = await self.repository.find_by_filters(
-            name=name,
-            document=document,
-            email=email,
-            phoneNumber=phoneNumber,
-            user_type_id=user_type_id,
-            active=active,
-            skip=skip,
-            limit=page_size
-        )
-        
-        total = await self.repository.count({
-            'active': active,
-            'user_type_id': user_type_id
-        })
-        
-        entities = [ModelToEntityMapper.user(model) for model in models]
-        view_models = [EntityToViewModelMapper.user(entity) for entity in entities]
-        
-        return {
-            'items': view_models,
-            'total': total,
-            'page': page,
-            'page_size': page_size,
-            'total_pages': (total + page_size - 1)
-        }
+        try:
+            skip = (page - 1) * page_size
+            
+            models = await self.repository.find_by_filters(
+                name=name,
+                document=document,
+                email=email,
+                phoneNumber=phoneNumber,
+                user_type_id=user_type_id,
+                active=active,
+                skip=skip,
+                limit=page_size
+            )
+            
+            total = await self.repository.count({
+                'active': active,
+                'user_type_id': user_type_id
+            })
+            
+            entities = [ModelToEntityMapper.user(model) for model in models]
+            view_models = [EntityToViewModelMapper.user(entity) for entity in entities]
+            
+            return {
+                'items': view_models,
+                'total': total,
+                'page': page,
+                'page_size': page_size,
+                'total_pages': (total + page_size - 1)
+            }
+        except Exception as e:
+            await ApplicationLogger.log_error(e, reraise=True)
     
     async def find_students(
         self,
@@ -377,35 +397,38 @@ class UserService(BaseService):
         page_size: int = 10
     ) -> dict:
         """Find students with all related data"""
-        skip = (page - 1) * page_size
-        
-        # Get students
-        models = await self.repository.find_by_filters(
-            name=name,
-            document=document,
-            email=email,
-            phoneNumber=phoneNumber,
-            user_type_id=5,
-            active=active,
-            skip=skip,
-            limit=page_size
-        )
-        
-        total = await self.repository.count({
-            'active': active,
-            'user_type_id': 5
-        })
-        
-        # Build student items with all related data
-        items = []
-        for model in models:
-            user_id = UUID(bytes=model.id)
-            student = await self._build_student_view_model(user_id, model)
-            items.append(student)
-        
-        return {
-            'items': items
-        }
+        try:
+            skip = (page - 1) * page_size
+            
+            # Get students
+            models = await self.repository.find_by_filters(
+                name=name,
+                document=document,
+                email=email,
+                phoneNumber=phoneNumber,
+                user_type_id=5,
+                active=active,
+                skip=skip,
+                limit=page_size
+            )
+            
+            total = await self.repository.count({
+                'active': active,
+                'user_type_id': 5
+            })
+            
+            # Build student items with all related data
+            items = []
+            for model in models:
+                user_id = UUID(bytes=model.id)
+                student = await self._build_student_view_model(user_id, model)
+                items.append(student)
+            
+            return {
+                'items': items
+            }
+        except Exception as e:
+            await ApplicationLogger.log_error(e, reraise=True)
     
     def _hash_password(self, password: str) -> str:
         """Hash password using bcrypt"""

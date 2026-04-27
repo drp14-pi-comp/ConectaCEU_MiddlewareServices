@@ -1,6 +1,7 @@
 """Generic reference service for all reference entities"""
 from typing import List, Any
 
+from src.application.logging.application_logger import ApplicationLogger
 from src.data.repositories.base.base_repository import BaseRepository
 from src.application.services.base_service import BaseService
 
@@ -13,13 +14,16 @@ class ReferenceService(BaseService):
         self.entity_name = entity_name
     
     async def get_all_active(self) -> List[Any]:
-        models = await self.repository.get_all()
-        from src.application.mappers.model_to_entity_mapper import ModelToEntityMapper
-        
-        mapper_method = self._get_mapper_method(ModelToEntityMapper)
-        if mapper_method:
-            return [mapper_method(model) for model in models]
-        return []
+        try:
+            models = await self.repository.get_all()
+            from src.application.mappers.model_to_entity_mapper import ModelToEntityMapper
+            
+            mapper_method = self._get_mapper_method(ModelToEntityMapper)
+            if mapper_method:
+                return [mapper_method(model) for model in models]
+            return []
+        except Exception as e:
+            await ApplicationLogger.log_error(e, reraise=True)
     
     def _get_mapper_method(self, mapper):
         """Get the mapper method by converting entity name to snake_case"""

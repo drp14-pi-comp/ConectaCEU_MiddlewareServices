@@ -2,6 +2,7 @@
 from typing import List
 from uuid import UUID
 
+from src.application.logging.application_logger import ApplicationLogger
 from src.data.repositories.legal_representative_repository import LegalRepresentativeRepository
 from src.application.services.base_service import BaseService
 from src.application.mappers.dto_to_entity_mapper import DtoToEntityMapper
@@ -21,15 +22,18 @@ class LegalRepresentativeService(BaseService):
     
     async def create_representative(self, dto: LegalRepresentativeCreateDTO) -> LegalRepresentativeViewModel:
         """Create a new legal representative"""
-        # Check if document already exists
-        if await self.repository.document_exists(dto.document):
-            raise ValueError("Document already registered")
-        
-        entity = DtoToEntityMapper.legal_representative(dto)
-        model = EntityToModelMapper.legal_representative(entity)
-        saved_model = await self.repository.create(model)
-        saved_entity = ModelToEntityMapper.legal_representative(saved_model)
-        return EntityToViewModelMapper.legal_representative(saved_entity)
+        try:
+            # Check if document already exists
+            if await self.repository.document_exists(dto.document):
+                raise ValueError("Document already registered")
+            
+            entity = DtoToEntityMapper.legal_representative(dto)
+            model = EntityToModelMapper.legal_representative(entity)
+            saved_model = await self.repository.create(model)
+            saved_entity = ModelToEntityMapper.legal_representative(saved_model)
+            return EntityToViewModelMapper.legal_representative(saved_entity)
+        except Exception as e:
+            await ApplicationLogger.log_error(e, reraise=True)
     
     async def update_representative(
         self,
@@ -37,25 +41,31 @@ class LegalRepresentativeService(BaseService):
         dto: LegalRepresentativeUpdateDTO
     ) -> LegalRepresentativeViewModel:
         """Update a legal representative"""
-        model = await self.repository.get_by_id(representative_id)
-        if not model:
-            raise ValueError("Representative not found")
-        
-        # Check document uniqueness if being updated
-        if dto.document:
-            exists = await self.repository.document_exists(dto.document, exclude_id=representative_id)
-            if exists:
-                raise ValueError("Document already registered")
-        
-        entity = ModelToEntityMapper.legal_representative(model)
-        updated_entity = UpdateMapper.legal_representative(entity, dto)
-        updated_model = EntityToModelMapper.legal_representative(updated_entity)
-        saved_model = await self.repository.update(updated_model)
-        saved_entity = ModelToEntityMapper.legal_representative(saved_model)
-        return EntityToViewModelMapper.legal_representative(saved_entity)
+        try:
+            model = await self.repository.get_by_id(representative_id)
+            if not model:
+                raise ValueError("Representative not found")
+            
+            # Check document uniqueness if being updated
+            if dto.document:
+                exists = await self.repository.document_exists(dto.document, exclude_id=representative_id)
+                if exists:
+                    raise ValueError("Document already registered")
+            
+            entity = ModelToEntityMapper.legal_representative(model)
+            updated_entity = UpdateMapper.legal_representative(entity, dto)
+            updated_model = EntityToModelMapper.legal_representative(updated_entity)
+            saved_model = await self.repository.update(updated_model)
+            saved_entity = ModelToEntityMapper.legal_representative(saved_model)
+            return EntityToViewModelMapper.legal_representative(saved_entity)
+        except Exception as e:
+            await ApplicationLogger.log_error(e, reraise=True)
     
     async def get_user_representatives(self, user_id: UUID) -> List[LegalRepresentativeViewModel]:
         """Get all legal representatives for a user"""
-        models = await self.repository.get_by_user_id(user_id)
-        entities = [ModelToEntityMapper.legal_representative(model) for model in models]
-        return [EntityToViewModelMapper.legal_representative(entity) for entity in entities]
+        try:
+            models = await self.repository.get_by_user_id(user_id)
+            entities = [ModelToEntityMapper.legal_representative(model) for model in models]
+            return [EntityToViewModelMapper.legal_representative(entity) for entity in entities]
+        except Exception as e:
+            await ApplicationLogger.log_error(e, reraise=True)

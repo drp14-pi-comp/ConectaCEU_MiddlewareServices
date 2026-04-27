@@ -3,6 +3,7 @@ from typing import List
 from uuid import UUID
 import bcrypt
 
+from src.application.logging.application_logger import ApplicationLogger
 from src.data.repositories.user_password_history_repository import UserPasswordHistoryRepository
 from src.application.services.base_service import BaseService
 from src.application.mappers.model_to_entity_mapper import ModelToEntityMapper
@@ -24,15 +25,21 @@ class UserPasswordHistoryService(BaseService):
         limit: int = 10
     ) -> List[UserPasswordHistoryViewModel]:
         """Get password history for a user"""
-        models = await self.repository.get_by_user_id(user_id, skip, limit)
-        entities = [ModelToEntityMapper.user_password_history(model) for model in models]
-        return [EntityToViewModelMapper.user_password_history(entity) for entity in entities]
+        try:
+            models = await self.repository.get_by_user_id(user_id, skip, limit)
+            entities = [ModelToEntityMapper.user_password_history(model) for model in models]
+            return [EntityToViewModelMapper.user_password_history(entity) for entity in entities]
+        except Exception as e:
+            await ApplicationLogger.log_error(e, reraise=True)
     
     async def get_recent_passwords(self, user_id: UUID, limit: int = 5) -> List[UserPasswordHistoryViewModel]:
         """Get recent password history for a user"""
-        models = await self.repository.get_recent_by_user_id(user_id, limit)
-        entities = [ModelToEntityMapper.user_password_history(model) for model in models]
-        return [EntityToViewModelMapper.user_password_history(entity) for entity in entities]
+        try:
+            models = await self.repository.get_recent_by_user_id(user_id, limit)
+            entities = [ModelToEntityMapper.user_password_history(model) for model in models]
+            return [EntityToViewModelMapper.user_password_history(entity) for entity in entities]
+        except Exception as e:
+            await ApplicationLogger.log_error(e, reraise=True)
     
     async def is_password_reused(
         self,
@@ -51,15 +58,18 @@ class UserPasswordHistoryService(BaseService):
         Returns:
             True if password was recently used, False otherwise
         """
-        # Get recent password history
-        recent_history = await self.repository.get_recent_by_user_id(user_id, check_count)
-        
-        # Check each historical password against the plain password
-        for history_entry in recent_history:
-            if self._verify_password(plain_password, history_entry.password):
-                return True
-        
-        return False
+        try:
+            # Get recent password history
+            recent_history = await self.repository.get_recent_by_user_id(user_id, check_count)
+            
+            # Check each historical password against the plain password
+            for history_entry in recent_history:
+                if self._verify_password(plain_password, history_entry.password):
+                    return True
+            
+            return False
+        except Exception as e:
+            await ApplicationLogger.log_error(e, reraise=True)
     
     async def is_password_hash_reused(
         self,
@@ -79,7 +89,10 @@ class UserPasswordHistoryService(BaseService):
         Returns:
             True if hash was recently used, False otherwise
         """
-        return await self.repository.is_password_reused(user_id, password_hash, check_count)
+        try:
+            return await self.repository.is_password_reused(user_id, password_hash, check_count)
+        except Exception as e:
+            await ApplicationLogger.log_error(e, reraise=True)
     
     async def add_password_to_history(
         self,
@@ -96,29 +109,32 @@ class UserPasswordHistoryService(BaseService):
         Returns:
             The created password history entry
         """
-        # Hash the password before storing
-        hashed_password = self._hash_password(plain_password)
-        
-        # Create password history entry
-        from uuid import uuid4
-        from src.domain.entities.user_password_history import UserPasswordHistory
-        from src.application.mappers.entity_to_model_mapper import EntityToModelMapper
-        
-        entity = UserPasswordHistory(
-            id=uuid4(),
-            created_at=DateTimeHandler.now(),
-            password=hashed_password,
-            user_id=user_id
-        )
-        
-        model = EntityToModelMapper.user_password_history(entity)
-        saved_model = await self.repository.create(model)
-        saved_entity = ModelToEntityMapper.user_password_history(saved_model)
-        
-        # Cleanup old passwords (keep only last 10)
-        await self.cleanup_old_passwords(user_id, max_history=10)
-        
-        return EntityToViewModelMapper.user_password_history(saved_entity)
+        try:
+            # Hash the password before storing
+            hashed_password = self._hash_password(plain_password)
+            
+            # Create password history entry
+            from uuid import uuid4
+            from src.domain.entities.user_password_history import UserPasswordHistory
+            from src.application.mappers.entity_to_model_mapper import EntityToModelMapper
+            
+            entity = UserPasswordHistory(
+                id=uuid4(),
+                created_at=DateTimeHandler.now(),
+                password=hashed_password,
+                user_id=user_id
+            )
+            
+            model = EntityToModelMapper.user_password_history(entity)
+            saved_model = await self.repository.create(model)
+            saved_entity = ModelToEntityMapper.user_password_history(saved_model)
+            
+            # Cleanup old passwords (keep only last 10)
+            await self.cleanup_old_passwords(user_id, max_history=10)
+            
+            return EntityToViewModelMapper.user_password_history(saved_entity)
+        except Exception as e:
+            await ApplicationLogger.log_error(e, reraise=True)
     
     async def add_password_hash_to_history(
         self,
@@ -136,25 +152,28 @@ class UserPasswordHistoryService(BaseService):
         Returns:
             The created password history entry
         """
-        from uuid import uuid4
-        from src.domain.entities.user_password_history import UserPasswordHistory
-        from src.application.mappers.entity_to_model_mapper import EntityToModelMapper
-        
-        entity = UserPasswordHistory(
-            id=uuid4(),
-            created_at=DateTimeHandler.now(),
-            password=hashed_password,
-            user_id=user_id
-        )
-        
-        model = EntityToModelMapper.user_password_history(entity)
-        saved_model = await self.repository.create(model)
-        saved_entity = ModelToEntityMapper.user_password_history(saved_model)
-        
-        # Cleanup old passwords (keep only last 10)
-        await self.cleanup_old_passwords(user_id, max_history=10)
-        
-        return EntityToViewModelMapper.user_password_history(saved_entity)
+        try:
+            from uuid import uuid4
+            from src.domain.entities.user_password_history import UserPasswordHistory
+            from src.application.mappers.entity_to_model_mapper import EntityToModelMapper
+            
+            entity = UserPasswordHistory(
+                id=uuid4(),
+                created_at=DateTimeHandler.now(),
+                password=hashed_password,
+                user_id=user_id
+            )
+            
+            model = EntityToModelMapper.user_password_history(entity)
+            saved_model = await self.repository.create(model)
+            saved_entity = ModelToEntityMapper.user_password_history(saved_model)
+            
+            # Cleanup old passwords (keep only last 10)
+            await self.cleanup_old_passwords(user_id, max_history=10)
+            
+            return EntityToViewModelMapper.user_password_history(saved_entity)
+        except Exception as e:
+            await ApplicationLogger.log_error(e, reraise=True)
     
     async def validate_password_change(
         self,
@@ -173,20 +192,23 @@ class UserPasswordHistoryService(BaseService):
         Returns:
             Dict with validation results: {'valid': bool, 'reason': str}
         """
-        # Check minimum length
-        if len(new_plain_password) < 8:
-            return {'valid': False, 'reason': 'Password must be at least 8 characters'}
-        
-        # Check maximum length
-        if len(new_plain_password) > 100:
-            return {'valid': False, 'reason': 'Password must be at most 100 characters'}
-        
-        # Check for password reuse
-        is_reused = await self.is_password_reused(user_id, new_plain_password, history_check_count)
-        if is_reused:
-            return {'valid': False, 'reason': f'Password was used in the last {history_check_count} passwords'}
-        
-        return {'valid': True, 'reason': 'Password is valid'}
+        try:
+            # Check minimum length
+            if len(new_plain_password) < 8:
+                return {'valid': False, 'reason': 'Password must be at least 8 characters'}
+            
+            # Check maximum length
+            if len(new_plain_password) > 100:
+                return {'valid': False, 'reason': 'Password must be at most 100 characters'}
+            
+            # Check for password reuse
+            is_reused = await self.is_password_reused(user_id, new_plain_password, history_check_count)
+            if is_reused:
+                return {'valid': False, 'reason': f'Password was used in the last {history_check_count} passwords'}
+            
+            return {'valid': True, 'reason': 'Password is valid'}
+        except Exception as e:
+            await ApplicationLogger.log_error(e, reraise=True)
     
     async def cleanup_old_passwords(self, user_id: UUID, max_history: int = 10) -> int:
         """
@@ -199,11 +221,17 @@ class UserPasswordHistoryService(BaseService):
         Returns:
             Number of deleted entries
         """
-        return await self.repository.cleanup_old_passwords(user_id, max_history)
+        try:
+            return await self.repository.cleanup_old_passwords(user_id, max_history)
+        except Exception as e:
+            await ApplicationLogger.log_error(e, reraise=True)
     
     async def get_password_history_count(self, user_id: UUID) -> int:
         """Get count of password history entries for a user"""
-        return await self.repository.count_by_user_id(user_id)
+        try:
+            return await self.repository.count_by_user_id(user_id)
+        except Exception as e:
+            await ApplicationLogger.log_error(e, reraise=True)
     
     async def clear_password_history(self, user_id: UUID) -> int:
         """
@@ -216,9 +244,46 @@ class UserPasswordHistoryService(BaseService):
         Returns:
             Number of deleted entries
         """
-        count = await self.repository.count_by_user_id(user_id)
-        await self.cleanup_old_passwords(user_id, max_history=0)
-        return count
+        try:
+            count = await self.repository.count_by_user_id(user_id)
+            await self.cleanup_old_passwords(user_id, max_history=0)
+            return count
+        except Exception as e:
+            await ApplicationLogger.log_error(e, reraise=True)
+    
+    async def get_password_age_summary(self, user_id: UUID) -> dict:
+        """
+        Get password age summary for a user.
+        
+        Args:
+            user_id: The user's ID
+            
+        Returns:
+            Dict with password age information
+        """
+        try:
+            recent = await self.repository.get_recent_by_user_id(user_id, limit=1)
+            
+            if not recent:
+                return {
+                    'has_history': False,
+                    'current_password_age_days': None,
+                    'total_historical_passwords': 0
+                }
+            
+            current_password = recent[0]
+            age = (DateTimeHandler.now() - current_password.created_at).days
+            
+            total = await self.repository.count_by_user_id(user_id)
+            
+            return {
+                'has_history': True,
+                'current_password_age_days': age,
+                'total_historical_passwords': total,
+                'last_changed': current_password.created_at
+            }
+        except Exception as e:
+            await ApplicationLogger.log_error(e, reraise=True)
     
     def _hash_password(self, plain_password: str) -> str:
         """
@@ -251,34 +316,3 @@ class UserPasswordHistoryService(BaseService):
             )
         except Exception:
             return False
-    
-    async def get_password_age_summary(self, user_id: UUID) -> dict:
-        """
-        Get password age summary for a user.
-        
-        Args:
-            user_id: The user's ID
-            
-        Returns:
-            Dict with password age information
-        """
-        recent = await self.repository.get_recent_by_user_id(user_id, limit=1)
-        
-        if not recent:
-            return {
-                'has_history': False,
-                'current_password_age_days': None,
-                'total_historical_passwords': 0
-            }
-        
-        current_password = recent[0]
-        age = (DateTimeHandler.now() - current_password.created_at).days
-        
-        total = await self.repository.count_by_user_id(user_id)
-        
-        return {
-            'has_history': True,
-            'current_password_age_days': age,
-            'total_historical_passwords': total,
-            'last_changed': current_password.created_at
-        }
