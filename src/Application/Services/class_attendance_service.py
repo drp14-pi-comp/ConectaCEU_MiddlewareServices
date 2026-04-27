@@ -1,15 +1,17 @@
 """Class attendance service - business logic for attendance"""
-from typing import List
+from datetime import date, datetime
+from typing import List, Optional
 from uuid import UUID, uuid4
 
 from src.data.repositories.class_attendance_repository import ClassAttendanceRepository
+from src.data.repositories.class_repository import ClassRepository
+from src.data.repositories.course_component_repository import CourseComponentRepository
 from src.data.repositories.user_class_repository import UserClassRepository
 from src.application.services.base_service import BaseService
-from src.application.mappers.dto_to_entity_mapper import DtoToEntityMapper
 from src.application.mappers.entity_to_model_mapper import EntityToModelMapper
 from src.application.mappers.model_to_entity_mapper import ModelToEntityMapper
 from src.application.mappers.entity_to_view_model_mapper import EntityToViewModelMapper
-from src.domain.dtos.class_attendance_dto import ClassAttendanceCreateDTO, BulkClassAttendanceCreateDTO
+from src.domain.dtos.class_attendance_dto import BulkClassAttendanceCreateDTO
 from src.domain.entities.class_attendance import ClassAttendance
 from src.infrastructure.handlers.datetime_handler import DateTimeHandler
 
@@ -19,11 +21,15 @@ class ClassAttendanceService(BaseService):
     def __init__(
         self, 
         repository: ClassAttendanceRepository,
-        user_class_repo: UserClassRepository
+        user_class_repo: UserClassRepository,
+        class_repo: ClassRepository,
+        component_repo: CourseComponentRepository
     ):
         super().__init__(repository)
         self.repository = repository
         self.user_class_repo = user_class_repo
+        self.class_repo = class_repo
+        self.component_repo = component_repo
     
     async def initialize_attendance_for_session(self, session_id: UUID) -> List[dict]:
         """Create attendance records for all enrolled students"""
@@ -128,4 +134,92 @@ class ClassAttendanceService(BaseService):
             'attendance_id': attendance_id,
             'attended': attended,
             'updated_at': DateTimeHandler.now()
+        }
+    
+    async def get_user_sessions(
+        self,
+        user_id: UUID,
+        date: Optional[date] = None,
+        attended: Optional[bool] = None,
+        page: int = 1,
+        page_size: int = 10
+    ) -> dict:
+        """
+        Get all sessions for a user with optional filters.
+        Shows future sessions too (with attended = None).
+        
+        Args:
+            user_id: User to get sessions for
+            date: Optional filter by specific date
+            attended: Optional filter by attendance status (None = all, including future)
+            page: Page number
+            page_size: Items per page
+        
+        Returns:
+            Dict with paginated session list
+        """
+        from src.data.repositories.class_session_repository import ClassSessionRepository
+        
+        session_repo = ClassSessionRepository(self.repository.session)
+        
+        # Get all enrollments for the user
+        enrollments = await self.user_class_repo.get_active_by_user_id(user_id)
+        all_sessions = []
+        
+        for enrollment in enrollments:
+            class_id = UUID(bytes=enrollment.class_id)
+            
+            # Get all sessions for this class
+            if date:
+                # Filter by specific date
+                class_sessions = await session_repo.get_by_date_range(
+                    class_id,
+                    datetime.combine(date, datetime.min.time()),
+                    datetime.combine(date, datetime.max.time())
+                )
+            else:
+                # Get all sessions
+                class_sessions = await session_repo.get_by_class_id(class_id)
+            
+            for session in class_sessions:
+                session_id = UUID(bytes=session.id)
+                
+                # Get attendance for this session
+                attendance = await self.repository.get_by_user_and_session(user_id, session_id)
+                
+                # Determine attendance status
+                is_past = session.date < DateTimeHandler.now()
+                attendance_status = None  # Default for future sessions
+                
+                if attendance:
+                    attendance_status = attendance.attended
+                elif is_past:
+                    attendance_status = False  # Past session without attendance = absent
+                
+                # Apply attendance filter
+                if attended is not None:
+                    if attended and attendance_status is not True:
+                        continue
+                    if not attended and attendance_status is not False:
+                        continue
+                
+                all_sessions.append({
+                    'session_id': session_id,
+                    'date': session.date,
+                    'class_id': class_id,
+                    'attended': attendance_status,
+                    'is_past': is_past,
+                    'is_future': not is_past,
+                    'attendance_id': UUID(bytes=attendance.id) if attendance else None
+                })
+        
+        # Sort by date
+        all_sessions.sort(key=lambda s: s['date'], reverse=True)
+        
+        # Paginate
+        skip = (page - 1) * page_size
+        items = all_sessions[skip:skip + page_size]
+        
+        return {
+            'items': items,
         }

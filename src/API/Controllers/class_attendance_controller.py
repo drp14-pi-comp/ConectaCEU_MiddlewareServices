@@ -1,6 +1,8 @@
 """Class attendance controller"""
+from datetime import date
+from typing import Optional
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from src.application.services.class_attendance_service import ClassAttendanceService
@@ -67,3 +69,27 @@ async def mark_single_attendance(
         return await service.mark_single_attendance(attendance_id, attended)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    
+@router.get("/user/{user_id}/sessions")
+async def get_user_sessions(
+    user_id: UUID,
+    date: Optional[date] = Query(None, description="Filter by specific date"),
+    attended: Optional[bool] = Query(None, description="Filter by attendance status"),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(10, ge=1, le=100),
+    service: ClassAttendanceService = Depends(get_attendance_service)
+):
+    """
+    Get all sessions for a user with filters.
+    
+    - Shows past sessions with attendance status
+    - Shows future sessions with attendance = null
+    - Filter by date and/or attendance status
+    """
+    return await service.get_user_sessions(
+        user_id=user_id,
+        date=date,
+        attended=attended,
+        page=page,
+        page_size=page_size
+    )
