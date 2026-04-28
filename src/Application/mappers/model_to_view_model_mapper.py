@@ -3,6 +3,7 @@ from src.application.mappers.model_to_entity_mapper import ModelToEntityMapper
 from src.application.mappers.entity_to_view_model_mapper import EntityToViewModelMapper
 
 # Models
+from src.data.models.legal_representative_degree_model import LegalRepresentativeDegreeModel
 from src.data.models.user_sex_type_model import UserSexTypeModel
 from src.data.models.user_gender_type_model import UserGenderTypeModel
 from src.data.models.user_type_model import UserTypeModel
@@ -12,6 +13,7 @@ from src.data.models.shift_type_model import ShiftTypeModel
 from src.data.models.report_type_model import ReportTypeModel
 
 # View models
+from src.domain.view_models.legal_representative_degree_view_model import LegalRepresentativeDegreeViewModel
 from src.domain.view_models.user_sex_type_view_model import UserSexTypeViewModel
 from src.domain.view_models.user_gender_type_view_model import UserGenderTypeViewModel
 from src.domain.view_models.user_type_view_model import UserTypeViewModel
@@ -60,6 +62,18 @@ class ModelToViewModelMapper:
     def user_types(models: list[UserTypeModel]) -> list[UserTypeViewModel]:
         """Convert multiple UserType models"""
         return [ModelToViewModelMapper.user_type(m) for m in models]
+    
+    # ========== Legal Representative Degree ==========
+    @staticmethod
+    def legal_representative_degree(model) -> LegalRepresentativeDegreeViewModel:
+        """Convert LegalRepresentativeDegree Model → ViewModel"""
+        entity = ModelToEntityMapper.legal_representative_degree(model)
+        return EntityToViewModelMapper.legal_representative_degree(entity)
+    
+    @staticmethod
+    def legal_representative_degrees(models: list[LegalRepresentativeDegreeModel]) -> list[LegalRepresentativeDegreeViewModel]:
+        """Convert LegalRepresentativeDegree Model → ViewModel"""
+        return [ModelToViewModelMapper.legal_representative_degree(m) for m in models]
     
     # ========== Document Type ==========
     @staticmethod
