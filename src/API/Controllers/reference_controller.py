@@ -11,11 +11,17 @@ from src.data.repositories.document_validation_status_type_repository import Doc
 from src.data.repositories.shift_type_repository import ShiftTypeRepository
 from src.data.repositories.report_type_repository import ReportTypeRepository
 from src.data.db_context.database import get_db
+from src.api.dependencies.auth_dependencies import get_current_active_user
 from src.application.mappers.model_to_view_model_mapper import ModelToViewModelMapper
 
-router = APIRouter(prefix="/reference", tags=["Reference"])
+router = APIRouter(
+    prefix="/reference",
+    tags=["Reference"],
+    dependencies=[Depends(get_current_active_user)]
+)
 
-# Sex Types
+
+# ========== Sex Types ==========
 @router.get("/sex-types")
 async def get_sex_types(db: Session = Depends(get_db)):
     """Get all sex types"""
@@ -23,7 +29,8 @@ async def get_sex_types(db: Session = Depends(get_db)):
     models = await repo.get_all()
     return [ModelToViewModelMapper.user_sex_type(m) for m in models]
 
-# Gender Types
+
+# ========== Gender Types ==========
 @router.get("/gender-types")
 async def get_gender_types(db: Session = Depends(get_db)):
     """Get all gender types"""
@@ -31,7 +38,8 @@ async def get_gender_types(db: Session = Depends(get_db)):
     models = await repo.get_all()
     return [ModelToViewModelMapper.user_gender_type(m) for m in models]
 
-# User Types
+
+# ========== User Types ==========
 @router.get("/user-types")
 async def get_user_types(db: Session = Depends(get_db)):
     """Get all user types"""
@@ -39,15 +47,17 @@ async def get_user_types(db: Session = Depends(get_db)):
     models = await repo.get_all()
     return [ModelToViewModelMapper.user_type(m) for m in models]
 
-# Legal representative degrees
+
+# ========== Legal Representative Degrees ==========
 @router.get("/legal-representative-degrees")
-async def get_user_types(db: Session = Depends(get_db)):
+async def get_legal_representative_degrees(db: Session = Depends(get_db)):
     """Get all legal representative degrees"""
     repo = LegalRepresentativeDegreeRepository(db)
     models = await repo.get_all()
-    return [ModelToViewModelMapper.user_type(m) for m in models]
+    return [ModelToViewModelMapper.legal_representative_degree(m) for m in models]
 
-# Document Types
+
+# ========== Document Types ==========
 @router.get("/document-types")
 async def get_document_types(db: Session = Depends(get_db)):
     """Get all document types"""
@@ -55,7 +65,8 @@ async def get_document_types(db: Session = Depends(get_db)):
     models = await repo.get_all()
     return [ModelToViewModelMapper.document_type(m) for m in models]
 
-# Validation Status Types
+
+# ========== Validation Status Types ==========
 @router.get("/validation-status-types")
 async def get_validation_status_types(db: Session = Depends(get_db)):
     """Get all validation status types"""
@@ -63,7 +74,8 @@ async def get_validation_status_types(db: Session = Depends(get_db)):
     models = await repo.get_all()
     return [ModelToViewModelMapper.document_validation_status_type(m) for m in models]
 
-# Shift Types
+
+# ========== Shift Types ==========
 @router.get("/shift-types")
 async def get_shift_types(db: Session = Depends(get_db)):
     """Get all shift types"""
@@ -71,7 +83,8 @@ async def get_shift_types(db: Session = Depends(get_db)):
     models = await repo.get_all()
     return [ModelToViewModelMapper.shift_type(m) for m in models]
 
-# Report Types
+
+# ========== Report Types ==========
 @router.get("/report-types")
 async def get_report_types(db: Session = Depends(get_db)):
     """Get all report types"""
