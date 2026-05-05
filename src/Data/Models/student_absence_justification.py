@@ -6,7 +6,7 @@ from src.data.db_context.base import UuidPkBaseModel
 class StudentAbsenceJustificationModel(UuidPkBaseModel):
     __tablename__ = "student_absence_justification"
 
-    class_attendance_id = Column(BINARY(16), ForeignKey('attendance.id'), nullable=False)
+    class_attendance_id = Column(BINARY(16), ForeignKey('class_attendance.id'), nullable=False)
     document_id = Column(BINARY(16), ForeignKey('document.id'), nullable=True)
 
     def get_uuid(self):

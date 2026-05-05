@@ -4,7 +4,7 @@ from sqlalchemy.dialects.mysql import BINARY
 from src.data.db_context.base import UuidPkUpdatableBaseModel
 
 class ClassAttendanceModel(UuidPkUpdatableBaseModel):
-    __tablename__ = "attendance"
+    __tablename__ = "class_attendance"
     
     attended = Column(Boolean, nullable=False, default=False)
     
