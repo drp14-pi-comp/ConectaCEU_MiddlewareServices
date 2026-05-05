@@ -9,7 +9,7 @@ from src.data.models.legal_representative_degree_model import LegalRepresentativ
 from src.data.models.profiles_to_exclude_model import ProfilesToExcludeModel
 from src.data.models.report_type_model import ReportTypeModel
 from src.data.models.shift_type_model import ShiftTypeModel
-from src.data.models.student_absence_justification import StudentAbsenceJustificationModel
+from src.data.models.student_absence_justification_model import StudentAbsenceJustificationModel
 from src.data.models.user_gender_type_model import UserGenderTypeModel
 from src.data.models.user_password_history_model import UserPasswordHistoryModel
 from src.data.models.user_sex_type_model import UserSexTypeModel

@@ -2,7 +2,7 @@ from typing import Optional, List
 from uuid import UUID
 from sqlalchemy.orm import Session
 from sqlalchemy import select
-from src.data.models.student_absence_justification import StudentAbsenceJustificationModel
+from src.data.models.student_absence_justification_model import StudentAbsenceJustificationModel
 from src.data.repositories.base.base_repository import BaseRepository
 
 class StudentAbsenceJustificationRepository(BaseRepository):
