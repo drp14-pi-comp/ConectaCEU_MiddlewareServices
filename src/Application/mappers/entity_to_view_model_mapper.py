@@ -1,5 +1,6 @@
 """All Entity to ViewModel conversions"""
 from src.domain.entities.profiles_to_exclude import ProfilesToExclude
+from src.domain.entities.student_absence_justification import StudentAbsenceJustification
 from src.domain.entities.user import User
 from src.domain.entities.address import Address
 from src.domain.entities.course import Course
@@ -13,6 +14,7 @@ from src.domain.entities.legal_representative import LegalRepresentative
 from src.domain.entities.user_password_history import UserPasswordHistory
 
 from src.domain.view_models.profiles_to_exclude_view_model import ProfilesToExcludeViewModel
+from src.domain.view_models.student_absence_justification_view_model import StudentAbsenceJustificationViewModel
 from src.domain.view_models.user_password_history_view_model import UserPasswordHistoryViewModel
 from src.domain.view_models.user_view_model import UserViewModel
 from src.domain.view_models.address_view_model import AddressViewModel
@@ -184,4 +186,14 @@ class EntityToViewModelMapper:
             id=entity.id,
             created_at=entity.created_at,
             user_id=entity.user_id
+        )
+    
+    # ========== Student Abscence Justification ==========
+    @staticmethod
+    def student_absence_justification(entity: StudentAbsenceJustification) -> StudentAbsenceJustificationViewModel:
+        return StudentAbsenceJustificationViewModel(
+            id=entity.id,
+            created_at=entity.created_at,
+            class_attendance_id=entity.class_attendance_id,
+            document_id=entity.document_id
         )

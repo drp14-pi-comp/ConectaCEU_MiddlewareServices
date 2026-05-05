@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from src.data.db_context.database import SessionLocal, engine
 from src.data.repositories.legal_representative_degree_repository import LegalRepresentativeDegreeRepository
 from src.data.repositories.profiles_to_exclude_repository import ProfilesToExcludeRepository
+from src.data.repositories.student_absence_justification_repository import StudentAbsenceJustificationRepository
 from src.data.repositories.user_repository import UserRepository
 from src.data.repositories.address_repository import AddressRepository
 from src.data.repositories.course_repository import CourseRepository
@@ -68,6 +69,7 @@ class DatabaseContext:
         self.report_types = ReportTypeRepository(self.session)
         self.legal_representative_degrees = LegalRepresentativeDegreeRepository(self.session)
         self.profiles_to_exclude = ProfilesToExcludeRepository(self.session)
+        self.student_absence_justification = StudentAbsenceJustificationRepository
         
         # Log repositories (write-only)
         self.log_application_errors = LogApplicationErrorRepository(self.session)

@@ -9,6 +9,7 @@ from src.data.models.legal_representative_degree_model import LegalRepresentativ
 from src.data.models.profiles_to_exclude_model import ProfilesToExcludeModel
 from src.data.models.report_type_model import ReportTypeModel
 from src.data.models.shift_type_model import ShiftTypeModel
+from src.data.models.student_absence_justification import StudentAbsenceJustificationModel
 from src.data.models.user_gender_type_model import UserGenderTypeModel
 from src.data.models.user_password_history_model import UserPasswordHistoryModel
 from src.data.models.user_sex_type_model import UserSexTypeModel
@@ -30,6 +31,7 @@ from src.domain.entities.legal_representative_degree import LegalRepresentativeD
 from src.domain.entities.profiles_to_exclude import ProfilesToExclude
 from src.domain.entities.report_type import ReportType
 from src.domain.entities.shift_type import ShiftType
+from src.domain.entities.student_absence_justification import StudentAbsenceJustification
 from src.domain.entities.user import User
 from src.domain.entities.address import Address
 from src.domain.entities.course import Course
@@ -302,4 +304,14 @@ class ModelToEntityMapper:
             id=UUID(bytes=model.id),
             created_at=model.created_at,
             user_id=UUID(bytes=model.user_id)
+        )
+    
+    # ========== Student Abscence Justification ==========
+    @staticmethod
+    def student_absence_justification(model: StudentAbsenceJustificationModel) -> StudentAbsenceJustification:
+        return StudentAbsenceJustification(
+            id=UUID(bytes=model.id),
+            created_at=model.created_at,
+            class_attendance_id=UUID(bytes=model.class_attendance_id),
+            document_id=UUID(bytes=model.document_id) if model.document_id else None
         )
