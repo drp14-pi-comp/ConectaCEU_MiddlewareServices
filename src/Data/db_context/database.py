@@ -18,6 +18,7 @@ engine = create_engine(
     connect_args={
         "connect_timeout": 10,
         "charset": "utf8mb4",
+        "collation": "utf8mb4_0900_as_cs",
         "use_unicode": True,
     }
 )
@@ -32,6 +33,7 @@ def set_mysql_session_vars(dbapi_connection, connection_record):
     cursor.execute("SET NAMES utf8mb4")
     cursor.execute("SET CHARACTER SET utf8mb4")
     cursor.execute("SET character_set_connection=utf8mb4")
+    cursor.execute("SET collation_connection = utf8mb4_0900_as_cs")
     cursor.close()
 
 # Session factory
