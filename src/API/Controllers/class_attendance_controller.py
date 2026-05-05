@@ -2,17 +2,18 @@
 from datetime import date
 from typing import Optional
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from src.application.services.class_attendance_service import ClassAttendanceService
 from src.data.repositories.class_attendance_repository import ClassAttendanceRepository
+from src.data.repositories.student_absence_justification_repository import StudentAbsenceJustificationRepository
 from src.data.repositories.user_class_repository import UserClassRepository
 from src.data.repositories.class_repository import ClassRepository
 from src.data.repositories.course_component_repository import CourseComponentRepository
 from src.data.db_context.database import get_db
 from src.api.dependencies.auth_dependencies import get_current_active_user
-from src.domain.dtos.class_attendance_dto import (ClassAttendanceCreateDTO, ClassAttendanceUpdateDTO, BulkClassAttendanceCreateDTO)
+from src.domain.dtos.class_attendance_dto import BulkClassAttendanceCreateDTO
 from src.domain.entities.user import User
 
 router = APIRouter(
@@ -27,7 +28,8 @@ def get_attendance_service(db: Session = Depends(get_db)) -> ClassAttendanceServ
     user_class_repo = UserClassRepository(db)
     class_repo = ClassRepository(db)
     component_repo = CourseComponentRepository(db)
-    return ClassAttendanceService(repository, user_class_repo, class_repo, component_repo)
+    absence_justification_repo = StudentAbsenceJustificationRepository(db)
+    return ClassAttendanceService(repository, user_class_repo, class_repo, component_repo, absence_justification_repo)
 
 
 @router.post("/session/{session_id}/initialize")
@@ -124,3 +126,18 @@ async def get_user_sessions(
         page=page,
         page_size=page_size
     )
+
+@router.post("/{attendance_id}/justify")
+async def submit_absence_justification(
+    attendance_id: UUID,
+    document_id: UUID,
+    current_user: User = Depends(get_current_active_user),
+    service: ClassAttendanceService = Depends(get_attendance_service)
+):
+    """
+    Submit a justification document for an absence.
+    """
+    try:
+        return await service.submit_absence_justification(attendance_id, document_id, current_user.id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
