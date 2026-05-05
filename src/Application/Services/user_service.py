@@ -9,6 +9,7 @@ from src.data.repositories.address_repository import AddressRepository
 from src.data.repositories.document_repository import DocumentRepository
 from src.data.repositories.document_validation_repository import DocumentValidationRepository
 from src.data.repositories.legal_representative_repository import LegalRepresentativeRepository
+from src.data.repositories.profiles_to_exclude_repository import ProfilesToExcludeRepository
 from src.data.repositories.user_repository import UserRepository
 from src.application.services.base_service import BaseService
 from src.application.mappers.dto_to_entity_mapper import DtoToEntityMapper
@@ -31,6 +32,7 @@ class UserService(BaseService):
         address_repo: AddressRepository,
         legal_rep_repo: LegalRepresentativeRepository,
         doc_validation_repo: DocumentValidationRepository,
+        profiles_to_exclude_repo: ProfilesToExcludeRepository
     ):
         super().__init__(repository)
         self.repository = repository
@@ -39,6 +41,7 @@ class UserService(BaseService):
         self.address_repo = address_repo
         self.legal_rep_repo = legal_rep_repo
         self.doc_validation_repo = doc_validation_repo
+        self.profiles_to_exclude_repo = profiles_to_exclude_repo
     
     async def create_user(
         self, 
@@ -282,32 +285,45 @@ class UserService(BaseService):
         performed_by_user_id: Optional[UUID] = None,
         user_ip_address: Optional[str] = None
     ) -> bool:
-        """Deactivate user account"""
-        try:
-            user = await self.repository.get_by_id(user_id)
-            if not user:
-                raise ValueError("User not found")
+        """Deactivate user account and add to exclusion list"""
+        user = await self.repository.get_by_id(user_id)
+        if not user:
+            raise ValueError("User not found")
+        
+        if not user.active:
+            raise ValueError("User already deactivated")
+        
+        # Deactivate user
+        result = await self.repository.deactivate(user_id)
+        
+        # Add to profiles to exclude
+        if result:
+            from uuid import uuid4
+            from src.domain.entities.profiles_to_exclude import ProfilesToExclude
+            from src.application.mappers.entity_to_model_mapper import EntityToModelMapper
             
-            if not user.active:
-                raise ValueError("User already deactivated")
+            exclusion = ProfilesToExclude(
+                id=uuid4(),
+                created_at=DateTimeHandler.now(),
+                user_id=user_id
+            )
             
-            result = await self.repository.deactivate(user_id)
-            
-            # Log activation change
-            if result and performed_by_user_id:
-                from src.data.repositories.log_user_activation_repository import LogUserActivationRepository
-                log_repo = LogUserActivationRepository(self.repository.session)
-                await log_repo.log_activation(
-                    deactivation_reason=reason,
-                    activated=False,
-                    user_id=user_id.bytes,
-                    performed_by_user_id=performed_by_user_id.bytes,
-                    performed_by_user_ip_address=user_ip_address or "unknown"
-                )
-            
-            return result
-        except Exception as e:
-            await ApplicationLogger.log_error(e, reraise=True)
+            exclusion_model = EntityToModelMapper.profiles_to_exclude(exclusion)
+            await self.profiles_to_exclude_repo.create(exclusion_model)
+        
+        # Log activation change
+        if result and performed_by_user_id:
+            from src.data.repositories.log_user_activation_repository import LogUserActivationRepository
+            log_repo = LogUserActivationRepository(self.repository.session)
+            await log_repo.log_activation(
+                deactivation_reason=reason,
+                activated=False,
+                user_id=user_id.bytes,
+                performed_by_user_id=performed_by_user_id.bytes,
+                performed_by_user_ip_address=user_ip_address or "unknown"
+            )
+        
+        return result
         
     async def activate_user(
         self, 

@@ -6,6 +6,7 @@ import bcrypt
 from jose import jwt, JWTError
 
 from src.application.logging.application_logger import ApplicationLogger
+from src.data.repositories.profiles_to_exclude_repository import ProfilesToExcludeRepository
 from src.domain.dtos.auth_dto import LoginDTO
 from src.infrastructure.configuration.settings import config
 from src.data.repositories.user_repository import UserRepository
@@ -16,8 +17,13 @@ from src.infrastructure.handlers.datetime_handler import DateTimeHandler
 class AuthService:
     """Service for authentication and JWT token management"""
     
-    def __init__(self, user_repo: UserRepository):
+    def __init__(
+        self,
+        user_repo: UserRepository,
+        profiles_to_exclude_repo: ProfilesToExcludeRepository = None
+    ):
         self.user_repo = user_repo
+        self.profiles_to_exclude_repo = profiles_to_exclude_repo
     
     async def create_access_token(self, user_id: UUID, user_type_id: int) -> str:
         """Create JWT access token"""
@@ -114,6 +120,26 @@ class AuthService:
             
             # Generate tokens
             user_uuid = UUID(bytes=user.id)
+            has_pending_deactivation = await self.profiles_to_exclude_repo.is_within_cancellation_window(user_uuid)
+            
+            if has_pending_deactivation:
+                # Cancel the deactivation
+                await self.profiles_to_exclude_repo.delete_exclusion(user_uuid)
+                
+                # Reactivate user
+                await self.user_repo.activate(user_uuid)
+                
+                # Log reactivation
+                from src.data.repositories.log_user_activation_repository import LogUserActivationRepository
+                log_repo = LogUserActivationRepository(self.user_repo.session)
+                await log_repo.log_activation(
+                    deactivation_reason=None,
+                    activated=True,
+                    user_id=user.id,
+                    performed_by_user_id=user.id,
+                    performed_by_user_ip_address="self_login"
+                )
+
             access_token = await self.create_access_token(user_uuid, user.user_type_id)
             refresh_token = await self.create_refresh_token(user_uuid)
             
