@@ -1,7 +1,7 @@
 """User activation log repository - Insert only"""
 from typing import Optional
 from sqlalchemy.orm import Session
-from src.data.models.log_user_activation_model import LogUserActivation as LogUserActivationModel
+from src.data.models.log_user_activation_model import LogUserActivationModel
 from src.data.repositories.base.base_repository import BaseRepository
 
 class LogUserActivationRepository(BaseRepository):

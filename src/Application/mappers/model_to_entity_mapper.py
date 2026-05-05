@@ -6,6 +6,7 @@ from src.data.models.document_type_model import DocumentTypeModel
 from src.data.models.document_validation_model import DocumentValidationModel
 from src.data.models.document_validation_status_type_model import DocumentValidationStatusTypeModel
 from src.data.models.legal_representative_degree_model import LegalRepresentativeDegreeModel
+from src.data.models.profiles_to_exclude_model import ProfilesToExcludeModel
 from src.data.models.report_type_model import ReportTypeModel
 from src.data.models.shift_type_model import ShiftTypeModel
 from src.data.models.user_gender_type_model import UserGenderTypeModel
@@ -26,6 +27,7 @@ from src.data.models.legal_representative_model import LegalRepresentativeModel
 from src.domain.entities.document_validation import DocumentValidation
 from src.domain.entities.document_validation_status_type import DocumentValidationStatusType
 from src.domain.entities.legal_representative_degree import LegalRepresentativeDegree
+from src.domain.entities.profiles_to_exclude import ProfilesToExclude
 from src.domain.entities.report_type import ReportType
 from src.domain.entities.shift_type import ShiftType
 from src.domain.entities.user import User
@@ -208,6 +210,7 @@ class ModelToEntityMapper:
             description=model.description
         )
 
+    # ========== User Gender Type ==========
     @staticmethod
     def user_gender_type(model: UserGenderTypeModel) -> UserGenderType:
         """Convert UserGenderType Model -> Entity"""
@@ -216,6 +219,7 @@ class ModelToEntityMapper:
             description=model.description
         )
 
+    # ========== User Type ==========
     @staticmethod
     def user_type(model: UserTypeModel) -> UserType:
         """Convert UserType Model -> Entity"""
@@ -233,6 +237,7 @@ class ModelToEntityMapper:
             emit_user_documents=model.emit_user_documents
         )
 
+    # ========== Document Type ==========
     @staticmethod
     def document_type(model: DocumentTypeModel) -> DocumentType:
         """Convert DocumentType Model -> Entity"""
@@ -241,6 +246,7 @@ class ModelToEntityMapper:
             description=model.description
         )
 
+    # ========== Document Validation Status Type ==========
     @staticmethod
     def document_validation_status_type(model: DocumentValidationStatusTypeModel) -> DocumentValidationStatusType:
         """Convert DocumentValidationStatusType Model -> Entity"""
@@ -249,6 +255,7 @@ class ModelToEntityMapper:
             description=model.description
         )
 
+    # ========== Document Validation ==========
     @staticmethod
     def document_validation(model: DocumentValidationModel) -> DocumentValidation:
         """Convert DocumentValidation Model -> Entity"""
@@ -261,6 +268,7 @@ class ModelToEntityMapper:
             document_id=UUID(bytes=model.document_id)
         )
 
+    # ========== Shift Type ==========
     @staticmethod
     def shift_type(model: ShiftTypeModel) -> ShiftType:
         """Convert ShiftType Model -> Entity"""
@@ -269,6 +277,7 @@ class ModelToEntityMapper:
             description=model.description
         )
 
+    # ========== Report Type ==========
     @staticmethod
     def report_type(model: ReportTypeModel) -> ReportType:
         """Convert ReportType Model -> Entity"""
@@ -277,10 +286,20 @@ class ModelToEntityMapper:
             description=model.description
         )
 
+    # ========== Legal Representative Degree ==========
     @staticmethod
     def legal_representative_degree(model: LegalRepresentativeDegreeModel) -> LegalRepresentativeDegree:
         """Convert LegalRepresentativeDegree Model -> Entity"""
         return LegalRepresentativeDegree(
             id=model.id,
             description=model.description
+        )
+    
+    # ========== Profile To Exclude ==========
+    @staticmethod
+    def profiles_to_exclude(model: ProfilesToExcludeModel) -> ProfilesToExclude:
+        return ProfilesToExclude(
+            id=UUID(bytes=model.id),
+            created_at=model.created_at,
+            user_id=UUID(bytes=model.user_id)
         )

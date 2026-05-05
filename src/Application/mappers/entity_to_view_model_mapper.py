@@ -1,4 +1,5 @@
 """All Entity to ViewModel conversions"""
+from src.domain.entities.profiles_to_exclude import ProfilesToExclude
 from src.domain.entities.user import User
 from src.domain.entities.address import Address
 from src.domain.entities.course import Course
@@ -9,8 +10,9 @@ from src.domain.entities.class_attendance import ClassAttendance
 from src.domain.entities.user_class import UserClass
 from src.domain.entities.document import Document
 from src.domain.entities.legal_representative import LegalRepresentative
-
 from src.domain.entities.user_password_history import UserPasswordHistory
+
+from src.domain.view_models.profiles_to_exclude_view_model import ProfilesToExcludeViewModel
 from src.domain.view_models.user_password_history_view_model import UserPasswordHistoryViewModel
 from src.domain.view_models.user_view_model import UserViewModel
 from src.domain.view_models.address_view_model import AddressViewModel
@@ -172,5 +174,14 @@ class EntityToViewModelMapper:
             id=entity.id,
             created_at=entity.created_at,
             password=entity.password,
+            user_id=entity.user_id
+        )
+    
+    # ========== Profile To Exclude ==========
+    @staticmethod
+    def profiles_to_exclude(entity: ProfilesToExclude) -> ProfilesToExcludeViewModel:
+        return ProfilesToExcludeViewModel(
+            id=entity.id,
+            created_at=entity.created_at,
             user_id=entity.user_id
         )
