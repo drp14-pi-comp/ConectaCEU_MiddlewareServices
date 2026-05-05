@@ -1,7 +1,9 @@
 """All Entity to SQLAlchemy Model conversions"""
 from uuid import UUID
 
+from src.data.models.student_absence_justification_model import StudentAbsenceJustificationModel
 from src.data.models.user_password_history_model import UserPasswordHistoryModel
+from src.domain.entities.student_absence_justification import StudentAbsenceJustification
 from src.domain.entities.user import User
 from src.domain.entities.address import Address
 from src.domain.entities.course import Course
@@ -179,4 +181,14 @@ class EntityToModelMapper:
             created_at=entity.created_at,
             password=entity.password,
             user_id=entity.user_id.bytes
+        )
+    
+    # ========== Student Abscence Justification ==========
+    @staticmethod
+    def student_absence_justification(model: StudentAbsenceJustification) -> StudentAbsenceJustificationModel:
+        return StudentAbsenceJustificationModel(
+            id=UUID(bytes=model.id),
+            created_at=model.created_at,
+            class_attendance_id=UUID(bytes=model.class_attendance_id),
+            document_id=UUID(bytes=model.document_id) if model.document_id else None
         )
