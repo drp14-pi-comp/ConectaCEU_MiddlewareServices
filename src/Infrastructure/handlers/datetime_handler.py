@@ -1,13 +1,14 @@
-from datetime import datetime
-from zoneinfo import ZoneInfo
+from datetime import datetime, timezone, timedelta
 
 class DateTimeHandler:
+    BRAZIL_TZ = timezone(timedelta(hours=-3))  # Brazil GMT-3
+    
     @staticmethod
     def now() -> datetime:
-        """Get current time in Brazil (America/Sao_Paulo) with DST support"""
-        return datetime.now(ZoneInfo("America/Sao_Paulo"))
+        """Get current time in Brazil (GMT-3)"""
+        return datetime.now(DateTimeHandler.BRAZIL_TZ)
     
     @staticmethod
     def utc_now() -> datetime:
         """Get current UTC time"""
-        return datetime.now(ZoneInfo("UTC"))
+        return datetime.now(timezone.utc)
