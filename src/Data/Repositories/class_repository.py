@@ -16,7 +16,7 @@ class ClassRepository(BaseRepository[ClassModel]):
     async def get_by_component_id(self, component_id: UUID) -> List[ClassModel]:
         """Get all classes for a component"""
         stmt = select(ClassModel).where(ClassModel.component_id == component_id.bytes)
-        result = await self.session.execute(stmt)
+        result = self.session.execute(stmt)
         return list(result.scalars().all())
     
     async def get_active_by_component_id(self, component_id: UUID) -> List[ClassModel]:
@@ -25,7 +25,7 @@ class ClassRepository(BaseRepository[ClassModel]):
             ClassModel.component_id == component_id.bytes,
             ClassModel.active == True
         )
-        result = await self.session.execute(stmt)
+        result = self.session.execute(stmt)
         return list(result.scalars().all())
     
     async def find_by_filters(
@@ -51,7 +51,7 @@ class ClassRepository(BaseRepository[ClassModel]):
             stmt = stmt.where(and_(*conditions))
         stmt = stmt.offset(skip).limit(limit)
         
-        result = await self.session.execute(stmt)
+        result = self.session.execute(stmt)
         return list(result.scalars().all())
     
     async def increment_seats(self, class_id: UUID) -> bool:
@@ -59,7 +59,7 @@ class ClassRepository(BaseRepository[ClassModel]):
         class_ = await self.get_by_id(class_id)
         if class_:
             class_.seats_in_use += 1
-            await self.session.flush()
+            self.session.flush()
             return True
         return False
     
@@ -68,7 +68,7 @@ class ClassRepository(BaseRepository[ClassModel]):
         class_ = await self.get_by_id(class_id)
         if class_ and class_.seats_in_use > 0:
             class_.seats_in_use -= 1
-            await self.session.flush()
+            self.session.flush()
             return True
         return False
     
@@ -77,6 +77,6 @@ class ClassRepository(BaseRepository[ClassModel]):
         class_ = await self.get_by_id(class_id)
         if class_:
             class_.active = False
-            await self.session.flush()
+            self.session.flush()
             return True
         return False

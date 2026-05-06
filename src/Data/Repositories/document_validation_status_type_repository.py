@@ -17,5 +17,5 @@ class DocumentValidationStatusTypeRepository(BaseRepository):
         stmt = select(DocumentValidationStatusTypeModel).where(
             DocumentValidationStatusTypeModel.description == description
         )
-        result = await self.session.execute(stmt)
+        result = self.session.execute(stmt)
         return result.scalar_one_or_none()

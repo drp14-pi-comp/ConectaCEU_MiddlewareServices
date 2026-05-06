@@ -15,5 +15,5 @@ class ShiftTypeRepository(BaseRepository):
     async def get_by_description(self, description: str) -> Optional[ShiftTypeModel]:
         """Get shift type by description"""
         stmt = select(ShiftTypeModel).where(ShiftTypeModel.description == description)
-        result = await self.session.execute(stmt)
+        result = self.session.execute(stmt)
         return result.scalar_one_or_none()

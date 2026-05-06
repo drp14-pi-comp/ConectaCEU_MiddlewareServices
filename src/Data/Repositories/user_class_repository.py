@@ -16,7 +16,7 @@ class UserClassRepository(BaseRepository[UserClassModel]):
     async def get_by_user_id(self, user_id: UUID) -> List[UserClassModel]:
         """Get all enrollments for a user"""
         stmt = select(UserClassModel).where(UserClassModel.user_id == user_id.bytes)
-        result = await self.session.execute(stmt)
+        result = self.session.execute(stmt)
         return list(result.scalars().all())
     
     async def get_active_by_user_id(self, user_id: UUID) -> List[UserClassModel]:
@@ -25,13 +25,13 @@ class UserClassRepository(BaseRepository[UserClassModel]):
             UserClassModel.user_id == user_id.bytes,
             UserClassModel.active == True
         )
-        result = await self.session.execute(stmt)
+        result = self.session.execute(stmt)
         return list(result.scalars().all())
     
     async def get_by_class_id(self, class_id: UUID) -> List[UserClassModel]:
         """Get all enrollments for a class"""
         stmt = select(UserClassModel).where(UserClassModel.class_id == class_id.bytes)
-        result = await self.session.execute(stmt)
+        result = self.session.execute(stmt)
         return list(result.scalars().all())
     
     async def get_active_by_class_id(self, class_id: UUID) -> List[UserClassModel]:
@@ -40,7 +40,7 @@ class UserClassRepository(BaseRepository[UserClassModel]):
             UserClassModel.class_id == class_id.bytes,
             UserClassModel.active == True
         )
-        result = await self.session.execute(stmt)
+        result = self.session.execute(stmt)
         return list(result.scalars().all())
     
     async def get_by_user_and_class(self, user_id: UUID, class_id: UUID) -> Optional[UserClassModel]:
@@ -49,7 +49,7 @@ class UserClassRepository(BaseRepository[UserClassModel]):
             UserClassModel.user_id == user_id.bytes,
             UserClassModel.class_id == class_id.bytes
         )
-        result = await self.session.execute(stmt)
+        result = self.session.execute(stmt)
         return result.scalar_one_or_none()
     
     async def deactivate_enrollment(self, enrollment_id: UUID) -> bool:
@@ -57,7 +57,7 @@ class UserClassRepository(BaseRepository[UserClassModel]):
         enrollment = await self.get_by_id(enrollment_id)
         if enrollment:
             enrollment.active = False
-            await self.session.flush()
+            self.session.flush()
             return True
         return False
     
@@ -66,7 +66,7 @@ class UserClassRepository(BaseRepository[UserClassModel]):
         enrollment = await self.get_by_id(enrollment_id)
         if enrollment:
             enrollment.active = True
-            await self.session.flush()
+            self.session.flush()
             return True
         return False
     
@@ -76,5 +76,5 @@ class UserClassRepository(BaseRepository[UserClassModel]):
             UserClassModel.class_id == class_id.bytes,
             UserClassModel.active == True
         )
-        result = await self.session.execute(stmt)
+        result = self.session.execute(stmt)
         return result.scalar() or 0

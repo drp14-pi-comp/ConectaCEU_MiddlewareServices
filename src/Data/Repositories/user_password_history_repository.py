@@ -24,7 +24,7 @@ class UserPasswordHistoryRepository(BaseRepository):
             UserPasswordHistoryModel.user_id == user_id.bytes
         ).order_by(UserPasswordHistoryModel.created_at.desc()).offset(skip).limit(limit)
         
-        result = await self.session.execute(stmt)
+        result = self.session.execute(stmt)
         return list(result.scalars().all())
     
     async def get_recent_by_user_id(
@@ -48,7 +48,7 @@ class UserPasswordHistoryRepository(BaseRepository):
         if limit:
             stmt = stmt.limit(limit)
         
-        result = await self.session.execute(stmt)
+        result = self.session.execute(stmt)
         return list(result.scalars().all())
     
     async def count_by_user_id(self, user_id: UUID) -> int:
@@ -58,7 +58,7 @@ class UserPasswordHistoryRepository(BaseRepository):
         stmt = select(func.count()).select_from(UserPasswordHistoryModel).where(
             UserPasswordHistoryModel.user_id == user_id.bytes
         )
-        result = await self.session.execute(stmt)
+        result = self.session.execute(stmt)
         return result.scalar() or 0
     
     async def delete_old_entries(self, user_id: UUID, keep_count: int = 10) -> int:

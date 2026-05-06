@@ -15,5 +15,5 @@ class DocumentTypeRepository(BaseRepository):
     async def get_by_description(self, description: str) -> Optional[DocumentTypeModel]:
         """Get document type by description"""
         stmt = select(DocumentTypeModel).where(DocumentTypeModel.description == description)
-        result = await self.session.execute(stmt)
+        result = self.session.execute(stmt)
         return result.scalar_one_or_none()

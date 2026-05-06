@@ -18,7 +18,7 @@ class CourseComponentRepository(BaseRepository[CourseComponentModel]):
         stmt = select(CourseComponentModel).where(
             CourseComponentModel.course_id == course_id.bytes
         )
-        result = await self.session.execute(stmt)
+        result = self.session.execute(stmt)
         return list(result.scalars().all())
     
     async def get_active_by_course_id(self, course_id: UUID) -> List[CourseComponentModel]:
@@ -27,13 +27,13 @@ class CourseComponentRepository(BaseRepository[CourseComponentModel]):
             CourseComponentModel.course_id == course_id.bytes,
             CourseComponentModel.active == True
         )
-        result = await self.session.execute(stmt)
+        result = self.session.execute(stmt)
         return list(result.scalars().all())
     
     async def get_by_name(self, name: str) -> Optional[CourseComponentModel]:
         """Get component by exact name"""
         stmt = select(CourseComponentModel).where(CourseComponentModel.name == name)
-        result = await self.session.execute(stmt)
+        result = self.session.execute(stmt)
         return result.scalar_one_or_none()
     
     async def deactivate(self, component_id: UUID) -> bool:
@@ -41,6 +41,6 @@ class CourseComponentRepository(BaseRepository[CourseComponentModel]):
         component = await self.get_by_id(component_id)
         if component:
             component.active = False
-            await self.session.flush()
+            self.session.flush()
             return True
         return False

@@ -16,7 +16,7 @@ class CourseRepository(BaseRepository[CourseModel]):
     async def get_by_name(self, name: str) -> Optional[CourseModel]:
         """Get course by exact name"""
         stmt = select(CourseModel).where(CourseModel.name == name)
-        result = await self.session.execute(stmt)
+        result = self.session.execute(stmt)
         return result.scalar_one_or_none()
     
     async def find_by_filters(
@@ -47,7 +47,7 @@ class CourseRepository(BaseRepository[CourseModel]):
             stmt = stmt.where(and_(*conditions))
         stmt = stmt.offset(skip).limit(limit)
         
-        result = await self.session.execute(stmt)
+        result = self.session.execute(stmt)
         return list(result.scalars().all())
     
     async def deactivate(self, course_id: UUID) -> bool:
@@ -55,7 +55,7 @@ class CourseRepository(BaseRepository[CourseModel]):
         course = await self.get_by_id(course_id)
         if course:
             course.active = False
-            await self.session.flush()
+            self.session.flush()
             return True
         return False
     
@@ -64,7 +64,7 @@ class CourseRepository(BaseRepository[CourseModel]):
         course = await self.get_by_id(course_id)
         if course:
             course.active = True
-            await self.session.flush()
+            self.session.flush()
             return True
         return False
     

@@ -15,5 +15,5 @@ class UserGenderTypeRepository(BaseRepository):
     async def get_by_description(self, description: str) -> Optional[UserGenderTypeModel]:
         """Get gender type by description"""
         stmt = select(UserGenderTypeModel).where(UserGenderTypeModel.description == description)
-        result = await self.session.execute(stmt)
+        result = self.session.execute(stmt)
         return result.scalar_one_or_none()

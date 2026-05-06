@@ -18,7 +18,7 @@ class ClassAttendanceRepository(BaseRepository[ClassAttendanceModel]):
         stmt = select(ClassAttendanceModel).where(
             ClassAttendanceModel.class_session_id == session_id.bytes
         )
-        result = await self.session.execute(stmt)
+        result = self.session.execute(stmt)
         return list(result.scalars().all())
     
     async def get_by_user_id(self, user_id: UUID, skip: int = 0, limit: int = 100) -> List[ClassAttendanceModel]:
@@ -26,7 +26,7 @@ class ClassAttendanceRepository(BaseRepository[ClassAttendanceModel]):
         stmt = select(ClassAttendanceModel).where(
             ClassAttendanceModel.user_id == user_id.bytes
         ).offset(skip).limit(limit)
-        result = await self.session.execute(stmt)
+        result = self.session.execute(stmt)
         return list(result.scalars().all())
     
     async def get_by_user_and_session(self, user_id: UUID, session_id: UUID) -> Optional[ClassAttendanceModel]:
@@ -35,7 +35,7 @@ class ClassAttendanceRepository(BaseRepository[ClassAttendanceModel]):
             ClassAttendanceModel.user_id == user_id.bytes,
             ClassAttendanceModel.class_session_id == session_id.bytes
         )
-        result = await self.session.execute(stmt)
+        result = self.session.execute(stmt)
         return result.scalar_one_or_none()
     
     async def mark_attendance(self, attendance_id: UUID, attended: bool) -> bool:
@@ -43,14 +43,14 @@ class ClassAttendanceRepository(BaseRepository[ClassAttendanceModel]):
         attendance = await self.get_by_id(attendance_id)
         if attendance:
             attendance.attended = attended
-            await self.session.flush()
+            self.session.flush()
             return True
         return False
     
     async def bulk_create(self, attendances: List[ClassAttendanceModel]) -> List[ClassAttendanceModel]:
         """Create multiple attendance records at once"""
         self.session.add_all(attendances)
-        await self.session.flush()
+        self.session.flush()
         return attendances
     
     async def get_attendance_summary(self, session_id: UUID) -> dict:
@@ -60,7 +60,7 @@ class ClassAttendanceRepository(BaseRepository[ClassAttendanceModel]):
             func.sum(ClassAttendanceModel.attended.cast(int)).label('present')
         ).where(ClassAttendanceModel.class_session_id == session_id.bytes)
         
-        result = await self.session.execute(stmt)
+        result = self.session.execute(stmt)
         row = result.first()
         
         total = row.total or 0
@@ -88,7 +88,7 @@ class ClassAttendanceRepository(BaseRepository[ClassAttendanceModel]):
             ClassSessionModel.class_id == class_id.bytes
         )
         
-        result = await self.session.execute(stmt)
+        result = self.session.execute(stmt)
         row = result.first()
         
         total = row.total or 0

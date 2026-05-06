@@ -16,7 +16,7 @@ class ProfilesToExcludeRepository(BaseRepository):
         stmt = select(ProfilesToExcludeModel).where(
             ProfilesToExcludeModel.user_id == user_id.bytes
         )
-        result = await self.session.execute(stmt)
+        result = self.session.execute(stmt)
         return result.scalar_one_or_none()
 
     async def get_active_exclusions(self, skip: int = 0, limit: int = 100) -> List[ProfilesToExcludeModel]:
@@ -29,7 +29,7 @@ class ProfilesToExcludeRepository(BaseRepository):
             ProfilesToExcludeModel.created_at > cutoff
         ).offset(skip).limit(limit)
         
-        result = await self.session.execute(stmt)
+        result = self.session.execute(stmt)
         return list(result.scalars().all())
 
     async def delete_exclusion(self, user_id: UUID) -> bool:
@@ -37,7 +37,7 @@ class ProfilesToExcludeRepository(BaseRepository):
         exclusion = await self.get_by_user_id(user_id)
         if exclusion:
             await self.session.delete(exclusion)
-            await self.session.flush()
+            self.session.flush()
             return True
         return False
 

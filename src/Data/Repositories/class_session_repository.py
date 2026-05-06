@@ -20,7 +20,7 @@ class ClassSessionRepository(BaseRepository[ClassSessionModel]):
         stmt = select(ClassSessionModel).where(
             ClassSessionModel.class_id == class_id.bytes
         ).order_by(ClassSessionModel.date)
-        result = await self.session.execute(stmt)
+        result = self.session.execute(stmt)
         return list(result.scalars().all())
     
     async def get_by_date_range(
@@ -35,7 +35,7 @@ class ClassSessionRepository(BaseRepository[ClassSessionModel]):
             ClassSessionModel.date >= start_date,
             ClassSessionModel.date <= end_date
         ).order_by(ClassSessionModel.date)
-        result = await self.session.execute(stmt)
+        result = self.session.execute(stmt)
         return list(result.scalars().all())
     
     async def get_upcoming_sessions(self, class_id: UUID) -> List[ClassSessionModel]:
@@ -44,7 +44,7 @@ class ClassSessionRepository(BaseRepository[ClassSessionModel]):
             ClassSessionModel.class_id == class_id.bytes,
             ClassSessionModel.date > DateTimeHandler.now()
         ).order_by(ClassSessionModel.date)
-        result = await self.session.execute(stmt)
+        result = self.session.execute(stmt)
         return list(result.scalars().all())
     
     async def get_past_sessions(self, class_id: UUID) -> List[ClassSessionModel]:
@@ -53,5 +53,5 @@ class ClassSessionRepository(BaseRepository[ClassSessionModel]):
             ClassSessionModel.class_id == class_id.bytes,
             ClassSessionModel.date < DateTimeHandler.now()
         ).order_by(ClassSessionModel.date.desc())
-        result = await self.session.execute(stmt)
+        result = self.session.execute(stmt)
         return list(result.scalars().all())

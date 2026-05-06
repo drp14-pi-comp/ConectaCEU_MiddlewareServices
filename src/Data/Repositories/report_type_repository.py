@@ -15,5 +15,5 @@ class ReportTypeRepository(BaseRepository):
     async def get_by_description(self, description: str) -> Optional[ReportTypeModel]:
         """Get report type by description"""
         stmt = select(ReportTypeModel).where(ReportTypeModel.description == description)
-        result = await self.session.execute(stmt)
+        result = self.session.execute(stmt)
         return result.scalar_one_or_none()

@@ -15,5 +15,5 @@ class LegalRepresentativeDegreeRepository(BaseRepository):
     async def get_by_description(self, description: str) -> Optional[LegalRepresentativeDegreeModel]:
         """Get legal representative degree by description"""
         stmt = select(LegalRepresentativeDegreeModel).where(LegalRepresentativeDegreeModel.description == description)
-        result = await self.session.execute(stmt)
+        result = self.session.execute(stmt)
         return result.scalar_one_or_none()

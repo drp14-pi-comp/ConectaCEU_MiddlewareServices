@@ -15,7 +15,7 @@ class UserTypeRepository(BaseRepository[UserTypeModel]):
     async def get_by_description(self, description: str) -> Optional[UserTypeModel]:
         """Get user type by description"""
         stmt = select(UserTypeModel).where(UserTypeModel.description == description)
-        result = await self.session.execute(stmt)
+        result = self.session.execute(stmt)
         return result.scalar_one_or_none()
     
     async def get_with_permission(self, permission_field: str) -> list[UserTypeModel]:
@@ -24,5 +24,5 @@ class UserTypeRepository(BaseRepository[UserTypeModel]):
             return []
         
         stmt = select(UserTypeModel).where(getattr(UserTypeModel, permission_field) == True)
-        result = await self.session.execute(stmt)
+        result = self.session.execute(stmt)
         return list(result.scalars().all())

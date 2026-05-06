@@ -18,7 +18,7 @@ class DocumentValidationRepository(BaseRepository):
         stmt = select(DocumentValidationModel).where(
             DocumentValidationModel.document_id == document_id.bytes
         )
-        result = await self.session.execute(stmt)
+        result = self.session.execute(stmt)
         return result.scalar_one_or_none()
     
     async def get_by_status_type(
@@ -32,7 +32,7 @@ class DocumentValidationRepository(BaseRepository):
             DocumentValidationModel.document_validation_status_type_id == status_type_id
         ).offset(skip).limit(limit)
         
-        result = await self.session.execute(stmt)
+        result = self.session.execute(stmt)
         return list(result.scalars().all())
     
     async def get_pending_validations(self, skip: int = 0, limit: int = 100) -> List[DocumentValidationModel]:
@@ -59,6 +59,6 @@ class DocumentValidationRepository(BaseRepository):
             validation.document_validation_status_type_id = status_type_id
             if rejection_reason:
                 validation.rejection_reason = rejection_reason
-            await self.session.flush()
+            self.session.flush()
             return True
         return False

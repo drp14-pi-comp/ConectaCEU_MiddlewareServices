@@ -18,7 +18,7 @@ class LegalRepresentativeRepository(BaseRepository):
         stmt = select(LegalRepresentativeModel).where(
             LegalRepresentativeModel.user_id == user_id.bytes
         )
-        result = await self.session.execute(stmt)
+        result = self.session.execute(stmt)
         return list(result.scalars().all())
     
     async def get_by_document(self, document: str) -> Optional[LegalRepresentativeModel]:
@@ -26,7 +26,7 @@ class LegalRepresentativeRepository(BaseRepository):
         stmt = select(LegalRepresentativeModel).where(
             LegalRepresentativeModel.document == document
         )
-        result = await self.session.execute(stmt)
+        result = self.session.execute(stmt)
         return result.scalar_one_or_none()
     
     async def get_primary_representative(self, user_id: UUID) -> Optional[LegalRepresentativeModel]:
@@ -43,5 +43,5 @@ class LegalRepresentativeRepository(BaseRepository):
         if exclude_id:
             stmt = stmt.where(LegalRepresentativeModel.id != exclude_id.bytes)
         
-        result = await self.session.execute(stmt)
+        result = self.session.execute(stmt)
         return result.scalar_one_or_none() is not None

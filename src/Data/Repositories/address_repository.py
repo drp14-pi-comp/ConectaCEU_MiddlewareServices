@@ -16,7 +16,7 @@ class AddressRepository(BaseRepository[AddressModel]):
     async def get_by_user_id(self, user_id: UUID) -> List[AddressModel]:
         """Get all addresses for a user"""
         stmt = select(AddressModel).where(AddressModel.user_id == user_id.bytes)
-        result = await self.session.execute(stmt)
+        result = self.session.execute(stmt)
         return list(result.scalars().all())
     
     async def get_primary_address(self, user_id: UUID) -> Optional[AddressModel]:
@@ -27,5 +27,5 @@ class AddressRepository(BaseRepository[AddressModel]):
     async def get_by_zip_code(self, zip_code: str, skip: int = 0, limit: int = 100) -> List[AddressModel]:
         """Get addresses by ZIP code"""
         stmt = select(AddressModel).where(AddressModel.zip_code == zip_code).offset(skip).limit(limit)
-        result = await self.session.execute(stmt)
+        result = self.session.execute(stmt)
         return list(result.scalars().all())

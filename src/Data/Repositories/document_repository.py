@@ -15,8 +15,8 @@ class DocumentRepository(BaseRepository):
     
     async def get_by_user_id(self, user_id: UUID) -> List[DocumentModel]:
         """Get all documents for a user"""
-        stmt = select(DocumentModel).where(DocumentModel.user_id == user_id.bytes)
-        result = await self.session.execute(stmt)
+        stmt = select(DocumentModel).where(DocumentModel.user_id == user_id.bytes and DocumentModel.legal_representative_id is None)
+        result = self.session.execute(stmt)
         return list(result.scalars().all())
     
     async def get_by_type(
@@ -29,7 +29,7 @@ class DocumentRepository(BaseRepository):
             DocumentModel.user_id == user_id.bytes,
             DocumentModel.document_type_id == document_type_id
         )
-        result = await self.session.execute(stmt)
+        result = self.session.execute(stmt)
         return list(result.scalars().all())
     
     async def get_front_document(
@@ -43,7 +43,7 @@ class DocumentRepository(BaseRepository):
             DocumentModel.document_type_id == document_type_id,
             DocumentModel.is_front == True
         )
-        result = await self.session.execute(stmt)
+        result = self.session.execute(stmt)
         return result.scalar_one_or_none()
     
     async def get_back_document(
@@ -57,5 +57,5 @@ class DocumentRepository(BaseRepository):
             DocumentModel.document_type_id == document_type_id,
             DocumentModel.is_front == False
         )
-        result = await self.session.execute(stmt)
+        result = self.session.execute(stmt)
         return result.scalar_one_or_none()
