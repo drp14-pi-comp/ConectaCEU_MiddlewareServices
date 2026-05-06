@@ -138,8 +138,8 @@ async def get_course(
     return course
 
 
-@router.get("/{course_id}/details")
-async def get_course_details(
+@router.get("/{course_id}/components")
+async def get_course_with_components(
     course_id: UUID,
     service: CourseService = Depends(get_course_service)
 ):

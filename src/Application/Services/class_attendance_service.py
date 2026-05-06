@@ -1,7 +1,7 @@
 """Class attendance service - business logic for attendance"""
 from datetime import date, datetime
-from typing import List, Optional
-from uuid import UUID, uuid4
+from typing import Optional
+from uuid import UUID
 
 from src.application.logging.application_logger import ApplicationLogger
 from src.data.repositories.class_attendance_repository import ClassAttendanceRepository
@@ -14,7 +14,6 @@ from src.application.mappers.entity_to_model_mapper import EntityToModelMapper
 from src.application.mappers.model_to_entity_mapper import ModelToEntityMapper
 from src.application.mappers.entity_to_view_model_mapper import EntityToViewModelMapper
 from src.domain.dtos.class_attendance_dto import BulkClassAttendanceCreateDTO
-from src.domain.entities.class_attendance import ClassAttendance
 from src.infrastructure.handlers.datetime_handler import DateTimeHandler
 
 class ClassAttendanceService(BaseService):
@@ -35,78 +34,62 @@ class ClassAttendanceService(BaseService):
         self.component_repo = component_repo
         self.absence_justification_repo = absence_justification_repo
     
-    async def initialize_attendance_for_session(self, session_id: UUID) -> List[dict]:
-        """Create attendance records for all enrolled students"""
-        try:
-            from src.data.repositories.class_session_repository import ClassSessionRepository
+    async def take_attendance(self, dto: BulkClassAttendanceCreateDTO) -> dict:
+        """
+        Takes attendance for a session in one go.
+        Client sends the complete list of students with their status.
+        Creates or updates attendance records directly.
+        """
+        session_id = UUID(dto.class_session_id)
+        
+        # Validate session exists
+        session = await self.session_repo.get_by_id(session_id)
+        if not session:
+            raise ValueError("Session not found")
+        
+        # Validate session date
+        if session.date > datetime.utcnow():
+            raise ValueError("Cannot take attendance before session date")
+        
+        created = 0
+        updated = 0
+        
+        for entry in dto.attendances:
+            user_id = UUID(entry.user_id)
             
-            # Get session to find class_id
-            session_repo = ClassSessionRepository(self.repository.session)
-            session = await session_repo.get_by_id(session_id)
-            if not session:
-                raise ValueError("Session not found")
+            # Check if attendance record already exists
+            existing = await self.repository.get_by_user_and_session(user_id, session_id)
             
-            # Get all active enrollments for this class
-            enrollments = await self.user_class_repo.get_active_by_class_id(session.class_id)
-            
-            # Create attendance records
-            attendances = []
-            for enrollment in enrollments:
+            if existing:
+                # Update existing record
+                existing.attended = entry.attended
+                await self.repository.update(existing)
+                updated += 1
+            else:
+                # Create new record
+                from uuid import uuid4
+                from src.domain.entities.class_attendance import ClassAttendance
+                
                 attendance = ClassAttendance(
                     id=uuid4(),
-                    created_at=DateTimeHandler.now(),
+                    created_at=datetime.utcnow(),
                     updated_at=None,
-                    attended=False,
-                    user_id=enrollment.user_id,
+                    attended=entry.attended,
+                    user_id=user_id,
                     class_session_id=session_id
                 )
-                attendances.append(attendance)
-            
-            # Bulk save
-            models = [EntityToModelMapper.class_attendance(a) for a in attendances]
-            saved_models = await self.repository.bulk_create(models)
-            
-            saved_entities = [ModelToEntityMapper.class_attendance(m) for m in saved_models]
-            return [EntityToViewModelMapper.class_attendance(e) for e in saved_entities]
-        except Exception as e:
-            await ApplicationLogger.log_error(e, reraise=True)
-    
-    async def take_attendance(self, dto: BulkClassAttendanceCreateDTO) -> dict:
-        """Take attendance for a session"""
-        try:
-            # Validate session exists
-            from src.data.repositories.class_session_repository import ClassSessionRepository
-            session_repo = ClassSessionRepository(self.repository.session)
-            session = await session_repo.get_by_id(UUID(dto.class_session_id))
-            if not session:
-                raise ValueError("Session not found")
-            
-            # Business rule: Can only take attendance on or after session date
-            if session.date > DateTimeHandler.now():
-                raise ValueError("Cannot take attendance before session date")
-            
-            updated_count = 0
-            for user_id_str, attended in dto.attendance_list.items():
-                user_id = UUID(user_id_str)
-                attendance = await self.repository.get_by_user_and_session(
-                    user_id, 
-                    UUID(dto.class_session_id)
-                )
-                if attendance:
-                    attendance.attended = attended
-                    await self.repository.update(attendance)
-                    updated_count += 1
-            
-            # Get summary
-            summary = await self.repository.get_attendance_summary(UUID(dto.class_session_id))
-            
-            return {
-                'session_id': dto.class_session_id,
-                'updated_count': updated_count,
-                'summary': summary
-            }
-        except Exception as e:
-            await ApplicationLogger.log_error(e, reraise=True)
+                model = EntityToModelMapper.class_attendance(attendance)
+                await self.repository.create(model)
+                created += 1
+        
+        summary = await self.repository.get_attendance_summary(session_id)
+        
+        return {
+            'session_id': str(session_id),
+            'created': created,
+            'updated': updated,
+            'summary': summary
+        }
     
     async def get_session_attendance(self, session_id: UUID) -> dict:
         try:
@@ -129,28 +112,6 @@ class ClassAttendanceService(BaseService):
         """Get attendance summary for a user in a class"""
         try:
             return await self.repository.get_user_attendance_summary(user_id, class_id)
-        except Exception as e:
-            await ApplicationLogger.log_error(e, reraise=True)
-    
-    async def mark_single_attendance(self, attendance_id: UUID, attended: bool) -> dict:
-        """Mark a single attendance record"""
-        try:
-            attendance = await self.repository.get_by_id(attendance_id)
-            if not attendance:
-                raise ValueError("Attendance record not found")
-            
-            # Business rule: Can't modify attendance after 7 days
-            from datetime import timedelta
-            if attendance.created_at < DateTimeHandler.now() - timedelta(days=7):
-                raise ValueError("Cannot modify attendance after 7 days")
-            
-            await self.repository.mark_attendance(attendance_id, attended)
-            
-            return {
-                'attendance_id': attendance_id,
-                'attended': attended,
-                'updated_at': DateTimeHandler.now()
-            }
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
     

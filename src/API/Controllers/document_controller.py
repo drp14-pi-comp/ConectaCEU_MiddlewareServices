@@ -55,24 +55,6 @@ async def get_user_documents(
     return await service.get_user_documents(user_id)
 
 
-@router.get("/user/{user_id}/type/{document_type_id}", response_model=List[DocumentViewModel])
-async def get_documents_by_type(
-    user_id: UUID,
-    document_type_id: int,
-    current_user: User = Depends(get_current_active_user),
-    service: DocumentService = Depends(get_document_service)
-):
-    """
-    Get documents of specific type for a user.
-    - Admin/Secretary can view any user's documents
-    - Users can view their own documents
-    """
-    if current_user.user_type_id not in [1, 2] and current_user.id != user_id:
-        raise HTTPException(status_code=403, detail="Can only view your own documents")
-    
-    return await service.get_documents_by_type(user_id, document_type_id)
-
-
 @router.get("/{document_id}", response_model=DocumentViewModel)
 async def get_document(
     document_id: UUID,

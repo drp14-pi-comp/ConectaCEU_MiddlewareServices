@@ -11,6 +11,11 @@ class ClassAttendanceUpdateDTO(BaseModel):
     attended: bool
 
 class BulkClassAttendanceCreateDTO(BaseModel):
-    """DTO for creating multiple attendance records"""
+    """DTO for submitting all attendances for a session at once"""
     class_session_id: str  # UUID as string
-    user_ids: list[str]  # List of UUIDs as strings
+    attendances: list[AttendanceEntryDTO]  # Complete list of students
+
+class AttendanceEntryDTO(BaseModel):
+    """Single attendance entry"""
+    user_id: str  # UUID as string
+    attended: bool

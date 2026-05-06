@@ -32,22 +32,6 @@ def get_attendance_service(db: Session = Depends(get_db)) -> ClassAttendanceServ
     return ClassAttendanceService(repository, user_class_repo, class_repo, component_repo, absence_justification_repo)
 
 
-@router.post("/session/{session_id}/initialize")
-async def initialize_attendance(
-    session_id: UUID,
-    current_user: User = Depends(get_current_active_user),
-    service: ClassAttendanceService = Depends(get_attendance_service)
-):
-    """Initialize attendance records for a session. Educators (4) and Coordinators (3) only."""
-    if current_user.user_type_id not in [3, 4]:
-        raise HTTPException(status_code=403, detail="Only educators and coordinators can initialize attendance")
-    
-    try:
-        return await service.initialize_attendance_for_session(session_id)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-
 @router.post("/session/take")
 async def take_attendance(
     dto: BulkClassAttendanceCreateDTO,
@@ -60,23 +44,6 @@ async def take_attendance(
     
     try:
         return await service.take_attendance(dto)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-
-@router.patch("/{attendance_id}")
-async def mark_single_attendance(
-    attendance_id: UUID,
-    attended: bool,
-    current_user: User = Depends(get_current_active_user),
-    service: ClassAttendanceService = Depends(get_attendance_service)
-):
-    """Mark a single attendance record. Educators (4) and Coordinators (3) only."""
-    if current_user.user_type_id not in [3, 4]:
-        raise HTTPException(status_code=403, detail="Only educators and coordinators can mark attendance")
-    
-    try:
-        return await service.mark_single_attendance(attendance_id, attended)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 

@@ -23,7 +23,7 @@ from src.api.controllers.course_component_controller import router as component_
 from src.api.controllers.class_controller import router as class_router
 from src.api.controllers.class_session_controller import router as session_router
 from src.api.controllers.class_attendance_controller import router as class_attendance_router
-from src.api.controllers.user_class_controller import router as enrollment_router
+from src.api.controllers.enrollment_controller import router as enrollment_router
 from src.api.controllers.document_controller import router as document_router
 from src.api.controllers.document_validation_controller import router as validation_router
 from src.api.controllers.legal_representative_controller import router as representative_router

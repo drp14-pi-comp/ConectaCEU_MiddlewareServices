@@ -39,15 +39,6 @@ class DocumentService(BaseService):
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
     
-    async def get_documents_by_type(self, user_id: UUID, document_type_id: int) -> List[DocumentViewModel]:
-        """Get documents of specific type for a user"""
-        try:
-            models = await self.repository.get_by_type(user_id, document_type_id)
-            entities = [ModelToEntityMapper.document(model) for model in models]
-            return [EntityToViewModelMapper.document(entity) for entity in entities]
-        except Exception as e:
-            await ApplicationLogger.log_error(e, reraise=True)
-    
     async def get_document_for_download(
         self, 
         document_id: UUID,
