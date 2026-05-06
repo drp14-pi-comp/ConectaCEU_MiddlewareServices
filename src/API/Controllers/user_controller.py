@@ -10,6 +10,7 @@ from src.data.repositories.address_repository import AddressRepository
 from src.data.repositories.document_repository import DocumentRepository
 from src.data.repositories.document_validation_repository import DocumentValidationRepository
 from src.data.repositories.legal_representative_repository import LegalRepresentativeRepository
+from src.data.repositories.profiles_to_exclude_repository import ProfilesToExcludeRepository
 from src.data.repositories.user_repository import UserRepository
 from src.data.repositories.user_password_history_repository import UserPasswordHistoryRepository
 from src.data.db_context.database import get_db
@@ -34,13 +35,15 @@ def get_user_service(db: Session = Depends(get_db)) -> UserService:
     address_repo = AddressRepository(db)
     legal_rep_repo = LegalRepresentativeRepository(db)
     doc_validation_repo = DocumentValidationRepository(db)
+    profiles_to_exclude_repo = ProfilesToExcludeRepository(db)
     return UserService(
         user_repo,
         password_history_service,
         document_repo,
         address_repo,
         legal_rep_repo,
-        doc_validation_repo
+        doc_validation_repo,
+        profiles_to_exclude_repo
     )
 
 
