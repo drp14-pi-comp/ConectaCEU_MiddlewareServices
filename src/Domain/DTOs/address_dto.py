@@ -9,7 +9,7 @@ class AddressCreateDTO(BaseModel):
     number: str = Field(..., max_length=10)
     complement: Optional[str] = Field(None, max_length=100)
     neighborhood: str = Field(..., min_length=3, max_length=100)
-    user_id: str  # UUID as string
+    user_id: Optional[str] = None  # UUID as string
 
 class AddressUpdateDTO(BaseModel):
     """DTO for updating an address"""
@@ -18,7 +18,3 @@ class AddressUpdateDTO(BaseModel):
     number: Optional[str] = Field(None, max_length=10)
     complement: Optional[str] = Field(None, max_length=100)
     neighborhood: Optional[str] = Field(None, min_length=3, max_length=100)
-    
-    def get_non_none_fields(self) -> dict:
-        """Return only fields that are not None"""
-        return {k: v for k, v in self.model_dump().items() if v is not None}

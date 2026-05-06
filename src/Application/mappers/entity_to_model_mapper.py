@@ -1,8 +1,10 @@
 """All Entity to SQLAlchemy Model conversions"""
 from uuid import UUID
 
+from src.data.models.document_validation_model import DocumentValidationModel
 from src.data.models.student_absence_justification_model import StudentAbsenceJustificationModel
 from src.data.models.user_password_history_model import UserPasswordHistoryModel
+from src.domain.entities.document_validation import DocumentValidation
 from src.domain.entities.student_absence_justification import StudentAbsenceJustification
 from src.domain.entities.user import User
 from src.domain.entities.address import Address
@@ -52,7 +54,8 @@ class EntityToModelMapper:
             active=entity.active,
             sex_id=entity.sex_id,
             gender_id=entity.gender_id,
-            user_type_id=entity.user_type_id
+            user_type_id=entity.user_type_id,
+            email_verified=entity.email_verified if entity.email != '' else None
         )
     
     # ========== Address ==========
@@ -161,6 +164,18 @@ class EntityToModelMapper:
             legal_representative_id=entity.legal_representative_id.bytes if entity.legal_representative_id else None
         )
     
+    # ========== Document Validation ==========
+    @staticmethod
+    def document_validation(entity: DocumentValidation) -> DocumentValidationModel:
+        return DocumentValidationModel(
+            id=entity.id.bytes,
+            created_at=entity.created_at,
+            updated_at=entity.updated_at,
+            rejection_reason=entity.rejection_reason,
+            document_validation_status_type_id=entity.document_validation_status_type_id,
+            document_id=entity.document_id.bytes
+        )
+    
     # ========== Legal Representative ==========
     @staticmethod
     def legal_representative(entity: LegalRepresentative) -> LegalRepresentativeModel:
@@ -170,7 +185,8 @@ class EntityToModelMapper:
             updated_at=entity.updated_at,
             name=entity.name,
             document=entity.document,
-            user_id=entity.user_id.bytes
+            user_id=entity.user_id.bytes,
+            legal_representative_degree_id=entity.legal_representative_degree_id
         )
     
     # ========== User Password History ==========

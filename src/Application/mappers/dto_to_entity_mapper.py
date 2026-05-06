@@ -41,6 +41,7 @@ from src.domain.dtos.document_validation_status_type_dto import DocumentValidati
 from src.domain.dtos.shift_type_dto import ShiftTypeCreateDTO
 from src.domain.dtos.report_type_dto import ReportTypeCreateDTO
 from src.infrastructure.handlers.datetime_handler import DateTimeHandler
+from src.infrastructure.handlers.uuid_extender import UuidExtender
 
 class DtoToEntityMapper:
     """Centralized DTO -> Entity conversions"""
@@ -63,7 +64,8 @@ class DtoToEntityMapper:
             active=True,
             sex_id=dto.sex_id,
             gender_id=dto.gender_id,
-            user_type_id=dto.user_type_id
+            user_type_id=dto.user_type_id,
+            email_verified=None
         )
     
     # ========== Address ==========
@@ -78,7 +80,7 @@ class DtoToEntityMapper:
             number=dto.number,
             complement=dto.complement,
             neighborhood=dto.neighborhood,
-            user_id=UUID(dto.user_id)
+            user_id=UUID(dto.user_id) if dto.user_id is not None else UuidExtender.empty()
         )
     
     # ========== Course ==========
@@ -142,7 +144,7 @@ class DtoToEntityMapper:
             created_at=DateTimeHandler.now(),
             updated_at=None,
             attended=False,
-            user_id=UUID(dto.user_id),
+            user_id=UUID(dto.user_id) if dto.user_id is not None else UuidExtender.empty(),
             class_session_id=UUID(dto.class_session_id)
         )
     
@@ -154,7 +156,7 @@ class DtoToEntityMapper:
             created_at=DateTimeHandler.now(),
             updated_at=None,
             active=True,
-            user_id=UUID(dto.user_id),
+            user_id=UUID(dto.user_id) if dto.user_id is not None else UuidExtender.empty(),
             class_id=UUID(dto.class_id)
         )
     
@@ -167,7 +169,7 @@ class DtoToEntityMapper:
             updated_at=None,
             base64=dto.base64,
             is_front=dto.is_front,
-            user_id=UUID(dto.user_id),
+            user_id=UUID(dto.user_id) if dto.user_id is not None else UuidExtender.empty(),
             document_type_id=dto.document_type_id,
             legal_representative_id=UUID(dto.legal_representative_id) if dto.legal_representative_id else None
         )
@@ -193,7 +195,8 @@ class DtoToEntityMapper:
             updated_at=None,
             name=dto.name,
             document=dto.document,
-            user_id=UUID(dto.user_id)
+            user_id=UUID(dto.user_id) if dto.user_id is not None else UuidExtender.empty(),
+            legal_representative_degree_id=dto.legal_representative_degree_id
         )
     
     # ========== User Sex Type ==========

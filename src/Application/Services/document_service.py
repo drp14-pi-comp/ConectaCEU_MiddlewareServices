@@ -1,5 +1,5 @@
 """Document service - business logic for Document entity"""
-from typing import List, Optional
+from typing import List
 from uuid import UUID
 
 from src.application.logging.application_logger import ApplicationLogger

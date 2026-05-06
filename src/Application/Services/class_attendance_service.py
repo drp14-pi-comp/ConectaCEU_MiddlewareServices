@@ -48,7 +48,7 @@ class ClassAttendanceService(BaseService):
             raise ValueError("Session not found")
         
         # Validate session date
-        if session.date > datetime.utcnow():
+        if session.date > DateTimeHandler.now():
             raise ValueError("Cannot take attendance before session date")
         
         created = 0
@@ -72,7 +72,7 @@ class ClassAttendanceService(BaseService):
                 
                 attendance = ClassAttendance(
                     id=uuid4(),
-                    created_at=datetime.utcnow(),
+                    created_at=DateTimeHandler.now(),
                     updated_at=None,
                     attended=entry.attended,
                     user_id=user_id,

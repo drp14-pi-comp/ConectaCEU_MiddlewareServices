@@ -9,11 +9,12 @@ class LegalRepresentativeCreateDTO(BaseModel):
     """DTO for creating a legal representative"""
     name: str = Field(..., min_length=3, max_length=200)
     document: str = Field(..., min_length=11, max_length=11)
-    user_id: str  # UUID as string
+    user_id: Optional[str] = None  # UUID as string
     legal_representative_degree_id: int
 
     # Documents
-    id_document: DocumentCreateDTO
+    id_document_front: DocumentCreateDTO
+    id_document_back: DocumentCreateDTO
     student_registry_authorization: DocumentCreateDTO
     
     @field_validator('document')

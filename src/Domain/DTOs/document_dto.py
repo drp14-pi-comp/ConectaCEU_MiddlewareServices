@@ -6,7 +6,7 @@ class DocumentCreateDTO(BaseModel):
     """DTO for uploading a document"""
     base64: str
     is_front: Optional[bool] = None
-    user_id: str  # UUID as string
+    user_id: Optional[str] = None  # UUID as string
     document_type_id: int
     legal_representative_id: Optional[str] = None  # UUID as string
 

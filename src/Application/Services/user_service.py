@@ -56,9 +56,13 @@ class UserService(BaseService):
             created_by_user_id: ID of the user creating this account (None for public registration)
         """
         try:
+            # Validate if password are the same
+            if dto.password != dto.confirm_password:
+                raise ValueError("As senhas são diferentes")
+
             # Hash passwords
             dto.password = self._hash_password(dto.password)
-            dto.confirm_password = self._hash_password(dto.confirm_password)
+            dto.confirm_password = ''
             
             # ========== Validations ==========
             # Validate passwords
@@ -73,11 +77,6 @@ class UserService(BaseService):
                 existing_email = await self.repository.get_by_email(dto.email)
                 if existing_email:
                     raise ValueError("E-mail pertence a outra pessoa")
-            
-            if dto.cellphone_number:
-                existing_phone = await self.repository.get_by_cellphone(dto.cellphone_number)
-                if existing_phone:
-                    raise ValueError("Número de celular pertence a outra pessoa")
             
             # ========== Determine Creation Path ==========
             is_public = created_by_user_id is None
@@ -113,14 +112,15 @@ class UserService(BaseService):
             
             # ========== Create User ==========
             entity = DtoToEntityMapper.user(dto)
+
+            if entity.email != '' and not is_admin_or_secretary:
+                entity.email_verified = False
             
             # Set user status based on creation path
             if is_admin_or_secretary:
                 entity.active = True
-                entity.email_verified = True
             else:
                 entity.active = False
-                entity.email_verified = False
             
             # Save user
             model = EntityToModelMapper.user(entity)
@@ -174,7 +174,8 @@ class UserService(BaseService):
                 saved_rep = await self.legal_rep_repo.create(rep_model)
                 rep_id_bytes = saved_rep.id
                 
-                await _create_document(rep_dto.id_document, user_id_bytes, rep_id_bytes)
+                await _create_document(rep_dto.id_document_front, user_id_bytes, rep_id_bytes)
+                await _create_document(rep_dto.id_document_back, user_id_bytes, rep_id_bytes)
                 await _create_document(rep_dto.student_registry_authorization, user_id_bytes, rep_id_bytes)
                 
                 return saved_rep
@@ -184,6 +185,9 @@ class UserService(BaseService):
             
             if dto.legal_representative_2:
                 await _create_legal_representative(dto.legal_representative_2, user_id_bytes)
+
+            # Commit the transaction
+            self.repository.session.commit()
             
             # ========== Return ViewModel ==========
             saved_entity = ModelToEntityMapper.user(saved_model)
@@ -483,9 +487,6 @@ class UserService(BaseService):
         - At least one special character
         """
         import re
-
-        if password != confirm_password:
-            raise ValueError("As senhas são diferentes")
         
         # Check length
         if len(password) < 8:
@@ -579,14 +580,13 @@ class UserService(BaseService):
     async def _auto_approve_documents(self, documents: list) -> None:
         """Auto-approve documents for admin/secretary created users"""
         from uuid import uuid4
-        from datetime import datetime
         from src.domain.entities.document_validation import DocumentValidation
         from src.application.mappers.entity_to_model_mapper import EntityToModelMapper
         
         for doc in documents:
             validation = DocumentValidation(
                 id=uuid4(),
-                created_at=datetime.utcnow(),
+                created_at=DateTimeHandler.now(),
                 updated_at=None,
                 rejection_reason=None,
                 document_validation_status_type_id=2,  # Approved
@@ -598,14 +598,13 @@ class UserService(BaseService):
     async def _create_pending_validations(self, documents: list) -> None:
         """Create pending validations for secretary review"""
         from uuid import uuid4
-        from datetime import datetime
         from src.domain.entities.document_validation import DocumentValidation
         from src.application.mappers.entity_to_model_mapper import EntityToModelMapper
         
         for doc in documents:
             validation = DocumentValidation(
                 id=uuid4(),
-                created_at=datetime.utcnow(),
+                created_at=DateTimeHandler.now(),
                 updated_at=None,
                 rejection_reason=None,
                 document_validation_status_type_id=1,  # Pending

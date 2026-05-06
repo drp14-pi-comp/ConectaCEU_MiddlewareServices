@@ -25,6 +25,7 @@ class User(BaseModel):
     sex_id: int
     gender_id: int
     user_type_id: int
+    email_verified: Optional[bool] = None
     
     model_config = ConfigDict(from_attributes=True)
     
