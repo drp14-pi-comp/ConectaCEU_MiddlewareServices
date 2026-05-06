@@ -28,7 +28,7 @@ engine = create_engine(
 def set_mysql_session_vars(dbapi_connection, connection_record):
     """Set MySQL session variables on connection"""
     cursor = dbapi_connection.cursor()
-    cursor.execute("SET time_zone = '+00:00'")
+    cursor.execute("SET time_zone = '-03:00'")
     cursor.execute("SET SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED")
     cursor.execute("SET NAMES utf8mb4")
     cursor.execute("SET CHARACTER SET utf8mb4")
