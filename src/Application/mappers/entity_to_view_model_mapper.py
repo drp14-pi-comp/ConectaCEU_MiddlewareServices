@@ -12,6 +12,15 @@ from src.domain.entities.user_class import UserClass
 from src.domain.entities.document import Document
 from src.domain.entities.legal_representative import LegalRepresentative
 from src.domain.entities.user_password_history import UserPasswordHistory
+from src.domain.entities.user_sex_type import UserSexType
+from src.domain.entities.user_gender_type import UserGenderType
+from src.domain.entities.user_type import UserType
+from src.domain.entities.document_type import DocumentType
+from src.domain.entities.document_validation_status_type import DocumentValidationStatusType
+from src.domain.entities.document_validation import DocumentValidation
+from src.domain.entities.shift_type import ShiftType
+from src.domain.entities.report_type import ReportType
+from src.domain.entities.legal_representative_degree import LegalRepresentativeDegree
 
 from src.domain.view_models.profiles_to_exclude_view_model import ProfilesToExcludeViewModel
 from src.domain.view_models.student_absence_justification_view_model import StudentAbsenceJustificationViewModel
@@ -26,6 +35,15 @@ from src.domain.view_models.class_attendance_view_model import ClassAttendanceVi
 from src.domain.view_models.user_class_view_model import UserClassViewModel
 from src.domain.view_models.document_view_model import DocumentViewModel
 from src.domain.view_models.legal_representative_view_model import LegalRepresentativeViewModel
+from src.domain.view_models.user_sex_type_view_model import UserSexTypeViewModel
+from src.domain.view_models.user_gender_type_view_model import UserGenderTypeViewModel
+from src.domain.view_models.user_type_view_model import UserTypeViewModel
+from src.domain.view_models.document_type_view_model import DocumentTypeViewModel
+from src.domain.view_models.document_validation_status_type_view_model import DocumentValidationStatusTypeViewModel
+from src.domain.view_models.document_validation_view_model import DocumentValidationViewModel
+from src.domain.view_models.shift_type_view_model import ShiftTypeViewModel
+from src.domain.view_models.report_type_view_model import ReportTypeViewModel
+from src.domain.view_models.legal_representative_degree_view_model import LegalRepresentativeDegreeViewModel
 
 class EntityToViewModelMapper:
     """Centralized Entity to ViewModel conversions"""
@@ -197,3 +215,65 @@ class EntityToViewModelMapper:
             class_attendance_id=entity.class_attendance_id,
             document_id=entity.document_id
         )
+    
+    # ========== User Sex Type ==========
+    @staticmethod
+    def user_sex_type(entity: UserSexType) -> UserSexTypeViewModel:
+        return UserSexTypeViewModel(id=entity.id, description=entity.description)
+
+    # ========== User Gender Type ==========
+    @staticmethod
+    def user_gender_type(entity: UserGenderType) -> UserGenderTypeViewModel:
+        return UserGenderTypeViewModel(id=entity.id, description=entity.description)
+
+    # ========== User Type ==========
+    @staticmethod
+    def user_type(entity: UserType) -> UserTypeViewModel:
+        return UserTypeViewModel(
+            id=entity.id,
+            description=entity.description,
+            register_user=entity.register_user,
+            validate_user_documents=entity.validate_user_documents,
+            list_secretaries=entity.list_secretaries,
+            list_educators=entity.list_educators,
+            list_students=entity.list_students,
+            send_broadcast_message=entity.send_broadcast_message,
+            add_courses=entity.add_courses,
+            add_classes=entity.add_classes,
+            emit_user_documents=entity.emit_user_documents
+        )
+
+    # ========== Document Type ==========
+    @staticmethod
+    def document_type(entity: DocumentType) -> DocumentTypeViewModel:
+        return DocumentTypeViewModel(id=entity.id, description=entity.description)
+
+    # ========== Document Validation Status Type ==========
+    @staticmethod
+    def document_validation_status_type(entity: DocumentValidationStatusType) -> DocumentValidationStatusTypeViewModel:
+        return DocumentValidationStatusTypeViewModel(id=entity.id, description=entity.description)
+
+    # ========== Document Validation ==========
+    @staticmethod
+    def document_validation(entity: DocumentValidation) -> DocumentValidationViewModel:
+        return DocumentValidationViewModel(
+            id=entity.id, created_at=entity.created_at, updated_at=entity.updated_at,
+            rejection_reason=entity.rejection_reason,
+            document_validation_status_type_id=entity.document_validation_status_type_id,
+            document_id=entity.document_id
+        )
+
+    # ========== Shift Type ==========
+    @staticmethod
+    def shift_type(entity: ShiftType) -> ShiftTypeViewModel:
+        return ShiftTypeViewModel(id=entity.id, description=entity.description)
+
+    # ========== Report Type ==========
+    @staticmethod
+    def report_type(entity: ReportType) -> ReportTypeViewModel:
+        return ReportTypeViewModel(id=entity.id, description=entity.description)
+
+    # ========== Legal Representative Degree ==========
+    @staticmethod
+    def legal_representative_degree(entity: LegalRepresentativeDegree) -> LegalRepresentativeDegreeViewModel:
+        return LegalRepresentativeDegreeViewModel(id=entity.id, description=entity.description)
