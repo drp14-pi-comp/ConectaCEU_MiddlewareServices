@@ -114,19 +114,25 @@ async def reject_document(
 async def get_pending_validations(
     skip: int = 0,
     limit: int = 100,
+    current_user: User = Depends(get_current_active_user),
     service: DocumentValidationService = Depends(get_validation_service)
 ):
     """Get pending document validations."""
+    if current_user.user_type_id not in [1, 2]:
+        raise HTTPException(status_code=403, detail="Only administrators and secretaries can list documents")
     return await service.get_pending_validations(skip, limit)
 
 
 @router.get("/document/{document_id}", response_model=DocumentValidationViewModel)
 async def get_validation_by_document(
     document_id: UUID,
+    current_user: User = Depends(get_current_active_user),
     service: DocumentValidationService = Depends(get_validation_service)
 ):
     """Get validation for a document."""
     try:
+        if current_user.user_type_id not in [1, 2]:
+            raise HTTPException(status_code=403, detail="Only administrators and secretaries can list documents")
         return await service.get_validation_by_document(document_id)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
