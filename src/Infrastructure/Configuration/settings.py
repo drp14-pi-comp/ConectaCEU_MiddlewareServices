@@ -25,7 +25,7 @@ class AppSettings(BaseSettings):
     # Security
     SECRET_KEY: str = Field(default="default-secret-key-change-in-production")
     JWT_ALGORITHM: str = Field(default="HS256")
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = Field(default=30)
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = Field(default=60)
     REFRESH_TOKEN_EXPIRE_DAYS: int = Field(default=7)
     
     # App configuration
