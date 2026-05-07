@@ -1,8 +1,8 @@
 """Health check controller"""
 from fastapi import APIRouter
-from datetime import datetime
 
 from src.infrastructure.configuration.settings import config
+from src.infrastructure.handlers.datetime_handler import DateTimeHandler
 
 router = APIRouter(tags=["Health"])
 
@@ -14,5 +14,5 @@ async def health_check():
         "app": config.settings.APP_NAME,
         "version": config.settings.APP_VERSION,
         "environment": config.settings.ENVIRONMENT,
-        "timestamp": datetime.utc(datetime.timezone.utc).isoformat()
+        "timestamp": DateTimeHandler.now()
     }
