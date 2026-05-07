@@ -27,7 +27,9 @@ async def get_sex_types(db: Session = Depends(get_db)):
     """Get all sex types"""
     repo = UserSexTypeRepository(db)
     models = await repo.get_all()
-    return [ModelToViewModelMapper.user_sex_type(m) for m in models]
+    result = [ModelToViewModelMapper.user_sex_type(m) for m in models]
+    result.sort(key=lambda x: x.id)
+    return result
 
 
 # ========== Gender Types ==========
@@ -36,7 +38,9 @@ async def get_gender_types(db: Session = Depends(get_db)):
     """Get all gender types"""
     repo = UserGenderTypeRepository(db)
     models = await repo.get_all()
-    return [ModelToViewModelMapper.user_gender_type(m) for m in models]
+    result = [ModelToViewModelMapper.user_gender_type(m) for m in models]
+    result.sort(key=lambda x: x.id)
+    return result
 
 
 # ========== User Types ==========
@@ -45,7 +49,9 @@ async def get_user_types(db: Session = Depends(get_db)):
     """Get all user types"""
     repo = UserTypeRepository(db)
     models = await repo.get_all()
-    return [ModelToViewModelMapper.user_type(m) for m in models]
+    result = [ModelToViewModelMapper.user_type(m) for m in models]
+    result.sort(key=lambda x: x.id)
+    return result
 
 
 # ========== Legal Representative Degrees ==========
@@ -54,7 +60,9 @@ async def get_legal_representative_degrees(db: Session = Depends(get_db)):
     """Get all legal representative degrees"""
     repo = LegalRepresentativeDegreeRepository(db)
     models = await repo.get_all()
-    return [ModelToViewModelMapper.legal_representative_degree(m) for m in models]
+    result = [ModelToViewModelMapper.legal_representative_degree(m) for m in models]
+    result.sort(key=lambda x: x.id)
+    return result
 
 
 # ========== Document Types ==========
@@ -63,7 +71,9 @@ async def get_document_types(db: Session = Depends(get_db)):
     """Get all document types"""
     repo = DocumentTypeRepository(db)
     models = await repo.get_all()
-    return [ModelToViewModelMapper.document_type(m) for m in models]
+    result = [ModelToViewModelMapper.document_type(m) for m in models]
+    result.sort(key=lambda x: x.id)
+    return result
 
 
 # ========== Validation Status Types ==========
@@ -72,7 +82,9 @@ async def get_validation_status_types(db: Session = Depends(get_db)):
     """Get all validation status types"""
     repo = DocumentValidationStatusTypeRepository(db)
     models = await repo.get_all()
-    return [ModelToViewModelMapper.document_validation_status_type(m) for m in models]
+    result = [ModelToViewModelMapper.document_validation_status_type(m) for m in models]
+    result.sort(key=lambda x: x.id)
+    return result
 
 
 # ========== Shift Types ==========
@@ -81,7 +93,9 @@ async def get_shift_types(db: Session = Depends(get_db)):
     """Get all shift types"""
     repo = ShiftTypeRepository(db)
     models = await repo.get_all()
-    return [ModelToViewModelMapper.shift_type(m) for m in models]
+    result = [ModelToViewModelMapper.shift_type(m) for m in models]
+    result.sort(key=lambda x: x.id)
+    return result
 
 
 # ========== Report Types ==========
@@ -90,4 +104,6 @@ async def get_report_types(db: Session = Depends(get_db)):
     """Get all report types"""
     repo = ReportTypeRepository(db)
     models = await repo.get_all()
-    return [ModelToViewModelMapper.report_type(m) for m in models]
+    result = [ModelToViewModelMapper.report_type(m) for m in models]
+    result.sort(key=lambda x: x.id);
+    return result
