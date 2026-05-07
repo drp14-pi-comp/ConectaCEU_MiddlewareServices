@@ -80,3 +80,12 @@ class ClassRepository(BaseRepository[ClassModel]):
             self.session.flush()
             return True
         return False
+    
+    async def activate(self, class_id: UUID) -> bool:
+        """Deactivate class"""
+        class_ = await self.get_by_id(class_id)
+        if class_:
+            class_.active = True
+            self.session.flush()
+            return True
+        return False
