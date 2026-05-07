@@ -23,7 +23,8 @@ security = HTTPBearer()
 
 def get_auth_service(db: Session = Depends(get_db)) -> AuthService:
     user_repo = UserRepository(db)
-    return AuthService(user_repo)
+    profiles_to_exclude_repo = ProfilesToExcludeRepository(db)
+    return AuthService(user_repo, profiles_to_exclude_repo)
 
 def get_user_service(db: Session = Depends(get_db)) -> UserService:
     """Dependency injection for UserService"""
