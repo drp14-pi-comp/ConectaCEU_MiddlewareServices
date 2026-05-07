@@ -1,4 +1,5 @@
 """User service - business logic for User entity"""
+import re
 from typing import Optional
 from uuid import UUID
 import bcrypt
@@ -56,6 +57,8 @@ class UserService(BaseService):
             created_by_user_id: ID of the user creating this account (None for public registration)
         """
         try:
+            dto.document = re.sub(r'\D', '', dto.document)
+
             # Validate if password are the same
             if dto.password != dto.confirm_password:
                 raise ValueError("As senhas são diferentes")
