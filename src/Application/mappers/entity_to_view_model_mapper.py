@@ -119,9 +119,9 @@ class EntityToViewModelMapper:
             class_id=entity.class_id
         )
     
-    # ========== Attendance ==========
+    # ========== Class Attendance ==========
     @staticmethod
-    def attendance(entity: ClassAttendance) -> ClassAttendanceViewModel:
+    def class_attendance(entity: ClassAttendance) -> ClassAttendanceViewModel:
         return ClassAttendanceViewModel(
             id=entity.id,
             created_at=entity.created_at,
