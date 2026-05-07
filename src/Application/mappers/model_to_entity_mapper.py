@@ -1,6 +1,5 @@
 """All SQLAlchemy Model to Entity conversions"""
 from uuid import UUID
-from xml.dom.minidom import DocumentType
 
 from src.data.models.document_type_model import DocumentTypeModel
 from src.data.models.document_validation_model import DocumentValidationModel
@@ -25,6 +24,7 @@ from src.data.models.user_class_model import UserClassModel
 from src.data.models.document_model import DocumentModel
 from src.data.models.legal_representative_model import LegalRepresentativeModel
 
+from src.domain.entities.document_type import DocumentType
 from src.domain.entities.document_validation import DocumentValidation
 from src.domain.entities.document_validation_status_type import DocumentValidationStatusType
 from src.domain.entities.legal_representative_degree import LegalRepresentativeDegree
