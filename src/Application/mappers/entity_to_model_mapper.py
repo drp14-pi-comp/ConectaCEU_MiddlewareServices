@@ -128,7 +128,7 @@ class EntityToModelMapper:
     
     # ========== Attendance ==========
     @staticmethod
-    def attendance(entity: ClassAttendance) -> ClassAttendanceModel:
+    def class_attendance(entity: ClassAttendance) -> ClassAttendanceModel:
         return ClassAttendanceModel(
             id=entity.id.bytes,
             created_at=entity.created_at,

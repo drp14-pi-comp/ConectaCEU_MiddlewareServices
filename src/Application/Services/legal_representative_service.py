@@ -1,4 +1,5 @@
 """Legal representative service - business logic for Legal Representative entity"""
+import re
 from typing import List
 from uuid import UUID
 
@@ -23,6 +24,7 @@ class LegalRepresentativeService(BaseService):
     async def create_representative(self, dto: LegalRepresentativeCreateDTO) -> LegalRepresentativeViewModel:
         """Create a new legal representative"""
         try:
+            dto.document = re.sub(r'\D', '', dto.document)
             # Check if document already exists
             if await self.repository.document_exists(dto.document):
                 raise ValueError("Document already registered")
@@ -30,6 +32,7 @@ class LegalRepresentativeService(BaseService):
             entity = DtoToEntityMapper.legal_representative(dto)
             model = EntityToModelMapper.legal_representative(entity)
             saved_model = await self.repository.create(model)
+            self.repository.session.commit()
             saved_entity = ModelToEntityMapper.legal_representative(saved_model)
             return EntityToViewModelMapper.legal_representative(saved_entity)
         except Exception as e:
@@ -46,6 +49,7 @@ class LegalRepresentativeService(BaseService):
             if not model:
                 raise ValueError("Representative not found")
             
+            dto.document = re.sub(r'\D', '', dto.document)
             # Check document uniqueness if being updated
             if dto.document:
                 exists = await self.repository.document_exists(dto.document, exclude_id=representative_id)
@@ -56,6 +60,7 @@ class LegalRepresentativeService(BaseService):
             updated_entity = UpdateMapper.legal_representative(entity, dto)
             updated_model = EntityToModelMapper.legal_representative(updated_entity)
             saved_model = await self.repository.update(updated_model)
+            self.repository.session.commit()
             saved_entity = ModelToEntityMapper.legal_representative(saved_model)
             return EntityToViewModelMapper.legal_representative(saved_entity)
         except Exception as e:

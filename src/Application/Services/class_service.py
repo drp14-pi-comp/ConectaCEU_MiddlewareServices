@@ -52,6 +52,7 @@ class ClassService(BaseService):
             entity = DtoToEntityMapper.class_(dto)
             model = EntityToModelMapper.class_(entity)
             saved_model = await self.repository.create(model)
+            self.repository.session.commit()
             saved_entity = ModelToEntityMapper.class_(saved_model)
             return EntityToViewModelMapper.class_(saved_entity)
         except Exception as e:
@@ -149,6 +150,8 @@ class ClassService(BaseService):
                     class_info['sessions_created'] += 1
                 
                 created_classes.append(class_info)
+
+            self.repository.session.commit()
             
             return {
                 'course_id': course_id,
@@ -174,6 +177,7 @@ class ClassService(BaseService):
             updated_entity = UpdateMapper.class_(entity, dto)
             updated_model = EntityToModelMapper.class_(updated_entity)
             saved_model = await self.repository.update(updated_model)
+            self.repository.session.commit()
             saved_entity = ModelToEntityMapper.class_(saved_model)
             return EntityToViewModelMapper.class_(saved_entity)
         except Exception as e:
@@ -227,6 +231,7 @@ class ClassService(BaseService):
             
             # Deactivate the class
             result = await self.repository.deactivate(class_id)
+            self.repository.session.commit()
             
             # Return summary
             return {
@@ -252,7 +257,10 @@ class ClassService(BaseService):
             if not component or not component.active:
                 raise ValueError("Cannot activate class because component is inactive")
             
-            return await self.repository.activate(class_id)
+            result = await self.repository.activate(class_id)
+            self.repository.session.commit()
+            
+            return result
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
     

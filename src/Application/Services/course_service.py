@@ -91,12 +91,14 @@ class CourseService(BaseService):
                 from src.data.repositories.log_course_creation_repository import LogCourseCreationRepository
                 
                 log_repo = LogCourseCreationRepository(self.repository.session)
-                await log_repo.log_course_creation(
+                await log_repo.log(
                     user_id=created_by_user_id.bytes,
                     user_ip_address=user_ip_address or "unknown",
                     course_id=saved_model.id
                 )
             
+            self.repository.session.commit()
+
             # Convert back to ViewModel
             saved_entity = ModelToEntityMapper.course(saved_model)
 
@@ -124,6 +126,8 @@ class CourseService(BaseService):
             # Save changes
             updated_model = EntityToModelMapper.course(updated_entity)
             saved_model = await self.repository.update(updated_model)
+
+            self.repository.session.commit()
             
             saved_entity = ModelToEntityMapper.course(saved_model)
             return EntityToViewModelMapper.course(saved_entity)
@@ -151,6 +155,8 @@ class CourseService(BaseService):
             
             # Deactivate the course
             await self.repository.deactivate(course_id)
+
+            self.repository.session.commit()
             
             return {
                 "success": True,
@@ -171,6 +177,8 @@ class CourseService(BaseService):
                 raise ValueError("Curso já está ativado")
             
             await self.repository.activate(course_id)
+            
+            self.repository.session.commit()
             
             return {
                 "success": True,

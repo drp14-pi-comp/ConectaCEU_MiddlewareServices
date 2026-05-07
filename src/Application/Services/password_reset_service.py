@@ -54,6 +54,7 @@ class PasswordResetService:
             user.password_reset_token = reset_token
             user.password_reset_expires = token_expiry
             await self.user_repo.update(user)
+            self.user_repo.session.commit()
             
             # Send email
             frontend_url = config.get("App.FrontendUrl", "")
@@ -136,6 +137,7 @@ class PasswordResetService:
             hashed_password = auth_service._hash_password(new_password)
             
             success = await self.user_repo.update_password(user_id, hashed_password)
+            self.user_repo.session.commit()
             
             if success:
                 # Add to password history
@@ -148,6 +150,7 @@ class PasswordResetService:
                 user.password_reset_token = None
                 user.password_reset_expires = None
                 await self.user_repo.update(user)
+                self.user_repo.session.commit()
                 
                 return {"success": True, "message": "Password reset successfully"}
             

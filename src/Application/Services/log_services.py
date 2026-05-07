@@ -20,6 +20,7 @@ class LogApplicationErrorService:
     async def log_error(self, exception: str, stacktrace: str) -> None:
         """Log an application error"""
         await self.repository.log_error(exception, stacktrace)
+        self.repository.session.commit()
 
 
 class LogBroadcastMessageService:
@@ -50,6 +51,7 @@ class LogBroadcastMessageService:
             user_id=user_id.bytes,
             user_ip_address=user_ip_address
         )
+        self.repository.session.commit()
 
 
 class LogCourseCreationService:
@@ -61,6 +63,7 @@ class LogCourseCreationService:
     async def log_creation(self, user_id: UUID, user_ip_address: str, course_id: UUID) -> None:
         """Log a course creation"""
         await self.repository.log_course_creation(user_id.bytes, user_ip_address, course_id.bytes)
+        self.repository.session.commit()
 
 
 class LogDocumentRequestService:
@@ -72,6 +75,7 @@ class LogDocumentRequestService:
     async def log_request(self, document_type_id: int, user_id: UUID, user_ip_address: str) -> None:
         """Log a document request"""
         await self.repository.log_document_request(document_type_id, user_id.bytes, user_ip_address)
+        self.repository.session.commit()
 
 
 class LogDocumentValidationService:
@@ -96,6 +100,7 @@ class LogDocumentValidationService:
             performed_by_user_id=performed_by_user_id.bytes,
             performed_user_ip_address=performed_user_ip_address
         )
+        self.repository.session.commit()
 
 
 class LogReportRequestService:
@@ -107,6 +112,7 @@ class LogReportRequestService:
     async def log_request(self, report_type_id: int, user_id: UUID, user_ip_address: str) -> None:
         """Log a report request"""
         await self.repository.log_report_request(report_type_id, user_id.bytes, user_ip_address)
+        self.repository.session.commit()
 
 
 class LogStudentEnrollmentService:
@@ -124,6 +130,7 @@ class LogStudentEnrollmentService:
     ) -> None:
         """Log a student enrollment/unenrollment"""
         await self.repository.log_enrollment(enrolled, user_id.bytes, user_ip_address, course_id.bytes)
+        self.repository.session.commit()
 
 
 class LogUserActivationService:
@@ -148,3 +155,4 @@ class LogUserActivationService:
             performed_by_user_id=performed_by_user_id.bytes,
             performed_by_user_ip_address=performed_by_user_ip_address
         )
+        self.repository.session.commit()

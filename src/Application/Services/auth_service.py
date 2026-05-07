@@ -29,14 +29,12 @@ class AuthService:
         """Create JWT access token"""
         try:
             expire = DateTimeHandler.now() + timedelta(minutes=config.settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-            
             payload = {
                 "sub": str(user_id),
                 "user_type_id": user_type_id,
                 "exp": expire,
                 "iat": DateTimeHandler.now()
             }
-            
             return jwt.encode(payload, config.settings.SECRET_KEY, algorithm=config.settings.JWT_ALGORITHM)
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
@@ -132,13 +130,14 @@ class AuthService:
                 # Log reactivation
                 from src.data.repositories.log_user_activation_repository import LogUserActivationRepository
                 log_repo = LogUserActivationRepository(self.user_repo.session)
-                await log_repo.log_activation(
+                await log_repo.log(
                     deactivation_reason=None,
                     activated=True,
                     user_id=user.id,
                     performed_by_user_id=user.id,
                     performed_by_user_ip_address="self_login"
                 )
+                self.user_repo.session.commit()
 
             access_token = await self.create_access_token(user_uuid, user.user_type_id)
             refresh_token = await self.create_refresh_token(user_uuid)

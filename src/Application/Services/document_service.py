@@ -25,6 +25,7 @@ class DocumentService(BaseService):
             entity = DtoToEntityMapper.document(dto)
             model = EntityToModelMapper.document(entity)
             saved_model = await self.repository.create(model)
+            self.repository.session.commit()
             saved_entity = ModelToEntityMapper.document(saved_model)
             return EntityToViewModelMapper.document(saved_entity)
         except Exception as e:
@@ -54,7 +55,7 @@ class DocumentService(BaseService):
             # Log document request
             from src.data.repositories.log_document_request_repository import LogDocumentRequestRepository
             log_repo = LogDocumentRequestRepository(self.repository.session)
-            await log_repo.log_document_request(
+            await log_repo.log(
                 document_type_id=document.document_type_id,
                 user_id=user_id.bytes,
                 user_ip_address=user_ip_address
@@ -73,6 +74,9 @@ class DocumentService(BaseService):
             if not document:
                 raise ValueError("Document not found")
             
-            return await self.repository.delete(document_id)
+            result = await self.repository.delete(document_id)
+            self.repository.session.commit()
+
+            return result
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)

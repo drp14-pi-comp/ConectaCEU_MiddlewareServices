@@ -31,6 +31,7 @@ class ClassSessionService(BaseService):
             entity = DtoToEntityMapper.class_session(dto)
             model = EntityToModelMapper.class_session(entity)
             saved_model = await self.repository.create(model)
+            self.repository.session.commit()
             saved_entity = ModelToEntityMapper.class_session(saved_model)
             return EntityToViewModelMapper.class_session(saved_entity)
         except Exception as e:

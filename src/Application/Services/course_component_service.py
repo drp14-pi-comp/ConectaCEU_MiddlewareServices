@@ -30,6 +30,7 @@ class CourseComponentService(BaseService):
             entity = DtoToEntityMapper.course_component(dto)
             model = EntityToModelMapper.course_component(entity)
             saved_model = await self.repository.create(model)
+            self.repository.session.commit()
             saved_entity = ModelToEntityMapper.course_component(saved_model)
             return EntityToViewModelMapper.course_component(saved_entity)
         except Exception as e:
@@ -51,6 +52,7 @@ class CourseComponentService(BaseService):
             updated_entity = UpdateMapper.course_component(entity, dto)
             updated_model = EntityToModelMapper.course_component(updated_entity)
             saved_model = await self.repository.update(updated_model)
+            self.repository.session.commit()
             saved_entity = ModelToEntityMapper.course_component(saved_model)
             return EntityToViewModelMapper.course_component(saved_entity)
         except Exception as e:
@@ -75,6 +77,9 @@ class CourseComponentService(BaseService):
             if not component.active:
                 raise ValueError("Component already deactivated")
             
-            return await self.repository.deactivate(component_id)
+            result = await self.repository.deactivate(component_id)
+            self.repository.session.commit()
+            
+            return result
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)

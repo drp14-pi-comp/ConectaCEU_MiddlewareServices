@@ -43,7 +43,7 @@ class ClassAttendanceService(BaseService):
         session_id = UUID(dto.class_session_id)
         
         # Validate session exists
-        session = await self.session_repo.get_by_id(session_id)
+        session = await self.repository.get_by_id(session_id)
         if not session:
             raise ValueError("Session not found")
         
@@ -82,6 +82,7 @@ class ClassAttendanceService(BaseService):
                 await self.repository.create(model)
                 created += 1
         
+        self.repository.session.commit()
         summary = await self.repository.get_attendance_summary(session_id)
         
         return {
@@ -249,6 +250,7 @@ class ClassAttendanceService(BaseService):
         
         justification_model = EntityToModelMapper.student_absence_justification(justification)
         saved = await self.absence_justification_repo.create(justification_model)
+        self.repository.session.commit()
         
         return {
             "message": "Justification submitted successfully. Awaiting validation.",

@@ -49,7 +49,7 @@ class ReportService:
         try:
             # Log report request
             if requested_by_user_id:
-                await self.log_report_repo.log_report_request(
+                await self.log_report_repo.log(
                     report_type_id=1,
                     user_id=requested_by_user_id.bytes,
                     user_ip_address=user_ip_address or "unknown"
@@ -108,6 +108,8 @@ class ReportService:
                                     'student_phone': user.cellphone_number,
                                     'student_type_id': user.user_type_id
                                 })
+
+            self.user_repo.session.commit()
             
             return report_data
         except Exception as e:
@@ -122,7 +124,7 @@ class ReportService:
         """Get vacancies by course"""
         try:
             if requested_by_user_id:
-                await self.log_report_repo.log_report_request(
+                await self.log_report_repo.log(
                     report_type_id=2,
                     user_id=requested_by_user_id.bytes,
                     user_ip_address=user_ip_address or "unknown"
@@ -173,6 +175,8 @@ class ReportService:
                         2
                     )
                 })
+
+            self.user_repo.session.commit()
             
             return report_data
         except Exception as e:

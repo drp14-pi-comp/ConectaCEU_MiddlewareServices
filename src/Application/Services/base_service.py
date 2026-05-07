@@ -3,11 +3,7 @@ from typing import Optional, List, Any
 from uuid import UUID
 
 from src.data.repositories.base.base_repository import BaseRepository
-from src.application.mappers.dto_to_entity_mapper import DtoToEntityMapper
-from src.application.mappers.entity_to_model_mapper import EntityToModelMapper
 from src.application.mappers.model_to_entity_mapper import ModelToEntityMapper
-from src.application.mappers.entity_to_view_model_mapper import EntityToViewModelMapper
-from src.application.mappers.update_mapper import UpdateMapper
 
 class BaseService:
     """Generic service with common CRUD operations"""
@@ -36,11 +32,15 @@ class BaseService:
     
     async def delete(self, id: UUID) -> bool:
         """Delete entity by ID"""
-        return await self.repository.delete(id)
+        result = await self.repository.delete(id)
+        self.repository.session.commit()
+        return True if result else False
     
     async def delete_int(self, id: int) -> bool:
         """Delete entity by integer ID"""
-        return await self.repository.delete_int(id)
+        result = await self.repository.delete_int(id)
+        self.repository.session.commit()
+        return True if result else False
     
     async def exists(self, id: UUID) -> bool:
         """Check if entity exists"""

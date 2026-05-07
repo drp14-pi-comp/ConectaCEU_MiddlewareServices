@@ -26,6 +26,7 @@ class AddressService(BaseService):
             entity = DtoToEntityMapper.address(dto)
             model = EntityToModelMapper.address(entity)
             saved_model = await self.repository.create(model)
+            self.repository.session.commit()
             saved_entity = ModelToEntityMapper.address(saved_model)
             return EntityToViewModelMapper.address(saved_entity)
         except Exception as e:
@@ -42,6 +43,7 @@ class AddressService(BaseService):
             updated_entity = UpdateMapper.address(entity, dto)
             updated_model = EntityToModelMapper.address(updated_entity)
             saved_model = await self.repository.update(updated_model)
+            self.repository.session.commit()
             saved_entity = ModelToEntityMapper.address(saved_model)
             return EntityToViewModelMapper.address(saved_entity)
         except Exception as e:

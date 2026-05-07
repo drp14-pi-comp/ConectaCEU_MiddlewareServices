@@ -65,12 +65,14 @@ class UserClassService(BaseService):
             if enrolled_by_user_id:
                 from src.data.repositories.log_student_enrollment_repository import LogStudentEnrollmentRepository
                 log_repo = LogStudentEnrollmentRepository(self.repository.session)
-                await log_repo.log_enrollment(
+                await log_repo.log(
                     enrolled=True,
                     user_id=enrolled_by_user_id.bytes,
                     user_ip_address=user_ip_address or "unknown",
                     course_id=self._get_course_id_for_class(class_id).bytes
                 )
+            
+            self.repository.session.commit()
             
             saved_entity = ModelToEntityMapper.user_class(saved_model)
             return EntityToViewModelMapper.user_class(saved_entity)
@@ -121,6 +123,8 @@ class UserClassService(BaseService):
                         issues.append({'user_id': user_id, 'issue': str(e)})
                 except ValueError:
                     issues.append({'user_id': user_id, 'issue': 'Invalid user ID format'})
+
+            self.repository.session.commit()
             
             return {
                 'valid': len(issues) == 0,
@@ -151,6 +155,8 @@ class UserClassService(BaseService):
                 enroll_dto = UserClassEnrollDTO(user_id=user_id, class_id=dto.class_id)
                 result = await self.enroll_user(enroll_dto)
                 enrolled.append(result)
+            
+            self.repository.session.commit()
             
             return {
                 'success': True,
@@ -186,12 +192,14 @@ class UserClassService(BaseService):
             if unenrolled_by_user_id:
                 from src.data.repositories.log_student_enrollment_repository import LogStudentEnrollmentRepository
                 log_repo = LogStudentEnrollmentRepository(self.repository.session)
-                await log_repo.log_enrollment(
+                await log_repo.log(
                     enrolled=False,
                     user_id=unenrolled_by_user_id.bytes,
                     user_ip_address=user_ip_address or "unknown",
                     course_id=self._get_course_id_for_class(enrollment.class_id).bytes
                 )
+
+            self.repository.session.commit()
             
             return result
         except Exception as e:

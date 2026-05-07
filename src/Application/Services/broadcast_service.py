@@ -1,8 +1,12 @@
 """Broadcast message service - sends messages to multiple recipients"""
-from typing import List, Optional
+from typing import AsyncGenerator, List, Optional
 from uuid import UUID
 
 from src.application.logging.application_logger import ApplicationLogger
+from src.data.models.user_class_model import UserClassModel
+from src.data.models.user_model import UserModel
+from src.data.repositories.class_repository import ClassRepository
+from src.data.repositories.course_component_repository import CourseComponentRepository
 from src.data.repositories.user_repository import UserRepository
 from src.data.repositories.user_class_repository import UserClassRepository
 from src.data.repositories.log_broadcast_message_repository import LogBroadcastMessageRepository
@@ -19,6 +23,8 @@ class BroadcastService:
         user_repo: UserRepository,
         user_class_repo: UserClassRepository,
         log_repo: LogBroadcastMessageRepository,
+        component_repo: CourseComponentRepository,
+        class_repo: ClassRepository,
         email_service: EmailService,
         sms_service: SmsService,
         whatsapp_service: WhatsAppService
@@ -26,6 +32,8 @@ class BroadcastService:
         self.user_repo = user_repo
         self.user_class_repo = user_class_repo
         self.log_repo = log_repo
+        self.component_repo = component_repo
+        self.class_repo = class_repo
         self.email_service = email_service
         self.sms_service = sms_service
         self.whatsapp_service = whatsapp_service
@@ -117,7 +125,7 @@ class BroadcastService:
                     results['total_errors'] += 1
             
             # Log the broadcast
-            await self.log_repo.log_broadcast(
+            await self.log_repo.log(
                 message=dto.message,
                 document_1_base64=document_1 or "",
                 document_2_base64=document_2 or "",
@@ -127,60 +135,139 @@ class BroadcastService:
                 user_id=sender_user_id.bytes,
                 user_ip_address=sender_ip_address
             )
+            self.log_repo.session.commit()
             
             return results
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
     
-    async def _get_recipients(
+    async def _stream_recipients(
         self,
         user_ids: Optional[List[str]] = None,
         course_id: Optional[str] = None,
         user_type_id: Optional[int] = None
-    ) -> List:
-        """Get recipients based on filters"""
-        recipients = []
+    ) -> AsyncGenerator[UserModel]:
+        """
+        Stream recipients one at a time from different sources.
+        Yields one user at a time to avoid loading all into memory.
+        """
         seen_ids = set()
+
+        # If no filters, stream all active users
+        if not user_ids and not course_id and not user_type_id:
+            yield self._stream_all_users(seen_ids)
+            return
         
         # By specific user IDs
         if user_ids:
+            yield self._stream_by_user_ids(seen_ids, user_ids)
+            return
+        
+        # By course - stream through enrollments
+        if course_id:
+            yield self._stream_by_course_id(seen_ids, UUID(course_id))
+            return
+        
+        # By user type
+        if user_type_id:
+            yield self._stream_by_user_type_id(seen_ids, user_type_id)
+            return
+            
+
+    async def _stream_all_users(self, seen_ids: set) -> AsyncGenerator[UserModel, None]:
+        """Stream all active users in batches."""
+        page_size = 100
+        page = 0
+        
+        while True:
+            users = await self.user_repo.find_by_filters(
+                active=True,
+                skip=page * page_size,
+                limit=page_size
+            )
+            
+            if not users:
+                break
+            
+            for user in users:
+                if user.id not in seen_ids:
+                    seen_ids.add(user.id)
+                    yield user
+            
+            page += 1
+
+    async def _stream_by_user_ids(self, seen_ids: set, user_ids: List[str]) -> AsyncGenerator[UserModel, None]:
+        """Stream all active users by their IDs."""
+        while True:
             for user_id_str in user_ids:
                 user_id = UUID(user_id_str)
                 user = await self.user_repo.get_by_id(user_id)
                 if user and user.active and user.id not in seen_ids:
-                    recipients.append(user)
                     seen_ids.add(user.id)
-        
-        # By course (all enrolled students)
-        if course_id:
-            course_uuid = UUID(course_id)
-            # Get all components for this course
-            from src.data.repositories.course_component_repository import CourseComponentRepository
-            component_repo = CourseComponentRepository(self.user_repo.session)
-            components = await component_repo.get_by_course_id(course_uuid)
+                    yield user
+
+    async def _stream_by_course_id(self, seen_ids: set, course_uuid: UUID) -> AsyncGenerator[UserModel, None]:
+        components = await self.component_repo.get_by_course_id(course_uuid)
             
-            for component in components:
-                from src.data.repositories.class_repository import ClassRepository
-                class_repo = ClassRepository(self.user_repo.session)
-                classes = await class_repo.get_by_component_id(UUID(bytes=component.id))
+        for component in components:
+            component_uuid = UUID(bytes=component.id)
+            
+            # Get classes for this component
+            classes = await self.class_repo.get_by_component_id(component_uuid)
+            
+            for class_ in classes:
+                class_uuid = UUID(bytes=class_.id)
                 
-                for class_ in classes:
-                    enrollments = await self.user_class_repo.get_active_by_class_id(UUID(bytes=class_.id))
-                    for enrollment in enrollments:
-                        user = await self.user_repo.get_by_id(UUID(bytes=enrollment.user_id))
-                        if user and user.active and user.id not in seen_ids:
-                            recipients.append(user)
-                            seen_ids.add(user.id)
+                # Stream active enrollments one at a time
+                async for enrollment in self._stream_enrollments(class_uuid):
+                    user = await self.user_repo.get_by_id(UUID(bytes=enrollment.user_id))
+                    if user and user.active and user.id not in seen_ids:
+                        seen_ids.add(user.id)
+                        yield user
+
+    async def _stream_enrollments(self, class_id: UUID) -> AsyncGenerator[UserClassModel]:
+        """Stream active enrollments for a class"""
+        page_size = 100
+        page = 0
         
-        # By user type
-        if user_type_id:
-            users = await self.user_repo.find_by_filters(user_type_id=user_type_id, active=True)
+        while True:
+            enrollments = await self.user_class_repo.get_active_by_class_id(
+                class_id, 
+                skip=page * page_size,
+                limit=page_size
+            )
+            
+            if not enrollments:
+                break
+            
+            for enrollment in enrollments:
+                yield enrollment
+            
+            page += 1
+
+
+    async def _stream_by_user_type_id(self, seen_ids: set, user_type_id: int):
+        page_size = 100  # Process in batches
+        page = 0
+        
+        while True:
+            users = await self.user_repo.find_by_filters(
+                user_type_id=user_type_id,
+                active=True,
+                skip=page * page_size,
+                limit=page_size
+            )
+            
+            if not users:
+                break
+            
             for user in users:
                 if user.id not in seen_ids:
-                    recipients.append(user)
                     seen_ids.add(user.id)
-        
-        return recipients
+                    yield user
+            
+            page += 1
+    
     
     def _format_html_message(self, message: str) -> str:
         """Format message as HTML for email"""

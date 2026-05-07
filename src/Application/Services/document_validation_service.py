@@ -68,7 +68,7 @@ class DocumentValidationService(BaseService):
                 doc_repo = DocumentRepository(self.repository.session)
                 document = await doc_repo.get_by_id(document_uuid)
                 
-                await log_repo.log_validation(
+                await log_repo.log(
                     rejection_reason=dto.rejection_reason,
                     activated=(dto.document_validation_status_type_id == 2),  # Approved
                     user_id=document.user_id if document else document_uuid.bytes,
@@ -76,43 +76,9 @@ class DocumentValidationService(BaseService):
                     performed_user_ip_address=user_ip_address or "unknown"
                 )
             
-            saved_entity = ModelToEntityMapper.document_validation(saved_model)
-            return EntityToViewModelMapper.document_validation(saved_entity)
-        except Exception as e:
-            await ApplicationLogger.log_error(e, reraise=True)
-    
-    async def update_validation(
-        self, 
-        validation_id: UUID, 
-        dto: DocumentValidationDTO,
-        performed_by_user_id: UUID,
-        user_ip_address: str
-    ) -> DocumentValidationViewModel:
-        """Update a document validation and log it"""
-        try:
-            model = await self.repository.get_by_id(validation_id)
-
-            if not model:
-                raise ValueError("Validation not found")
-            
-            entity = ModelToEntityMapper.document_validation(model)
-            updated_entity = UpdateMapper.document_validation(entity, dto)
-            updated_model = EntityToModelMapper.document_validation(updated_entity)
-            saved_model = await self.repository.update(updated_model)
-            
-            # Log validation
-            from src.data.repositories.log_document_validation_repository import LogDocumentValidationRepository
-            log_repo = LogDocumentValidationRepository(self.repository.session)
-            await log_repo.log_validation(
-                rejection_reason=dto.rejection_reason,
-                activated=(dto.document_validation_status_type_id == 2),  # Approved
-                user_id=UUID(bytes=saved_model.document_id),  # User who owns the document
-                performed_by_user_id=performed_by_user_id,
-                performed_user_ip_address=user_ip_address
-            )
+            self.repository.session.commit()
             
             saved_entity = ModelToEntityMapper.document_validation(saved_model)
-            
             return EntityToViewModelMapper.document_validation(saved_entity)
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)

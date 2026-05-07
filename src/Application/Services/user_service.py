@@ -58,6 +58,8 @@ class UserService(BaseService):
         """
         try:
             dto.document = re.sub(r'\D', '', dto.document)
+            dto.legal_representative_1.document = re.sub(r'\D', '', dto.legal_representative_1.document)
+            dto.legal_representative_2.document = re.sub(r'\D', '', dto.legal_representative_2.document)
 
             # Validate if password are the same
             if dto.password != dto.confirm_password:
@@ -189,7 +191,6 @@ class UserService(BaseService):
             if dto.legal_representative_2:
                 await _create_legal_representative(dto.legal_representative_2, user_id_bytes)
 
-            # Commit the transaction
             self.repository.session.commit()
             
             # ========== Return ViewModel ==========
@@ -225,8 +226,12 @@ class UserService(BaseService):
             # Save changes
             updated_model = EntityToModelMapper.user(updated_entity)
             saved_model = await self.repository.update(updated_model)
+
+            # Commit the transaction
+            self.repository.session.commit()
             
             saved_entity = ModelToEntityMapper.user(saved_model)
+            
             return EntityToViewModelMapper.user(saved_entity)
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
@@ -245,6 +250,7 @@ class UserService(BaseService):
                 return None
             
             entity = ModelToEntityMapper.user(user)
+
             return EntityToViewModelMapper.user(entity)
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
@@ -273,13 +279,16 @@ class UserService(BaseService):
             # Hash and update password
             hashed_password = self._hash_password(dto.new_password)
             success = await self.repository.update_password(user_id, hashed_password)
-            
+
             if success:
                 # Add to password history
                 await self.password_history_service.add_password_hash_to_history(
                     user_id=user_id,
                     hashed_password=hashed_password
                 )
+
+            # Commit the transaction
+            self.repository.session.commit()
             
             return success
         except Exception as e:
@@ -329,6 +338,9 @@ class UserService(BaseService):
                 performed_by_user_id=performed_by_user_id.bytes,
                 performed_by_user_ip_address=user_ip_address or "unknown"
             )
+
+        # Commit the transaction
+        self.repository.session.commit()
         
         return result
         
@@ -360,6 +372,9 @@ class UserService(BaseService):
                     performed_by_user_id=performed_by_user_id.bytes,
                     performed_by_user_ip_address=user_ip_address or "unknown"
                 )
+
+            # Commit the transaction
+            self.repository.session.commit()
             
             return result
         except Exception as e:
