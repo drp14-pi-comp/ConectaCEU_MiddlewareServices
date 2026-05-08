@@ -36,7 +36,12 @@ class LegalRepresentativeService(BaseService):
             dto.document = re.sub(r'\D', '', dto.document)
             # Check if document already exists
             if await self.repository.document_exists(dto.document):
-                raise ValueError("Document already registered")
+                raise ValueError("Documento já registrado para um representante")
+            
+            existing_representatives_count = len(self.get_user_representatives(dto.user_id))
+
+            if existing_representatives_count >= 2:
+                raise ValueError("Usuário já possui o limite de 2 representantes legais")
             
             entity = DtoToEntityMapper.legal_representative(dto)
             model = EntityToModelMapper.legal_representative(entity)
