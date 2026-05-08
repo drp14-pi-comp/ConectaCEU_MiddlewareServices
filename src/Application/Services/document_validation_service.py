@@ -32,7 +32,7 @@ class DocumentValidationService(BaseService):
         If not, create a new one.
         """
         try:
-            document_uuid = UUID(dto.document_id) if dto.document_id is not None else ""
+            document_uuid = UUID(dto.document_id)
             
             # Try to find existing validation
             existing_model = await self.repository.get_by_document_id(document_uuid)
@@ -72,7 +72,7 @@ class DocumentValidationService(BaseService):
                     rejection_reason=dto.rejection_reason,
                     activated=(dto.document_validation_status_type_id == 2),  # Approved
                     user_id=document.user_id if document else document_uuid.bytes,
-                    performed_by_user_id=performed_by_user_id,
+                    performed_by_user_id=performed_by_user_id.bytes,
                     performed_user_ip_address=user_ip_address or "unknown"
                 )
             

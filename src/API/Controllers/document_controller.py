@@ -103,10 +103,9 @@ async def download_document(
 
 
 # Document validation
-@router.put("/{document_id}/validate", response_model=DocumentValidationViewModel)
+@router.put("/validate", response_model=DocumentValidationViewModel)
 async def validate_document(
     request: Request,
-    document_id: UUID,
     dto: DocumentValidationDTO,
     current_user: User = Depends(get_current_active_user),
     service: DocumentValidationService = Depends(get_validation_service)
@@ -122,7 +121,6 @@ async def validate_document(
         user_ip = request.client.host if request.client else "unknown"
         return await service.create_or_update_validation(
             dto=dto,
-            document_id=document_id,
             performed_by_user_id=current_user.id,
             user_ip_address=user_ip
         )
