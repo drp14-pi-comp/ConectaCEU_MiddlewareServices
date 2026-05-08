@@ -25,7 +25,6 @@ from src.api.controllers.class_session_controller import router as session_route
 from src.api.controllers.class_attendance_controller import router as class_attendance_router
 from src.api.controllers.enrollment_controller import router as enrollment_router
 from src.api.controllers.document_controller import router as document_router
-from src.api.controllers.document_validation_controller import router as validation_router
 from src.api.controllers.legal_representative_controller import router as representative_router
 from src.api.controllers.password_reset_controller import router as password_router
 from src.api.controllers.reference_controller import router as reference_router
@@ -105,7 +104,6 @@ def create_app() -> FastAPI:
     app.include_router(representative_router, prefix="/api")
     app.include_router(session_router, prefix="/api")
     app.include_router(user_router, prefix="/api")
-    app.include_router(validation_router, prefix="/api")
     
     return app
 
