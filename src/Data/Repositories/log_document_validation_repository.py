@@ -1,7 +1,7 @@
 """Document validation log repository - Insert only"""
 from typing import Optional
 from sqlalchemy.orm import Session
-from src.data.models.log_document_validation_model import LogDocumentValidation as LogDocumentValidationModel
+from src.data.models.log_document_validation_model import LogDocumentValidationModel
 from src.data.repositories.base.base_repository import BaseRepository
 
 class LogDocumentValidationRepository(BaseRepository):
