@@ -44,3 +44,12 @@ class CourseComponentRepository(BaseRepository[CourseComponentModel]):
             self.session.flush()
             return True
         return False
+    
+    async def activate(self, component_id: UUID) -> bool:
+        """Activate component"""
+        component = await self.get_by_id(component_id)
+        if component:
+            component.active = True
+            self.session.flush()
+            return True
+        return False

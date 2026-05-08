@@ -83,3 +83,20 @@ class CourseComponentService(BaseService):
             return result
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
+    
+    async def activate_component(self, component_id: UUID) -> bool:
+        """Activate a component"""
+        try:
+            component = await self.repository.get_by_id(component_id)
+            if not component:
+                raise ValueError("Component not found")
+            
+            if not component.active:
+                raise ValueError("Component already active")
+            
+            result = await self.repository.activate(component_id)
+            self.repository.session.commit()
+            
+            return result
+        except Exception as e:
+            await ApplicationLogger.log_error(e, reraise=True)

@@ -77,6 +77,23 @@ async def deactivate_component(
         raise HTTPException(status_code=400, detail=str(e))
 
 
+@router.patch("/{component_id}/activate")
+async def activate_component(
+    component_id: UUID,
+    current_user: User = Depends(get_current_active_user),
+    service: CourseComponentService = Depends(get_component_service)
+):
+    """Activate a component. Admin (1), Coordinator (3), Educator (4) only."""
+    if current_user.user_type_id not in [1, 3, 4]:
+        raise HTTPException(status_code=403, detail="Only admins, coordinators, and educators can deactivate components")
+    
+    try:
+        result = await service.activate_component(component_id)
+        return {"message": "Component activated successfully", "success": result}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 @router.get("/course/{course_id}", response_model=list[CourseComponentViewModel])
 async def get_course_components(
     course_id: UUID,
