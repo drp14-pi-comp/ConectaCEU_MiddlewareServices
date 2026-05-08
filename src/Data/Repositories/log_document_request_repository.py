@@ -1,6 +1,6 @@
 """Document request log repository - Insert only"""
 from sqlalchemy.orm import Session
-from src.data.models.log_document_request_model import LogDocumentRequest as LogDocumentRequestModel
+from src.data.models.log_document_request_model import LogDocumentRequestModel
 from src.data.repositories.base.base_repository import BaseRepository
 
 class LogDocumentRequestRepository(BaseRepository):
