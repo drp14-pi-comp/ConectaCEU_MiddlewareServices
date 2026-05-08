@@ -172,24 +172,26 @@ class UserService(BaseService):
             await self.address_repo.create(address_model)
             
             # ========== Create Legal Representatives ==========
-            async def _create_legal_representative(rep_dto, student_user_id_bytes):
-                rep_entity = DtoToEntityMapper.legal_representative(rep_dto)
-                rep_entity.user_id = UUID(bytes=student_user_id_bytes)
-                rep_model = EntityToModelMapper.legal_representative(rep_entity)
-                saved_rep = await self.legal_rep_repo.create(rep_model)
-                rep_id_bytes = saved_rep.id
+            is_user_student = saved_model.user_type_id is 5  # Only creates representatives if user is student
+            if is_user_student:
+                async def _create_legal_representative(rep_dto, student_user_id_bytes):
+                    rep_entity = DtoToEntityMapper.legal_representative(rep_dto)
+                    rep_entity.user_id = UUID(bytes=student_user_id_bytes)
+                    rep_model = EntityToModelMapper.legal_representative(rep_entity)
+                    saved_rep = await self.legal_rep_repo.create(rep_model)
+                    rep_id_bytes = saved_rep.id
+                    
+                    await _create_document(rep_dto.id_document_front, user_id_bytes, rep_id_bytes)
+                    await _create_document(rep_dto.id_document_back, user_id_bytes, rep_id_bytes)
+                    await _create_document(rep_dto.student_registry_authorization, user_id_bytes, rep_id_bytes)
+                    
+                    return saved_rep
                 
-                await _create_document(rep_dto.id_document_front, user_id_bytes, rep_id_bytes)
-                await _create_document(rep_dto.id_document_back, user_id_bytes, rep_id_bytes)
-                await _create_document(rep_dto.student_registry_authorization, user_id_bytes, rep_id_bytes)
+                if dto.legal_representative_1:
+                    await _create_legal_representative(dto.legal_representative_1, user_id_bytes)
                 
-                return saved_rep
-            
-            if dto.legal_representative_1:
-                await _create_legal_representative(dto.legal_representative_1, user_id_bytes)
-            
-            if dto.legal_representative_2:
-                await _create_legal_representative(dto.legal_representative_2, user_id_bytes)
+                if dto.legal_representative_2:
+                    await _create_legal_representative(dto.legal_representative_2, user_id_bytes)
 
             self.repository.session.commit()
             
