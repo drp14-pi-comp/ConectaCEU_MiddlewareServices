@@ -27,7 +27,7 @@ class DocumentRepository(BaseRepository):
         stmt = (
             select(DocumentModel)
             .where(
-                DocumentModel.user_id == model.user_id.bytes,
+                DocumentModel.user_id == model.user_id,
                 DocumentModel.document_type_id == model.document_type_id,
                 DocumentModel.is_front == model.is_front
             )
