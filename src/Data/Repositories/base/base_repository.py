@@ -41,24 +41,24 @@ class BaseRepository(Generic[T]):
     
     async def update(self, entity: T) -> T:
         """Update an entity"""
-        await self.session.merge(entity)
+        self.session.merge(entity)
         self.session.flush()
         return entity
     
     async def delete(self, id: UUID) -> bool:
         """Hard delete an entity"""
-        entity = await self.get_by_id(id)
+        entity = self.get_by_id(id)
         if entity:
-            await self.session.delete(entity)
+            self.session.delete(entity)
             self.session.flush()
             return True
         return False
     
     async def delete_int(self, id: int) -> bool:
         """Hard delete an entity with integer ID"""
-        entity = await self.get_by_id_int(id)
+        entity = self.get_by_id_int(id)
         if entity:
-            await self.session.delete(entity)
+            self.session.delete(entity)
             self.session.flush()
             return True
         return False
@@ -75,10 +75,10 @@ class BaseRepository(Generic[T]):
     
     async def exists(self, id: UUID) -> bool:
         """Check if entity exists"""
-        entity = await self.get_by_id(id)
+        entity = self.get_by_id(id)
         return entity is not None
     
     async def exists_int(self, id: int) -> bool:
         """Check if entity with integer ID exists"""
-        entity = await self.get_by_id_int(id)
+        entity = self.get_by_id_int(id)
         return entity is not None
