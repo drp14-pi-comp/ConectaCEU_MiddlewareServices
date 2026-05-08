@@ -5,9 +5,9 @@ from pydantic import BaseModel, Field
 class DocumentCreateDTO(BaseModel):
     """DTO for uploading a document"""
     base64: str
-    is_front: Optional[bool] = None
-    user_id: Optional[str] = None  # UUID as string
+    user_id: str = None  # UUID as string
     document_type_id: int
+    is_front: Optional[bool] = None
     legal_representative_id: Optional[str] = None  # UUID as string
 
 class DocumentValidationDTO(BaseModel):

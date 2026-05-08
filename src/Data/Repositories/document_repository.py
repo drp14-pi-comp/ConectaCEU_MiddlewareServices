@@ -19,6 +19,25 @@ class DocumentRepository(BaseRepository):
         result = self.session.execute(stmt)
         return list(result.scalars().all())
     
+    async def get_latest_document(
+        self,
+        model: DocumentModel
+    ) -> Optional[DocumentModel]:
+        """Get the most recently created document matching the criteria"""
+        stmt = (
+            select(DocumentModel)
+            .where(
+                DocumentModel.user_id == model.user_id.bytes,
+                DocumentModel.document_type_id == model.document_type_id,
+                DocumentModel.is_front == model.is_front
+            )
+            .order_by(DocumentModel.created_at.desc())
+            .limit(1)
+        )
+        
+        result = self.session.execute(stmt)
+        return result.scalars().first()
+    
     async def get_by_type(
         self,
         user_id: UUID,

@@ -24,7 +24,12 @@ class DocumentService(BaseService):
         try:
             entity = DtoToEntityMapper.document(dto)
             model = EntityToModelMapper.document(entity)
-            saved_model = await self.repository.create(model)
+            existing_document = await self.repository.get_latest_document(model)
+            if existing_document:
+                existing_document.base64 = dto.base64
+                self.repository.update(existing_document)
+            else:
+                saved_model = await self.repository.create(model)
             self.repository.session.commit()
             saved_entity = ModelToEntityMapper.document(saved_model)
             return EntityToViewModelMapper.document(saved_entity)
