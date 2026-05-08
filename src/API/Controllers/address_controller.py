@@ -25,22 +25,6 @@ def get_address_service(db: Session = Depends(get_db)) -> AddressService:
     return AddressService(repository)
 
 
-@router.post("/", response_model=AddressViewModel, status_code=status.HTTP_201_CREATED)
-async def create_address(
-    dto: AddressCreateDTO,
-    current_user: User = Depends(get_current_active_user),
-    service: AddressService = Depends(get_address_service)
-):
-    """
-    Create a new address.
-    All authenticated users can create addresses (their own).
-    """
-    try:
-        return await service.create_address(dto)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-
 @router.get("/user/{user_id}", response_model=List[AddressViewModel])
 async def get_user_addresses(
     user_id: UUID,

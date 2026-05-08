@@ -99,17 +99,6 @@ async def get_enrollment_summary(
     return await service.get_enrollment_summary(user_id)
 
 
-@router.get("/user/{user_id}/eligibility/{class_id}")
-async def check_enrollment_eligibility(
-    user_id: UUID,
-    class_id: UUID,
-    current_user: User = Depends(get_current_active_user),
-    service: UserClassService = Depends(get_user_class_service)
-):
-    """Check if user can enroll in a class."""
-    return await service.check_enrollment_eligibility(user_id, class_id)
-
-
 @router.get("/class/{class_id}", response_model=list[UserClassViewModel])
 async def get_class_enrollments(
     class_id: UUID,
@@ -126,7 +115,7 @@ async def get_class_enrollments(
     return await service.get_class_enrollments(class_id)
 
 
-@router.patch("/{enrollment_id}/deactivate")
+@router.patch("/{enrollment_id}/unenroll")
 async def unenroll_user(
     request: Request,
     enrollment_id: UUID,

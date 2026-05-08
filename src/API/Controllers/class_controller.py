@@ -32,23 +32,7 @@ def get_class_service(db: Session = Depends(get_db)) -> ClassService:
     return ClassService(class_repo, component_repo, user_class_repo, course_repo, session_repo)
 
 
-@router.post("/", response_model=ClassViewModel, status_code=status.HTTP_201_CREATED)
-async def create_class(
-    dto: ClassCreateDTO,
-    current_user: User = Depends(get_current_active_user),
-    service: ClassService = Depends(get_class_service)
-):
-    """Create a new class. Admin (1), Coordinator (3), Educator (4) only."""
-    if current_user.user_type_id not in [1, 3, 4]:
-        raise HTTPException(status_code=403, detail="Only admins, coordinators, and educators can create classes")
-    
-    try:
-        return await service.create_class(dto)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-
-@router.post("/bulk", status_code=status.HTTP_201_CREATED)
+@router.post("/", status_code=status.HTTP_201_CREATED)
 async def bulk_create_classes(
     dto: ClassBulkCreateDTO,
     current_user: User = Depends(get_current_active_user),
@@ -148,15 +132,3 @@ async def get_class(
     if not class_:
         raise HTTPException(status_code=404, detail="Class not found")
     return class_
-
-
-@router.get("/{class_id}/seats")
-async def get_available_seats(
-    class_id: UUID,
-    service: ClassService = Depends(get_class_service)
-):
-    """Get available seats for a class."""
-    try:
-        return await service.get_available_seats(class_id)
-    except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))

@@ -103,7 +103,7 @@ async def download_document(
 
 
 # Document validation
-@router.put("/validate/{document_id}", response_model=DocumentValidationViewModel)
+@router.put("/{document_id}/validate", response_model=DocumentValidationViewModel)
 async def validate_document(
     request: Request,
     document_id: UUID,
