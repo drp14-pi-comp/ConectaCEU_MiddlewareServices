@@ -18,7 +18,7 @@ class ClassSessionService(BaseService):
     """Service for Class Session business logic"""
     
     def __init__(self, repository: ClassSessionRepository):
-        super().__init__(repository)
+        super().__init__(repository, 'class_session', mapper_class=ModelToEntityMapper)
         self.repository = repository
     
     async def create_session(self, dto: ClassSessionCreateDTO) -> ClassSessionViewModel:

@@ -27,7 +27,7 @@ class ClassAttendanceService(BaseService):
         component_repo: CourseComponentRepository,
         absence_justification_repo: StudentAbsenceJustificationRepository
     ):
-        super().__init__(repository)
+        super().__init__(repository, 'class_attendance', mapper_class=ModelToEntityMapper)
         self.repository = repository
         self.user_class_repo = user_class_repo
         self.class_repo = class_repo

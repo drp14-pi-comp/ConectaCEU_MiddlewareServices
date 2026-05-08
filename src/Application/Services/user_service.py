@@ -35,7 +35,7 @@ class UserService(BaseService):
         doc_validation_repo: DocumentValidationRepository,
         profiles_to_exclude_repo: ProfilesToExcludeRepository
     ):
-        super().__init__(repository)
+        super().__init__(repository, 'user', mapper_class=ModelToEntityMapper)
         self.repository = repository
         self.password_history_service = password_history_service
         self.document_repo = document_repo
@@ -172,7 +172,7 @@ class UserService(BaseService):
             await self.address_repo.create(address_model)
             
             # ========== Create Legal Representatives ==========
-            is_user_student = saved_model.user_type_id is 5  # Only creates representatives if user is student
+            is_user_student = saved_model.user_type_id == 5  # Only creates representatives if user is student
             if is_user_student:
                 async def _create_legal_representative(rep_dto, student_user_id_bytes):
                     rep_entity = DtoToEntityMapper.legal_representative(rep_dto)

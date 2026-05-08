@@ -26,7 +26,7 @@ class LegalRepresentativeService(BaseService):
         repository: LegalRepresentativeRepository,
         user_repo: UserRepository
     ):
-        super().__init__(repository)
+        super().__init__(repository, 'legal_representative', mapper_class=ModelToEntityMapper)
         self.repository = repository
         self.user_repo = user_repo
     

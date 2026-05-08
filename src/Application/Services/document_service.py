@@ -16,7 +16,7 @@ class DocumentService(BaseService):
     """Service for Document business logic"""
     
     def __init__(self, repository: DocumentRepository):
-        super().__init__(repository)
+        super().__init__(repository, 'document', mapper_class=ModelToEntityMapper)
         self.repository = repository
     
     async def upload_document(self, dto: DocumentCreateDTO) -> DocumentViewModel:

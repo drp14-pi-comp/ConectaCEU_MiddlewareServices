@@ -17,7 +17,7 @@ class AddressService(BaseService):
     """Service for Address business logic"""
     
     def __init__(self, repository: AddressRepository):
-        super().__init__(repository)
+        super().__init__(repository, 'address', mapper_class=ModelToEntityMapper)
         self.repository = repository
     
     async def create_address(self, dto: AddressCreateDTO) -> AddressViewModel:

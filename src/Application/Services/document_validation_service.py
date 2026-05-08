@@ -17,7 +17,7 @@ class DocumentValidationService(BaseService):
     """Service for Document Validation business logic"""
     
     def __init__(self, repository: DocumentValidationRepository):
-        super().__init__(repository)
+        super().__init__(repository, 'document_validation', mapper_class=ModelToEntityMapper)
         self.repository = repository
     
     async def create_or_update_validation(

@@ -15,7 +15,7 @@ class UserPasswordHistoryService(BaseService):
     """Service for User Password History business logic"""
     
     def __init__(self, repository: UserPasswordHistoryRepository):
-        super().__init__(repository)
+        super().__init__(repository, 'user_password_history', mapper_class=ModelToEntityMapper)
         self.repository = repository
     
     async def get_user_password_history(

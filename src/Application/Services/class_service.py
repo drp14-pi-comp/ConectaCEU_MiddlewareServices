@@ -32,7 +32,7 @@ class ClassService(BaseService):
         course_repo: CourseRepository,
         class_session_repo: ClassSessionRepository
     ):
-        super().__init__(repository)
+        super().__init__(repository, 'class_', mapper_class=ModelToEntityMapper)
         self.repository = repository
         self.component_repo = component_repo
         self.user_class_repo = user_class_repo

@@ -22,7 +22,7 @@ class CourseService(BaseService):
         repository: CourseRepository,
         component_repo: CourseComponentRepository
     ):
-        super().__init__(repository)
+        super().__init__(repository, 'course', mapper_class=ModelToEntityMapper)
         self.repository = repository
         self.component_repo = component_repo
     

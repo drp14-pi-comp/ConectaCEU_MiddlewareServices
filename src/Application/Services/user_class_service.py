@@ -23,7 +23,7 @@ class UserClassService(BaseService):
         class_repo: ClassRepository,
         class_session_repo: ClassSessionRepository
     ):
-        super().__init__(repository)
+        super().__init__(repository, 'user_class', mapper_class=ModelToEntityMapper)
         self.repository = repository
         self.class_repo = class_repo
         self.class_session_repo = class_session_repo

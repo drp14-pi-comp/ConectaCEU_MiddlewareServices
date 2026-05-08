@@ -17,7 +17,7 @@ class CourseComponentService(BaseService):
     """Service for Course Component business logic"""
     
     def __init__(self, repository: CourseComponentRepository):
-        super().__init__(repository)
+        super().__init__(repository, 'course_component', mapper_class=ModelToEntityMapper)
         self.repository = repository
     
     async def create_component(self, dto: CourseComponentCreateDTO) -> CourseComponentViewModel:
