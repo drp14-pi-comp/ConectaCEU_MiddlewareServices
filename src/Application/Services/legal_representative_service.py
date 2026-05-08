@@ -4,6 +4,8 @@ from typing import List
 from uuid import UUID
 
 from src.application.logging.application_logger import ApplicationLogger
+from src.data.models.legal_representative_model import LegalRepresentativeModel
+from src.data.models.user_model import UserModel
 from src.data.repositories.legal_representative_repository import LegalRepresentativeRepository
 from src.application.services.base_service import BaseService
 from src.application.mappers.dto_to_entity_mapper import DtoToEntityMapper
@@ -11,15 +13,22 @@ from src.application.mappers.entity_to_model_mapper import EntityToModelMapper
 from src.application.mappers.model_to_entity_mapper import ModelToEntityMapper
 from src.application.mappers.entity_to_view_model_mapper import EntityToViewModelMapper
 from src.application.mappers.update_mapper import UpdateMapper
+from src.data.repositories.user_repository import UserRepository
 from src.domain.dtos.legal_representative_dto import LegalRepresentativeCreateDTO, LegalRepresentativeUpdateDTO
 from src.domain.view_models.legal_representative_view_model import LegalRepresentativeViewModel
+from src.infrastructure.handlers.datetime_handler import DateTimeHandler
 
 class LegalRepresentativeService(BaseService):
     """Service for Legal Representative business logic"""
     
-    def __init__(self, repository: LegalRepresentativeRepository):
+    def __init__(
+        self,
+        repository: LegalRepresentativeRepository,
+        user_repo: UserRepository
+    ):
         super().__init__(repository)
         self.repository = repository
+        self.user_repo = user_repo
     
     async def create_representative(self, dto: LegalRepresentativeCreateDTO) -> LegalRepresentativeViewModel:
         """Create a new legal representative"""
@@ -72,5 +81,25 @@ class LegalRepresentativeService(BaseService):
             models = await self.repository.get_by_user_id(user_id)
             entities = [ModelToEntityMapper.legal_representative(model) for model in models]
             return [EntityToViewModelMapper.legal_representative(entity) for entity in entities]
+        except Exception as e:
+            await ApplicationLogger.log_error(e, reraise=True)
+
+    async def delete_representative(self, representative_id: UUID) -> bool:
+        """Delete a legal representative"""
+        try:
+            representative: LegalRepresentativeModel = await self.repository.get_by_id(representative_id)
+            if self._can_delete_representative(representative):
+                await self.repository.delete(representative.id)
+            return False
+        except Exception as e:
+            await ApplicationLogger.log_error(e, reraise=True)
+
+    async def _can_delete_representative(self, representative: LegalRepresentativeModel) -> bool:
+        """Validates if a representative can be deleted"""
+        try:
+            user: UserModel = await self.user_repo.get_by_id(representative.user_id)
+            user_representatives_count: int = len(await self.get_user_representatives(user.id))
+            is_user_of_age: bool = (DateTimeHandler.now().date() - user.birthdate).days > 17 * 365
+            return user_representatives_count > 1 or is_user_of_age
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)

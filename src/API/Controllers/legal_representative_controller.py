@@ -8,6 +8,7 @@ from src.application.services.legal_representative_service import LegalRepresent
 from src.data.repositories.legal_representative_repository import LegalRepresentativeRepository
 from src.data.db_context.database import get_db
 from src.api.dependencies.auth_dependencies import get_current_active_user
+from src.data.repositories.user_repository import UserRepository
 from src.domain.dtos.legal_representative_dto import LegalRepresentativeCreateDTO, LegalRepresentativeUpdateDTO
 from src.domain.view_models.legal_representative_view_model import LegalRepresentativeViewModel
 from src.domain.entities.user import User
@@ -22,7 +23,8 @@ router = APIRouter(
 def get_representative_service(db: Session = Depends(get_db)) -> LegalRepresentativeService:
     """Dependency injection for LegalRepresentativeService"""
     repository = LegalRepresentativeRepository(db)
-    return LegalRepresentativeService(repository)
+    user_repo = UserRepository(db)
+    return LegalRepresentativeService(repository, user_repo)
 
 
 @router.post("/", response_model=LegalRepresentativeViewModel, status_code=status.HTTP_201_CREATED)
@@ -67,13 +69,13 @@ async def delete_representative(
     current_user: User = Depends(get_current_active_user),
     service: LegalRepresentativeService = Depends(get_representative_service)
 ):
-    """Delete a legal representative. Admin (1) and Secretary (2) only."""
-    if current_user.user_type_id not in [1, 2]:
-        raise HTTPException(status_code=403, detail="Only administrators and secretaries can delete representatives")
+    """Delete a legal representative. Admin (1), Secretary (2) and Student (5) only."""
+    if current_user.user_type_id not in [1, 2, 5]:
+        raise HTTPException(status_code=403, detail="Only administrators, secretaries and students can delete representatives")
     
-    deleted = await service.delete(representative_id)
+    deleted = await service.delete_representative(representative_id)
     if not deleted:
-        raise HTTPException(status_code=404, detail="Representative not found")
+        raise HTTPException(status_code=404, detail="Representative could not be deleted")
     return {"message": "Representative deleted successfully"}
 
 
