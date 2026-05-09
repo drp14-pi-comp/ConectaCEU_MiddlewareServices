@@ -36,6 +36,10 @@ class DocumentValidationService(BaseService):
             
             # Try to find existing validation
             existing_model = await self.repository.get_by_document_id(document_uuid)
+
+            # If rejection, a reason must be provided
+            if dto.document_validation_status_type_id == 3 and (not dto.rejection_reason or dto.rejection_reason.isspace):
+                raise ValueError("Rejeições de documentos precisam de uma justificativa")
             
             if existing_model:
                 # Update existing validation
