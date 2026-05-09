@@ -303,7 +303,9 @@ class UserService(BaseService):
         user_ip_address: Optional[str] = None
     ) -> bool:
         """Deactivate user account and add to exclusion list"""
-        user = await self.repository.get_by_id(dto.user_id)
+        user_id = UUID(dto.user_id)
+
+        user = await self.repository.get_by_id(user_id)
         if not user:
             raise ValueError("User not found")
         
@@ -311,7 +313,7 @@ class UserService(BaseService):
             raise ValueError("User already deactivated")
         
         # Deactivate user
-        result = await self.repository.deactivate(dto.user_id)
+        result = await self.repository.deactivate(user_id)
         
         # Add to profiles to exclude
         if result:
@@ -322,7 +324,7 @@ class UserService(BaseService):
             exclusion = ProfilesToExclude(
                 id=uuid4(),
                 created_at=DateTimeHandler.now(),
-                user_id=dto.user_id
+                user_id=user_id
             )
             
             exclusion_model = EntityToModelMapper.profiles_to_exclude(exclusion)
@@ -332,10 +334,10 @@ class UserService(BaseService):
         if result and performed_by_user_id:
             from src.data.repositories.log_user_activation_repository import LogUserActivationRepository
             log_repo = LogUserActivationRepository(self.repository.session)
-            await log_repo.log_activation(
+            await log_repo.log(
                 deactivation_reason=dto.reason,
                 activated=False,
-                user_id=dto.user_id.bytes,
+                user_id=user_id.bytes,
                 performed_by_user_id=performed_by_user_id.bytes,
                 performed_by_user_ip_address=user_ip_address or "unknown"
             )

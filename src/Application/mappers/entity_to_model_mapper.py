@@ -2,9 +2,11 @@
 from uuid import UUID
 
 from src.data.models.document_validation_model import DocumentValidationModel
+from src.data.models.profiles_to_exclude_model import ProfilesToExcludeModel
 from src.data.models.student_absence_justification_model import StudentAbsenceJustificationModel
 from src.data.models.user_password_history_model import UserPasswordHistoryModel
 from src.domain.entities.document_validation import DocumentValidation
+from src.domain.entities.profiles_to_exclude import ProfilesToExclude
 from src.domain.entities.student_absence_justification import StudentAbsenceJustification
 from src.domain.entities.user import User
 from src.domain.entities.address import Address
@@ -207,4 +209,13 @@ class EntityToModelMapper:
             created_at=model.created_at,
             class_attendance_id=UUID(bytes=model.class_attendance_id),
             document_id=UUID(bytes=model.document_id) if model.document_id else None
+        )
+    
+    # ========== Profiles To Exclude ==========
+    @staticmethod
+    def profiles_to_exclude(entity: ProfilesToExclude) -> ProfilesToExcludeModel:
+        return ProfilesToExcludeModel(
+            id=entity.id.bytes,
+            created_at=entity.created_at,
+            user_id=entity.user_id.bytes
         )
