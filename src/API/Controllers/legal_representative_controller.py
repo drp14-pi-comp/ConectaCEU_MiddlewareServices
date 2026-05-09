@@ -35,7 +35,7 @@ async def create_representative(
 ):
     """Create a new legal representative. Admin (1) and Secretary (2) only."""
     if current_user.user_type_id not in [1, 2]:
-        raise HTTPException(status_code=403, detail="Only administrators and secretaries can create representatives")
+        raise HTTPException(status_code=403, detail="Não autorizado")
     
     try:
         return await service.create_representative(dto)
@@ -52,12 +52,12 @@ async def update_representative(
 ):
     """Update a legal representative. Admin (1) and Secretary (2) only."""
     if current_user.user_type_id not in [1, 2]:
-        raise HTTPException(status_code=403, detail="Only administrators and secretaries can update representatives")
+        raise HTTPException(status_code=403, detail="Não autorizado")
     
     try:
         representative = await service.update_representative(representative_id, dto)
         if not representative:
-            raise HTTPException(status_code=404, detail="Representative not found")
+            raise HTTPException(status_code=404, detail="Representante legal não encontrado")
         return representative
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -71,12 +71,12 @@ async def delete_representative(
 ):
     """Delete a legal representative. Admin (1), Secretary (2) and Student (5) only."""
     if current_user.user_type_id not in [1, 2, 5]:
-        raise HTTPException(status_code=403, detail="Only administrators, secretaries and students can delete representatives")
+        raise HTTPException(status_code=403, detail="Não autorizado")
     
     deleted = await service.delete_representative(representative_id)
     if not deleted:
-        raise HTTPException(status_code=404, detail="Representative could not be deleted")
-    return {"message": "Representative deleted successfully"}
+        raise HTTPException(status_code=404, detail="Representante não pôde ser excluído")
+    return {"message": "Representante excluído com sucesso"}
 
 
 @router.get("/user/{user_id}", response_model=List[LegalRepresentativeViewModel])
@@ -91,7 +91,7 @@ async def get_user_representatives(
     - Users can view their own
     """
     if current_user.user_type_id not in [1, 2] and current_user.id != user_id:
-        raise HTTPException(status_code=403, detail="Can only view your own representatives")
+        raise HTTPException(status_code=403, detail="Só pode ver seus próprios representantes")
     
     return await service.get_user_representatives(user_id)
 
@@ -105,10 +105,10 @@ async def get_representative(
     """Get representative by ID."""
     representative = await service.get_by_id(representative_id)
     if not representative:
-        raise HTTPException(status_code=404, detail="Representative not found")
+        raise HTTPException(status_code=404, detail="Representante não encontrado")
     
     # Check ownership
     if current_user.user_type_id not in [1, 2] and representative.user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Can only view your own representatives")
+        raise HTTPException(status_code=403, detail="Só pode ver seus próprios representantes")
     
     return representative

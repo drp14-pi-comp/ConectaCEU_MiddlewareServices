@@ -38,7 +38,8 @@ class LegalRepresentativeService(BaseService):
             if await self.repository.document_exists(dto.document):
                 raise ValueError("Documento já registrado para um representante")
             
-            existing_representatives_count = len(self.get_user_representatives(dto.user_id))
+            uuid_user_id = UUID(dto.user_id)
+            existing_representatives_count = len(await self.get_user_representatives(uuid_user_id))
 
             if existing_representatives_count >= 2:
                 raise ValueError("Usuário já possui o limite de 2 representantes legais")
