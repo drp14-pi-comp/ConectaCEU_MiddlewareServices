@@ -58,8 +58,12 @@ class UserService(BaseService):
         """
         try:
             dto.document = re.sub(r'\D', '', dto.document)
-            dto.legal_representative_1.document = re.sub(r'\D', '', dto.legal_representative_1.document)
-            dto.legal_representative_2.document = re.sub(r'\D', '', dto.legal_representative_2.document)
+
+            if dto.legal_representative_1:
+                dto.legal_representative_1.document = re.sub(r'\D', '', dto.legal_representative_1.document)
+            
+            if dto.legal_representative_2:
+                dto.legal_representative_2.document = re.sub(r'\D', '', dto.legal_representative_2.document)
 
             # Validate if password are the same
             if dto.password != dto.confirm_password:
@@ -82,6 +86,9 @@ class UserService(BaseService):
                 existing_email = await self.repository.get_by_email(dto.email)
                 if existing_email:
                     raise ValueError("E-mail pertence a outra pessoa")
+            
+            if dto.legal_representative_1.document == dto.legal_representative_2.document:
+                raise ValueError("Os representantes legais não podem ser os mesmos")
             
             # ========== Determine Creation Path ==========
             is_public = created_by_user_id is None
