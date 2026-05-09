@@ -29,6 +29,7 @@ class UserViewModel(BaseModel):
 
 class StudentUserViewModel(BaseModel):
     # User
+    id: UUID
     document: str
     name: str
     email: Optional[str]
