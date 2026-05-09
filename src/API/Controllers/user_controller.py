@@ -58,7 +58,7 @@ async def create_user(
     Documents are auto-approved.
     """
     if current_user.user_type_id not in [1, 2]:
-        raise HTTPException(status_code=403, detail="Only administrators and secretaries can create users")
+        raise HTTPException(status_code=403, detail="Não autorizado")
     
     try:
         return await service.create_user(dto, created_by_user_id=current_user.id)
@@ -77,7 +77,7 @@ async def deactivate_user(
     Deactivate a user account. Admin (1) and Secretary (2) only.
     """
     if current_user.user_type_id not in [1, 2]:
-        raise HTTPException(status_code=403, detail="Only administrators and secretaries can deactivate users")
+        raise HTTPException(status_code=403, detail="Não autorizado")
     
     try:
         user_ip = request.client.host if request.client else "unknown"
@@ -86,7 +86,7 @@ async def deactivate_user(
             performed_by_user_id=current_user.id,
             user_ip_address=user_ip
         )
-        return {"message": "User deactivated successfully", "success": result}
+        return {"message": "Usuário desativado com sucesso", "success": result}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -102,7 +102,7 @@ async def activate_user(
     Activate a user account. Admin (1) and Secretary (2) only.
     """
     if current_user.user_type_id not in [1, 2]:
-        raise HTTPException(status_code=403, detail="Only administrators and secretaries can activate users")
+        raise HTTPException(status_code=403, detail="Não autorizado")
     
     try:
         user_ip = request.client.host if request.client else "unknown"
@@ -111,7 +111,7 @@ async def activate_user(
             performed_by_user_id=current_user.id,
             user_ip_address=user_ip
         )
-        return {"message": "User activated successfully", "success": result}
+        return {"message": "Usuário ativado com sucesso", "success": result}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -155,7 +155,7 @@ async def list_users(
             page_size=page_size
         )
     
-    raise HTTPException(status_code=403, detail="Cannot list users")
+    raise HTTPException(status_code=403, detail="Não autorizado")
 
 
 @router.get("/students", response_model=dict)
@@ -175,7 +175,7 @@ async def list_students(
     - Admin/Secretary/Coordinator/Educator: can list
     """
     if current_user.user_type_id not in [1, 2, 3, 4]:
-        raise HTTPException(status_code=403, detail="Only staff can list students")
+        raise HTTPException(status_code=403, detail="Não autorizado")
     
     return await service.find_students(
         name=name,
@@ -201,10 +201,10 @@ async def get_user(
     """
     user = await service.get_by_id(user_id)
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
     
     if current_user.user_type_id not in [1, 2] and current_user.id != user_id:
-        raise HTTPException(status_code=403, detail="Can only view your own profile")
+        raise HTTPException(status_code=403, detail="Só pode ver seu próprio perfil")
     
     return user
 
@@ -222,12 +222,12 @@ async def update_user(
     - Users can update themselves
     """
     if current_user.user_type_id not in [1, 2] and current_user.id != user_id:
-        raise HTTPException(status_code=403, detail="Can only update your own profile")
+        raise HTTPException(status_code=403, detail="Só pode atualizar seu próprio perfil")
     
     try:
         user = await service.update_user(user_id, dto)
         if not user:
-            raise HTTPException(status_code=404, detail="User not found")
+            raise HTTPException(status_code=404, detail="Usuário não encontrado")
         return user
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -245,10 +245,10 @@ async def change_password(
     - Users can only change their own password
     """
     if current_user.id != user_id:
-        raise HTTPException(status_code=403, detail="Can only change your own password")
+        raise HTTPException(status_code=403, detail="Só pode alterar sua própria senha")
     
     try:
         result = await service.change_password(user_id, dto)
-        return {"message": "Password changed successfully", "success": result}
+        return {"message": "Senha alterada com sucesso", "success": result}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
