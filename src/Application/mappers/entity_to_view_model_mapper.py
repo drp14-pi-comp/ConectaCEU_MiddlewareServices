@@ -184,7 +184,8 @@ class EntityToViewModelMapper:
             updated_at=entity.updated_at,
             name=entity.name,
             document=entity.document,
-            user_id=entity.user_id
+            user_id=entity.user_id,
+            legal_representative_degree_id=entity.legal_representative_degree_id
         )
     
     # ========== User Password History ==========

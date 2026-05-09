@@ -190,7 +190,8 @@ class ModelToEntityMapper:
             updated_at=model.updated_at,
             name=model.name,
             document=model.document,
-            user_id=UUID(bytes=model.user_id)
+            user_id=UUID(bytes=model.user_id),
+            legal_representative_degree_id = model.legal_representative_degree_id
         )
     
     # ========== User Password History ==========

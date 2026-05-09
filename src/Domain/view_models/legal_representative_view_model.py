@@ -11,5 +11,6 @@ class LegalRepresentativeViewModel(BaseModel):
     name: str
     document: str
     user_id: UUID
+    legal_representative_degree_id: int
     
     model_config = ConfigDict(from_attributes=True)
