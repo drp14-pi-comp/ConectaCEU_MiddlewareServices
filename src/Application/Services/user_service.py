@@ -1,6 +1,6 @@
 """User service - business logic for User entity"""
 import re
-from typing import Optional
+from typing import List, Optional
 from uuid import UUID
 import bcrypt
 
@@ -430,7 +430,7 @@ class UserService(BaseService):
         active: Optional[bool] = None,
         page: int = 1,
         page_size: int = 10
-    ) -> dict:
+    ) -> List[StudentUserViewModel]:
         """Find students with all related data"""
         try:
             skip = (page - 1) * page_size
@@ -459,9 +459,7 @@ class UserService(BaseService):
                 student = await self._build_student_view_model(user_id, model)
                 items.append(student)
             
-            return {
-                'items': items
-            }
+            return items
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
     

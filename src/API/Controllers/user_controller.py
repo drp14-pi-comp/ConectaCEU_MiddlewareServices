@@ -1,5 +1,5 @@
 """User controller"""
-from typing import Optional
+from typing import List, Optional
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Request, status, Query
 from sqlalchemy.orm import Session
@@ -16,7 +16,7 @@ from src.data.repositories.user_password_history_repository import UserPasswordH
 from src.data.db_context.database import get_db
 from src.api.dependencies.auth_dependencies import get_current_active_user
 from src.domain.dtos.user_dto import DeactivateUserDTO, UserCreateDTO, UserUpdateDTO, PasswordChangeDTO
-from src.domain.view_models.user_view_model import UserViewModel
+from src.domain.view_models.user_view_model import StudentUserViewModel, UserViewModel
 from src.domain.entities.user import User
 
 router = APIRouter(
@@ -158,7 +158,7 @@ async def list_users(
     raise HTTPException(status_code=403, detail="Não autorizado")
 
 
-@router.get("/students", response_model=dict)
+@router.get("/students", response_model=List[StudentUserViewModel])
 async def list_students(
     name: Optional[str] = Query(None),
     document: Optional[str] = Query(None),
