@@ -15,7 +15,7 @@ from src.data.repositories.user_repository import UserRepository
 from src.data.repositories.user_password_history_repository import UserPasswordHistoryRepository
 from src.data.db_context.database import get_db
 from src.api.dependencies.auth_dependencies import get_current_active_user
-from src.domain.dtos.user_dto import UserCreateDTO, UserUpdateDTO, PasswordChangeDTO
+from src.domain.dtos.user_dto import DeactivateUserDTO, UserCreateDTO, UserUpdateDTO, PasswordChangeDTO
 from src.domain.view_models.user_view_model import UserViewModel
 from src.domain.entities.user import User
 
@@ -69,8 +69,7 @@ async def create_user(
 @router.patch("/{user_id}/deactivate")
 async def deactivate_user(
     request: Request,
-    user_id: UUID,
-    reason: Optional[str] = None,
+    dto: DeactivateUserDTO,
     current_user: User = Depends(get_current_active_user),
     service: UserService = Depends(get_user_service)
 ):
@@ -83,8 +82,7 @@ async def deactivate_user(
     try:
         user_ip = request.client.host if request.client else "unknown"
         result = await service.deactivate_user(
-            user_id,
-            reason=reason,
+            dto,
             performed_by_user_id=current_user.id,
             user_ip_address=user_ip
         )

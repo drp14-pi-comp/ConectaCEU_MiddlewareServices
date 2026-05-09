@@ -18,7 +18,7 @@ from src.application.mappers.entity_to_model_mapper import EntityToModelMapper
 from src.application.mappers.model_to_entity_mapper import ModelToEntityMapper
 from src.application.mappers.entity_to_view_model_mapper import EntityToViewModelMapper
 from src.application.mappers.update_mapper import UpdateMapper
-from src.domain.dtos.user_dto import UserCreateDTO, UserUpdateDTO, UserLoginDTO, PasswordChangeDTO
+from src.domain.dtos.user_dto import DeactivateUserDTO, UserCreateDTO, UserUpdateDTO, UserLoginDTO, PasswordChangeDTO
 from src.domain.view_models.user_view_model import StudentUserViewModel, UserViewModel
 from src.infrastructure.handlers.datetime_handler import DateTimeHandler
 
@@ -298,13 +298,12 @@ class UserService(BaseService):
     
     async def deactivate_user(
         self, 
-        user_id: UUID, 
-        reason: Optional[str] = None,
+        dto: DeactivateUserDTO,
         performed_by_user_id: Optional[UUID] = None,
         user_ip_address: Optional[str] = None
     ) -> bool:
         """Deactivate user account and add to exclusion list"""
-        user = await self.repository.get_by_id(user_id)
+        user = await self.repository.get_by_id(dto.user_id)
         if not user:
             raise ValueError("User not found")
         
@@ -312,7 +311,7 @@ class UserService(BaseService):
             raise ValueError("User already deactivated")
         
         # Deactivate user
-        result = await self.repository.deactivate(user_id)
+        result = await self.repository.deactivate(dto.user_id)
         
         # Add to profiles to exclude
         if result:
@@ -323,7 +322,7 @@ class UserService(BaseService):
             exclusion = ProfilesToExclude(
                 id=uuid4(),
                 created_at=DateTimeHandler.now(),
-                user_id=user_id
+                user_id=dto.user_id
             )
             
             exclusion_model = EntityToModelMapper.profiles_to_exclude(exclusion)
@@ -334,9 +333,9 @@ class UserService(BaseService):
             from src.data.repositories.log_user_activation_repository import LogUserActivationRepository
             log_repo = LogUserActivationRepository(self.repository.session)
             await log_repo.log_activation(
-                deactivation_reason=reason,
+                deactivation_reason=dto.reason,
                 activated=False,
-                user_id=user_id.bytes,
+                user_id=dto.user_id.bytes,
                 performed_by_user_id=performed_by_user_id.bytes,
                 performed_by_user_ip_address=user_ip_address or "unknown"
             )

@@ -61,6 +61,11 @@ class UserUpdateDTO(BaseModel):
         """Return only fields that are not None"""
         return {k: v for k, v in self.model_dump().items() if v is not None}
 
+class DeactivateUserDTO(BaseModel):
+    """DTO for deactivation an user"""
+    user_id: str  # UUID as string
+    reason: str = Field(min_length=10)
+
 class UserLoginDTO(BaseModel):
     """DTO for user login"""
     document: str
