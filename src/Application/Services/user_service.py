@@ -64,14 +64,14 @@ class UserService(BaseService):
             # Validate if password are the same
             if dto.password != dto.confirm_password:
                 raise ValueError("As senhas são diferentes")
+            
+            # ========== Validations ==========
+            # Validate passwords
+            self._validate_passwords(dto.password)
 
             # Hash passwords
             dto.password = self._hash_password(dto.password)
             dto.confirm_password = ''
-            
-            # ========== Validations ==========
-            # Validate passwords
-            self._validate_passwords(dto.password, dto.confirm_password)
 
             # Check if document already exists
             existing = await self.repository.get_by_document(dto.document)
@@ -207,19 +207,13 @@ class UserService(BaseService):
         try:
             model = await self.repository.get_by_id(user_id)
             if not model:
-                raise ValueError("User not found")
+                raise ValueError("Usuário não encontrado")
             
             # Check email uniqueness if being updated
             if dto.email:
                 existing = await self.repository.get_by_email(dto.email)
                 if existing and existing.id != model.id:
-                    raise ValueError("Email already registered")
-            
-            # Check cellphone uniqueness if being updated
-            if dto.cellphone_number:
-                existing = await self.repository.get_by_cellphone(dto.cellphone_number)
-                if existing and existing.id != model.id:
-                    raise ValueError("Cellphone already registered")
+                    raise ValueError("E-mail já registrado")
             
             # Convert to entity and apply updates
             entity = ModelToEntityMapper.user(model)
@@ -246,7 +240,7 @@ class UserService(BaseService):
                 return None
             
             if not user.active:
-                raise ValueError("User account is deactivated")
+                raise ValueError("Conta do usuário desativada")
             
             if not self._verify_password(dto.password, user.password):
                 return None
@@ -262,11 +256,11 @@ class UserService(BaseService):
         try:
             user = await self.repository.get_by_id(user_id)
             if not user:
-                raise ValueError("User not found")
+                raise ValueError("Usuário não encontrado")
             
             # Verify current password
             if not self._verify_password(dto.current_password, user.password):
-                raise ValueError("Current password is incorrect")
+                raise ValueError("Senha atual incorreta")
             
             # Validate new password against history
             validation = await self.password_history_service.validate_password_change(
@@ -307,10 +301,10 @@ class UserService(BaseService):
 
         user = await self.repository.get_by_id(user_id)
         if not user:
-            raise ValueError("User not found")
+            raise ValueError("Usuário não encontrado")
         
         if not user.active:
-            raise ValueError("User already deactivated")
+            raise ValueError("Conta de usuário já desativada")
         
         # Deactivate user
         result = await self.repository.deactivate(user_id)
@@ -357,10 +351,10 @@ class UserService(BaseService):
         try:
             user = await self.repository.get_by_id(user_id)
             if not user:
-                raise ValueError("User not found")
+                raise ValueError("Usuário não encontrado")
             
             if user.active:
-                raise ValueError("User already active")
+                raise ValueError("Usuário já ativo")
             
             result = await self.repository.activate(user_id)
             
@@ -368,7 +362,7 @@ class UserService(BaseService):
             if result and performed_by_user_id:
                 from src.data.repositories.log_user_activation_repository import LogUserActivationRepository
                 log_repo = LogUserActivationRepository(self.repository.session)
-                await log_repo.log_activation(
+                await log_repo.log(
                     deactivation_reason=None,
                     activated=True,
                     user_id=user_id.bytes,
@@ -496,9 +490,9 @@ class UserService(BaseService):
         )
         
         history_model = EntityToModelMapper.user_password_history(history)
-        await self.password_history_repo.create(history_model)
+        await self.password_history_service.add_password_hash_to_history(history_model)
 
-    def _validate_passwords(self, password: str, confirm_password: str) -> None:
+    def _validate_passwords(self, password: str) -> None:
         """
         Validate if passwords match and password strength requirements:
         - 8 to 128 characters
