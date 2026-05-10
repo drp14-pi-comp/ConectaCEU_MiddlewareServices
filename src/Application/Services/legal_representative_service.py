@@ -41,9 +41,9 @@ class LegalRepresentativeService(BaseService):
         """Create a new legal representative"""
         try:
             dto.document = re.sub(r'\D', '', dto.document)
-            # Check if document already exists
-            if await self.repository.document_exists(dto.document):
-                raise ValueError("Documento já registrado para um representante")
+            # Check if document already exists for a representative of the same user
+            if await self.repository.document_exists(dto.document, UUID(dto.user_id)):
+                raise ValueError("Documento já registrado para um representante deste usuário")
             
             uuid_user_id = UUID(dto.user_id)
             existing_representatives_count = len(await self.get_user_representatives(uuid_user_id))
