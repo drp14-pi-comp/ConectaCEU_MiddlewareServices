@@ -31,7 +31,7 @@ class ApplicationLogger:
             repo = LogApplicationErrorRepository(session)
             stacktrace = traceback.format_exc()
             error_detail = str(exception)
-            await repo.log_error(
+            await repo.log(
                 exception=error_detail,
                 stacktrace=stacktrace
             )
