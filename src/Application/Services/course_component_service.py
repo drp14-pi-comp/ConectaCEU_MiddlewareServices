@@ -95,7 +95,7 @@ class CourseComponentService(BaseService):
             if not component:
                 raise ValueError("Componente não encontrado")
             
-            if not component.active:
+            if component.active:
                 raise ValueError("Componente já ativo")
             
             result = await self.repository.activate(component_id)
