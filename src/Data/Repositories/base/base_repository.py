@@ -23,7 +23,7 @@ class BaseRepository(Generic[T]):
     
     async def get_by_id(self, id: UUID) -> Optional[T]:
         """Get entity by UUID"""
-        stmt = select(self.model_class).where(self.model_class.id == id)
+        stmt = select(self.model_class).where(self.model_class.id == id.bytes)
         result = self.session.execute(stmt)
         return result.scalar_one_or_none()
     
@@ -47,9 +47,9 @@ class BaseRepository(Generic[T]):
     
     async def delete(self, id: UUID) -> bool:
         """Hard delete an entity"""
-        entity = await self.get_by_id(id)
-        if entity:
-            self.session.delete(entity)
+        model = await self.get_by_id(id)
+        if model:
+            self.session.delete(model)
             self.session.flush()
             return True
         return False
