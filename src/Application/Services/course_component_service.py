@@ -32,6 +32,7 @@ class CourseComponentService(BaseService):
             
             entity = DtoToEntityMapper.course_component(dto)
             model = EntityToModelMapper.course_component(entity)
+            model.active = True
             saved_model = await self.repository.create(model)
             self.repository.session.commit()
             saved_entity = ModelToEntityMapper.course_component(saved_model)

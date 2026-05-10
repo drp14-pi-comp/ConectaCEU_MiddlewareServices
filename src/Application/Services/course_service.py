@@ -82,6 +82,7 @@ class CourseService(BaseService):
                 
                 # Convert Entity -> Model and save
                 component_model = EntityToModelMapper.course_component(component_entity)
+                component_model.active = True
                 saved_component_model = await self.component_repo.create(component_model)
                 saved_entity = ModelToEntityMapper.course_component(saved_component_model)
                 saved_components_viewmodels.append(EntityToViewModelMapper.course_component(saved_entity))
