@@ -6,7 +6,9 @@ from uuid import UUID
 from src.application.logging.application_logger import ApplicationLogger
 from src.data.repositories.class_attendance_repository import ClassAttendanceRepository
 from src.data.repositories.class_repository import ClassRepository
+from src.data.repositories.class_session_repository import ClassSessionRepository
 from src.data.repositories.course_component_repository import CourseComponentRepository
+from src.data.repositories.document_repository import DocumentRepository
 from src.data.repositories.student_absence_justification_repository import StudentAbsenceJustificationRepository
 from src.data.repositories.user_class_repository import UserClassRepository
 from src.application.services.base_service import BaseService
@@ -14,6 +16,7 @@ from src.application.mappers.entity_to_model_mapper import EntityToModelMapper
 from src.application.mappers.model_to_entity_mapper import ModelToEntityMapper
 from src.application.mappers.entity_to_view_model_mapper import EntityToViewModelMapper
 from src.domain.dtos.class_attendance_dto import BulkClassAttendanceCreateDTO
+from src.domain.dtos.document_dto import DocumentCreateDTO
 from src.infrastructure.handlers.datetime_handler import DateTimeHandler
 
 class ClassAttendanceService(BaseService):
@@ -24,14 +27,18 @@ class ClassAttendanceService(BaseService):
         repository: ClassAttendanceRepository,
         user_class_repo: UserClassRepository,
         class_repo: ClassRepository,
+        session_repo: ClassSessionRepository,
         component_repo: CourseComponentRepository,
+        document_repo: DocumentRepository,
         absence_justification_repo: StudentAbsenceJustificationRepository
     ):
         super().__init__(repository, 'class_attendance', mapper_class=ModelToEntityMapper)
         self.repository = repository
         self.user_class_repo = user_class_repo
         self.class_repo = class_repo
+        self.session_repo = session_repo
         self.component_repo = component_repo
+        self.document_repo = document_repo
         self.absence_justification_repo = absence_justification_repo
     
     async def take_attendance(self, dto: BulkClassAttendanceCreateDTO) -> dict:
@@ -43,13 +50,13 @@ class ClassAttendanceService(BaseService):
         session_id = UUID(dto.class_session_id)
         
         # Validate session exists
-        session = await self.repository.get_by_id(session_id)
+        session = await self.session_repo.get_by_id(session_id)
         if not session:
-            raise ValueError("Session not found")
+            raise ValueError("Sessão não encontrada")
         
         # Validate session date
-        if session.date > DateTimeHandler.now():
-            raise ValueError("Cannot take attendance before session date")
+        if session.date.date() > DateTimeHandler.now().date():
+            raise ValueError("Não é possível registrar chamada antes da data")
         
         created = 0
         updated = 0
@@ -169,7 +176,7 @@ class ClassAttendanceService(BaseService):
                     attendance = await self.repository.get_by_user_and_session(user_id, session_id)
                     
                     # Determine attendance status
-                    is_past = session.date < DateTimeHandler.now()
+                    is_past = session.date.date() < DateTimeHandler.now().date()
                     attendance_status = None  # Default for future sessions
                     
                     if attendance:
@@ -207,10 +214,13 @@ class ClassAttendanceService(BaseService):
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
 
-    async def submit_absence_justification(self, attendance_id: UUID, document_id: UUID, user_id: UUID) -> dict:
+    async def submit_absence_justification(self, attendance_id: UUID, document: DocumentCreateDTO, user_id: UUID) -> dict:
         """
         Student submits a justification document for an absence.
         """
+        if user_id != UUID(document.user_id):
+            raise ValueError('Você só pode enviar justificativas por si mesmo')
+
         from uuid import uuid4
         from src.domain.entities.student_absence_justification import StudentAbsenceJustification
         from src.application.mappers.entity_to_model_mapper import EntityToModelMapper
@@ -218,27 +228,28 @@ class ClassAttendanceService(BaseService):
         # Verify the attendance record exists and belongs to this user
         attendance = await self.repository.get_by_id(attendance_id)
         if not attendance:
-            raise ValueError("Attendance record not found")
+            raise ValueError("Chamada não encontrada")
         
         if UUID(bytes=attendance.user_id) != user_id:
-            raise ValueError("This attendance record does not belong to you")
+            raise ValueError("Esta chamada não pertence a você")
         
         # Verify the student was actually absent
         if attendance.attended:
-            raise ValueError("Cannot justify an attendance that was present")
+            raise ValueError("Não é possível justificar uma chamada já com presença")
         
         # Check if justification already exists
         existing = await self.absence_justification_repo.get_by_attendance_id(attendance_id)
-        if existing:
-            if existing.document_id:
-                raise ValueError("A justification has already been submitted for this absence")
-            else:
-                await self.absence_justification_repo.update_document_id(UUID(bytes=existing.id), document_id)
-                return {
-                    "message": "Justification document submitted successfully. Awaiting validation.",
-                    "justification_id": str(UUID(bytes=existing.id)),
-                    "document_id": str(document_id)
-                }
+        if existing and existing.document_id:
+            raise ValueError("Já existe uma justificativa para esta ausência")
+        
+        # Create the document first
+        from src.application.mappers.dto_to_entity_mapper import DtoToEntityMapper
+        
+        doc_entity = DtoToEntityMapper.document(document)
+        doc_entity.user_id = user_id
+        doc_model = EntityToModelMapper.document(doc_entity)
+        saved_doc = await self.document_repo.create(doc_model)
+        document_id = UUID(bytes=saved_doc.id)
         
         # Create new justification
         justification = StudentAbsenceJustification(
@@ -253,7 +264,7 @@ class ClassAttendanceService(BaseService):
         self.repository.session.commit()
         
         return {
-            "message": "Justification submitted successfully. Awaiting validation.",
+            "message": "Justificativa carregada com sucesso. Aguarde validação.",
             "justification_id": str(UUID(bytes=saved.id)),
             "document_id": str(document_id)
         }

@@ -2,7 +2,7 @@
 from typing import List, Optional
 from uuid import UUID
 from sqlalchemy.orm import Session
-from sqlalchemy import select, and_, func
+from sqlalchemy import Integer, select, and_, func
 
 from src.data.models.class_attendance_model import ClassAttendanceModel
 from src.data.repositories.base.base_repository import BaseRepository
@@ -57,7 +57,7 @@ class ClassAttendanceRepository(BaseRepository[ClassAttendanceModel]):
         """Get attendance summary for a session"""
         stmt = select(
             func.count().label('total'),
-            func.sum(ClassAttendanceModel.attended.cast(int)).label('present')
+            func.sum(ClassAttendanceModel.attended.cast(Integer)).label('present')
         ).where(ClassAttendanceModel.class_session_id == session_id.bytes)
         
         result = self.session.execute(stmt)
@@ -79,7 +79,7 @@ class ClassAttendanceRepository(BaseRepository[ClassAttendanceModel]):
         
         stmt = select(
             func.count().label('total'),
-            func.sum(ClassAttendanceModel.attended.cast(int)).label('present')
+            func.sum(ClassAttendanceModel.attended.cast(Integer)).label('present')
         ).join(
             ClassSessionModel,
             ClassAttendanceModel.class_session_id == ClassSessionModel.id

@@ -203,12 +203,12 @@ class EntityToModelMapper:
     
     # ========== Student Abscence Justification ==========
     @staticmethod
-    def student_absence_justification(model: StudentAbsenceJustification) -> StudentAbsenceJustificationModel:
+    def student_absence_justification(entity: StudentAbsenceJustification) -> StudentAbsenceJustificationModel:
         return StudentAbsenceJustificationModel(
-            id=UUID(bytes=model.id),
-            created_at=model.created_at,
-            class_attendance_id=UUID(bytes=model.class_attendance_id),
-            document_id=UUID(bytes=model.document_id) if model.document_id else None
+            id=entity.id.bytes,
+            created_at=entity.created_at,
+            class_attendance_id=entity.class_attendance_id.bytes,
+            document_id=entity.document_id.bytes if entity.document_id else None
         )
     
     # ========== Profiles To Exclude ==========
