@@ -23,9 +23,12 @@ class CourseComponentService(BaseService):
     async def create_component(self, dto: CourseComponentCreateDTO) -> CourseComponentViewModel:
         """Create a new course component"""
         try:
-            existing = await self.repository.get_by_name(dto.name)
-            if existing:
-                raise ValueError("Component name already exists")
+            if not dto.course_id:
+                raise ValueError("ID do curso é obrigatório")
+
+            component_exists = await self.repository.component_exists(dto.name, UUID(dto.course_id))
+            if component_exists:
+                raise ValueError("Componente já existe para este curso")
             
             entity = DtoToEntityMapper.course_component(dto)
             model = EntityToModelMapper.course_component(entity)
@@ -41,12 +44,12 @@ class CourseComponentService(BaseService):
         try:
             model = await self.repository.get_by_id(component_id)
             if not model:
-                raise ValueError("Component not found")
+                raise ValueError("Componente não encontrado")
             
             if dto.name:
-                existing = await self.repository.get_by_name(dto.name)
-                if existing and existing.id != model.id:
-                    raise ValueError("Component name already exists")
+                component_exists = await self.repository.component_exists(dto.name, UUID(dto.course_id))
+                if component_exists and component_exists.id != model.id:
+                    raise ValueError("Componente já existe para este curso")
             
             entity = ModelToEntityMapper.course_component(model)
             updated_entity = UpdateMapper.course_component(entity, dto)
@@ -72,10 +75,10 @@ class CourseComponentService(BaseService):
         try:
             component = await self.repository.get_by_id(component_id)
             if not component:
-                raise ValueError("Component not found")
+                raise ValueError("Componente não encontrado")
             
             if not component.active:
-                raise ValueError("Component already deactivated")
+                raise ValueError("Componente já desativado")
             
             result = await self.repository.deactivate(component_id)
             self.repository.session.commit()
@@ -89,10 +92,10 @@ class CourseComponentService(BaseService):
         try:
             component = await self.repository.get_by_id(component_id)
             if not component:
-                raise ValueError("Component not found")
+                raise ValueError("Componente não encontrado")
             
             if not component.active:
-                raise ValueError("Component already active")
+                raise ValueError("Componente já ativo")
             
             result = await self.repository.activate(component_id)
             self.repository.session.commit()

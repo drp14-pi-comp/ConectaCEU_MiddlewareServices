@@ -25,9 +25,7 @@ def get_course_service(db: Session = Depends(get_db)) -> CourseService:
     """Dependency injection for CourseService"""
     course_repo = CourseRepository(db)
     component_repo = CourseComponentRepository(db)
-    class_repo = ClassRepository(db)
-    user_class_repo = UserClassRepository(db)
-    return CourseService(course_repo, component_repo, class_repo, user_class_repo)
+    return CourseService(course_repo, component_repo)
 
 
 @router.post("/", response_model=CourseViewModel, status_code=status.HTTP_201_CREATED)
