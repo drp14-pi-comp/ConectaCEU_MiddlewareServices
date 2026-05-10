@@ -19,6 +19,12 @@ class DocumentRepository(BaseRepository):
         result = self.session.execute(stmt)
         return list(result.scalars().all())
     
+    async def get_by_legal_representative_id(self, legal_representative_id: UUID) -> List[DocumentModel]:
+        """Get all documents for a legal representative"""
+        stmt = select(DocumentModel).where(DocumentModel.legal_representative_id == legal_representative_id.bytes)
+        result = self.session.execute(stmt)
+        return list(result.scalars().all())
+    
     async def get_latest_document(
         self,
         model: DocumentModel
