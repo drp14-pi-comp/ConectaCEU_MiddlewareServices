@@ -418,13 +418,7 @@ class UserService(BaseService):
             entities = [ModelToEntityMapper.user(model) for model in models]
             view_models = [EntityToViewModelMapper.user(entity) for entity in entities]
             
-            return {
-                'items': view_models,
-                'total': total,
-                'page': page,
-                'page_size': page_size,
-                'total_pages': (total + page_size - 1)
-            }
+            return view_models
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
     

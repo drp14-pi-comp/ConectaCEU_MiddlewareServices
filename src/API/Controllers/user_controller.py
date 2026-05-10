@@ -116,7 +116,7 @@ async def activate_user(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get("/list", response_model=dict)
+@router.get("/list", response_model=List[UserViewModel])
 async def list_users(
     name: Optional[str] = Query(None),
     document: Optional[str] = Query(None),
