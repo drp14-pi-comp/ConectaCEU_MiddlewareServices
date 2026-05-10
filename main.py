@@ -16,6 +16,7 @@ from src.api.middleware.exception_handler import register_exception_handlers
 
 # Import all routers
 from src.api.controllers.auth_controller import router as auth_router
+from src.api.controllers.broadcast_controller import router as broadcast_router
 from src.api.controllers.user_controller import router as user_router
 from src.api.controllers.address_controller import router as address_router
 from src.api.controllers.course_controller import router as course_router
@@ -91,6 +92,7 @@ def create_app() -> FastAPI:
     # Register API routes
     app.include_router(auth_router, prefix="/api")
     app.include_router(address_router, prefix="/api")
+    app.include_router(broadcast_router, prefix="/api")
     app.include_router(class_attendance_router, prefix="/api")
     app.include_router(class_router, prefix="/api")
     app.include_router(session_router, prefix="/api")
