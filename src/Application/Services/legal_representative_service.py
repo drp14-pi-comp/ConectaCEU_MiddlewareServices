@@ -42,7 +42,7 @@ class LegalRepresentativeService(BaseService):
         try:
             dto.document = re.sub(r'\D', '', dto.document)
             # Check if document already exists for a representative of the same user
-            if await self.repository.document_exists(dto.document, UUID(dto.user_id)):
+            if await self.repository.document_exists_by_user_id(dto.document, UUID(dto.user_id)):
                 raise ValueError("Documento já registrado para um representante deste usuário")
             
             uuid_user_id = UUID(dto.user_id)
@@ -71,9 +71,9 @@ class LegalRepresentativeService(BaseService):
             if not model:
                 raise ValueError("Representative not found")
             
-            dto.document = re.sub(r'\D', '', dto.document)
             # Check document uniqueness if being updated
             if dto.document:
+                dto.document = re.sub(r'\D', '', dto.document)
                 exists = await self.repository.document_exists(dto.document, exclude_id=representative_id)
                 if exists:
                     raise ValueError("Document already registered")
