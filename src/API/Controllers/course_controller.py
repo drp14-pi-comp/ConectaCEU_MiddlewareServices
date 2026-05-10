@@ -6,8 +6,6 @@ from sqlalchemy.orm import Session
 from src.application.services.course_service import CourseService
 from src.data.repositories.course_repository import CourseRepository
 from src.data.repositories.course_component_repository import CourseComponentRepository
-from src.data.repositories.class_repository import ClassRepository
-from src.data.repositories.user_class_repository import UserClassRepository
 from src.data.db_context.database import get_db
 from src.api.dependencies.auth_dependencies import get_current_active_user
 from src.domain.dtos.course_dto import CourseCreateDTO, CourseUpdateDTO, CourseFilterDTO
@@ -104,7 +102,7 @@ async def activate_course(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get("/", response_model=dict)
+@router.get("/", response_model=list[CourseViewModel])
 async def list_courses(
     name: str = Query(None),
     active: bool = Query(None),
@@ -136,7 +134,7 @@ async def get_course(
     return course
 
 
-@router.get("/{course_id}/components")
+@router.get("/{course_id}/components", response_model=CourseViewModel)
 async def get_course_with_components(
     course_id: UUID,
     service: CourseService = Depends(get_course_service)

@@ -1,5 +1,5 @@
 """Course service - business logic for Course entity"""
-from typing import List, Optional
+from typing import Optional
 from uuid import UUID
 
 from src.application.logging.application_logger import ApplicationLogger
@@ -74,7 +74,7 @@ class CourseService(BaseService):
             course_uuid = UUID(bytes=course_id)
             
             # Create all components
-            saved_components_viewmodels: List[CourseComponentViewModel] = []
+            saved_components_viewmodels: list[CourseComponentViewModel] = []
             for component_dto in dto.components:
                 component_dto.course_id = str(course_uuid)
                 # Convert DTO -> Entity with course_id
@@ -199,7 +199,7 @@ class CourseService(BaseService):
         educator_id: Optional[UUID] = None,
         page: int = 1,
         page_size: int = 10
-    ) -> dict:
+    ) -> list[CourseViewModel]:
         """Find courses with filters"""
         try:
             skip = (page - 1) * page_size
@@ -217,17 +217,11 @@ class CourseService(BaseService):
             entities = [ModelToEntityMapper.course(model) for model in models]
             view_models = [EntityToViewModelMapper.course(entity) for entity in entities]
             
-            return {
-                'items': view_models,
-                'total': total,
-                'page': page,
-                'page_size': page_size,
-                'total_pages': (total + page_size - 1) // page_size
-            }
+            return view_models
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
     
-    async def get_course_with_components(self, course_id: UUID) -> dict:
+    async def get_course_with_components(self, course_id: UUID) -> CourseViewModel:
         """Get course with its components"""
         try:
             course_model = await self.repository.get_by_id(course_id)
@@ -238,11 +232,9 @@ class CourseService(BaseService):
             
             course_entity = ModelToEntityMapper.course(course_model)
             component_entities = [ModelToEntityMapper.course_component(c) for c in components]
+            course_viewmodel = EntityToViewModelMapper.course(course_entity)
+            course_viewmodel.course_components = [EntityToViewModelMapper.course_component(c) for c in component_entities]
             
-            return {
-                'course': EntityToViewModelMapper.course(course_entity),
-                'components': [EntityToViewModelMapper.course_component(c) for c in component_entities],
-                'total_components': len(components)
-            }
+            return course_viewmodel
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
