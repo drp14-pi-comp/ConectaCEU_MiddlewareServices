@@ -8,8 +8,11 @@ class LogBroadcastMessage(BaseModel):
     
     id: UUID
     created_at: datetime
+    subject: str
     message: str
+    document_1_file_name: str
     document_1_base64: str
+    document_2_file_name: str
     document_2_base64: str
     sent_whatsapp: bool = False
     sent_email: bool = False

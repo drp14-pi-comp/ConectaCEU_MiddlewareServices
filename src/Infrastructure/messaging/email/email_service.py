@@ -72,7 +72,7 @@ class EmailService:
             print(f"Failed to send email: {e}")
             return False
     
-    def _attach_base64_document(self, msg: MIMEMultipart, base64_content: str, filename: str) -> None:
+    def _attach_base64_document(self, msg: MIMEMultipart, base64_content: str, fileNameWithExtension: str) -> None:
         """Attach a base64 document to an email"""
         try:
             # Determine file type
@@ -85,7 +85,9 @@ class EmailService:
             file_data = base64.b64decode(base64_content)
             
             # Determine extension from mime type
-            ext = self._get_extension_from_mime(mime_type)
+            splitFileName = fileNameWithExtension.split('.')
+            fileName = splitFileName[0]
+            ext = (splitFileName[1] if len(splitFileName) == 2 else self._get_extension_from_mime(mime_type)).replace('.', '')
             
             # Create attachment
             part = MIMEBase("application", "octet-stream")
@@ -93,7 +95,7 @@ class EmailService:
             encoders.encode_base64(part)
             part.add_header(
                 "Content-Disposition",
-                f"attachment; filename={filename}{ext}"
+                f"attachment; filename={fileName}.{ext}"
             )
             
             msg.attach(part)

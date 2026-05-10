@@ -4,8 +4,8 @@ from pydantic import BaseModel, Field, field_validator
 
 class BroadcastMessageCreateDTO(BaseModel):
     """DTO for creating a broadcast message"""
-    message: str = Field(..., min_length=1, max_length=4000)
-    
+    subject: str = Field(..., min_length=10, max_length=40)
+    message: str = Field(..., min_length=10, max_length=4000)
     # Documents as a list (max 2)
     documents: List[BroadcastDocumentDTO] = Field(
         default_factory=list,
@@ -23,7 +23,7 @@ class BroadcastMessageCreateDTO(BaseModel):
     recipient_course_id: Optional[str] = None  # All students in a course
     
     @field_validator('documents')
-    def validate_documents(cls, v: List[str]) -> List[str]:
+    def validate_documents(cls, v: List[BroadcastDocumentDTO]) -> List[BroadcastDocumentDTO]:
         """Validate document list"""
         # Check max quantity
         if len(v) > 2:
@@ -36,7 +36,7 @@ class BroadcastMessageCreateDTO(BaseModel):
             
             # Limit to ~10MB for scalability
             max_length = 10_000_000  # 10MB in base64
-            if len(doc) > max_length:
+            if len(doc.fileBase64) > max_length:
                 raise ValueError(f'Document {i+1} exceeds maximum size of 10MB')
         
         return v
@@ -50,5 +50,5 @@ class BroadcastMessageCreateDTO(BaseModel):
     
 class BroadcastDocumentDTO(BaseModel):
     """Common structure for broadcast documents"""
-    fileName: str
-    fileBase64: str
+    fileNameWithExtension: str = Field(..., min_length=5, max_length=30)
+    fileBase64: str =  Field(..., min_length=1)

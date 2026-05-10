@@ -47,7 +47,7 @@ def get_broadcast_service(db: Session = Depends(get_db)) -> BroadcastService:
     )
 
 
-@router.post("/", status_code=status.HTTP_201_CREATED)
+@router.post("/", status_code=status.HTTP_200_OK)
 async def send_broadcast(
     request: Request,
     dto: BroadcastMessageCreateDTO,

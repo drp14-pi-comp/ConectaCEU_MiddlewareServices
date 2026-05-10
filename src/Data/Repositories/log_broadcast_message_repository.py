@@ -11,8 +11,11 @@ class LogBroadcastMessageRepository(BaseRepository):
     
     async def log(
         self,
+        subject: str,
         message: str,
+        document_1_file_name: str,
         document_1_base64: str,
+        document_2_file_name: str,
         document_2_base64: str,
         sent_whatsapp: bool,
         sent_email: bool,
@@ -22,8 +25,11 @@ class LogBroadcastMessageRepository(BaseRepository):
     ) -> LogBroadcastMessageModel:
         """Log a broadcast message"""
         log = LogBroadcastMessageModel(
+            subject=subject,
             message=message,
+            document_1_file_name=document_1_file_name,
             document_1_base64=document_1_base64,
+            document_2_file_name=document_2_file_name,
             document_2_base64=document_2_base64,
             sent_whatsapp=sent_whatsapp,
             sent_email=sent_email,

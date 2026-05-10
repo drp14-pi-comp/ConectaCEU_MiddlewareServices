@@ -51,7 +51,6 @@ class BroadcastService:
             # Extract documents from list (max 2)
             document_1 = dto.documents[0] if len(dto.documents) > 0 else None
             document_2 = dto.documents[1] if len(dto.documents) > 1 else None
-            
             results = {
                 'email_sent': 0,
                 'email_failed': 0,
@@ -75,12 +74,12 @@ class BroadcastService:
                         try:
                             email_sent = await self.email_service.send_broadcast_email(
                                 to_email=user.email,
-                                subject="ConectaCEU - Comunicado",
+                                subject=dto.subject,
                                 message=self._format_html_message(dto.message),
                                 document_1_base64=document_1.fileBase64,
                                 document_2_base64=document_2.fileBase64,
-                                document_1_name=document_1.fileName,
-                                document_2_name=document_2.fileName
+                                document_1_name=document_1.fileNameWithExtension,
+                                document_2_name=document_2.fileNameWithExtension
                             )
                             
                             if email_sent:
@@ -127,9 +126,12 @@ class BroadcastService:
             
             # Log the broadcast
             await self.log_repo.log(
+                subject=dto.subject,
                 message=dto.message,
-                document_1_base64=document_1 or "",
-                document_2_base64=document_2 or "",
+                document_1_file_name=document_1.fileNameWithExtension or "",
+                document_1_base64=document_1.fileBase64 or "",
+                document_2_file_name=document_2.fileNameWithExtension or "",
+                document_2_base64=document_2.fileBase64 or "",
                 sent_whatsapp=dto.send_whatsapp and results['whatsapp_sent'] > 0,
                 sent_email=dto.send_email and results['email_sent'] > 0,
                 sent_sms=dto.send_sms and results['sms_sent'] > 0,
@@ -154,18 +156,21 @@ class BroadcastService:
         seen_ids = set()
 
         # If no filters, stream all active users
-        if not user_ids and not course_id:
-            yield self._stream_all_students(seen_ids)
+        if (not user_ids or len(user_ids) <= 0) and not course_id:
+            async for user in self._stream_all_students(seen_ids):
+                yield user
             return
         
         # By specific user IDs
         if user_ids:
-            yield self._stream_students_by_ids(seen_ids, user_ids)
+            async for user in self._stream_students_by_ids(seen_ids, user_ids):
+                yield user
             return
         
         # By course - stream through enrollments
         if course_id:
-            yield self._stream_students_by_course_id(seen_ids, UUID(course_id))
+            async for user in self._stream_students_by_course_id(seen_ids, UUID(course_id)):
+                yield user
             return
             
 
