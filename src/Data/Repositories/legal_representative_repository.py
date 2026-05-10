@@ -45,3 +45,12 @@ class LegalRepresentativeRepository(BaseRepository):
         
         result = self.session.execute(stmt)
         return result.scalar_one_or_none() is not None
+    
+    async def document_exists_by_user_id(self, document: str, user_id: UUID) -> bool:
+        """Check if document already exists"""
+        stmt = select(LegalRepresentativeModel).where(
+            LegalRepresentativeModel.document == document
+            and LegalRepresentativeModel.id != user_id.bytes
+        )
+        result = self.session.execute(stmt)
+        return result.scalar_one_or_none() is not None
