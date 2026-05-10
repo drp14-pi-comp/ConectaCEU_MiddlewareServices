@@ -65,8 +65,7 @@ class BroadcastService:
             
             async for user in self._stream_recipients(
                 dto.recipient_user_ids,
-                dto.recipient_course_id,
-                dto.recipient_user_type_id
+                dto.recipient_course_id
             ):
                 try:
                     results['total_processed'] += 1
@@ -144,8 +143,7 @@ class BroadcastService:
     async def _stream_recipients(
         self,
         user_ids: Optional[List[str]] = None,
-        course_id: Optional[str] = None,
-        user_type_id: Optional[int] = None
+        course_id: Optional[str] = None
     ) -> AsyncGenerator[UserModel]:
         """
         Stream recipients one at a time from different sources.
@@ -154,33 +152,29 @@ class BroadcastService:
         seen_ids = set()
 
         # If no filters, stream all active users
-        if not user_ids and not course_id and not user_type_id:
-            yield self._stream_all_users(seen_ids)
+        if not user_ids and not course_id:
+            yield self._stream_all_students(seen_ids)
             return
         
         # By specific user IDs
         if user_ids:
-            yield self._stream_by_user_ids(seen_ids, user_ids)
+            yield self._stream_students_by_ids(seen_ids, user_ids)
             return
         
         # By course - stream through enrollments
         if course_id:
-            yield self._stream_by_course_id(seen_ids, UUID(course_id))
-            return
-        
-        # By user type
-        if user_type_id:
-            yield self._stream_by_user_type_id(seen_ids, user_type_id)
+            yield self._stream_students_by_course_id(seen_ids, UUID(course_id))
             return
             
 
-    async def _stream_all_users(self, seen_ids: set) -> AsyncGenerator[UserModel, None]:
-        """Stream all active users in batches."""
+    async def _stream_all_students(self, seen_ids: set) -> AsyncGenerator[UserModel, None]:
+        """Stream all active students in batches."""
         page_size = 100
         page = 0
         
         while True:
             users = await self.user_repo.find_by_filters(
+                user_type_id=5, # Students only
                 active=True,
                 skip=page * page_size,
                 limit=page_size
@@ -196,8 +190,8 @@ class BroadcastService:
             
             page += 1
 
-    async def _stream_by_user_ids(self, seen_ids: set, user_ids: List[str]) -> AsyncGenerator[UserModel, None]:
-        """Stream all active users by their IDs."""
+    async def _stream_students_by_ids(self, seen_ids: set, user_ids: List[str]) -> AsyncGenerator[UserModel, None]:
+        """Stream all active students by their IDs."""
         while True:
             for user_id_str in user_ids:
                 user_id = UUID(user_id_str)
@@ -206,7 +200,8 @@ class BroadcastService:
                     seen_ids.add(user.id)
                     yield user
 
-    async def _stream_by_course_id(self, seen_ids: set, course_uuid: UUID) -> AsyncGenerator[UserModel, None]:
+    async def _stream_students_by_course_id(self, seen_ids: set, course_uuid: UUID) -> AsyncGenerator[UserModel, None]:
+        """Stream all active students by course"""
         components = await self.component_repo.get_by_course_id(course_uuid)
             
         for component in components:
@@ -232,7 +227,7 @@ class BroadcastService:
         
         while True:
             enrollments = await self.user_class_repo.get_active_by_class_id(
-                class_id, 
+                class_id,
                 skip=page * page_size,
                 limit=page_size
             )
@@ -242,29 +237,6 @@ class BroadcastService:
             
             for enrollment in enrollments:
                 yield enrollment
-            
-            page += 1
-
-
-    async def _stream_by_user_type_id(self, seen_ids: set, user_type_id: int):
-        page_size = 100  # Process in batches
-        page = 0
-        
-        while True:
-            users = await self.user_repo.find_by_filters(
-                user_type_id=user_type_id,
-                active=True,
-                skip=page * page_size,
-                limit=page_size
-            )
-            
-            if not users:
-                break
-            
-            for user in users:
-                if user.id not in seen_ids:
-                    seen_ids.add(user.id)
-                    yield user
             
             page += 1
     

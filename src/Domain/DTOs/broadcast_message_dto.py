@@ -21,7 +21,6 @@ class BroadcastMessageCreateDTO(BaseModel):
     # Recipients
     recipient_user_ids: Optional[List[str]] = None  # Specific users
     recipient_course_id: Optional[str] = None  # All students in a course
-    recipient_user_type_id: Optional[int] = None  # All users of a type
     
     @field_validator('documents')
     def validate_documents(cls, v: List[str]) -> List[str]:

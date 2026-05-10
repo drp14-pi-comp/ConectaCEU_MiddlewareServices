@@ -49,8 +49,7 @@ class UserRepository(BaseRepository[UserModel]):
         limit: int = 100
     ) -> List[UserModel]:
         """Find users with multiple filters"""
-        # removes administrators from listing
-        conditions = [UserModel.user_type_id != 1]
+        conditions = [UserModel.user_type_id != 1] # Never include administrators
         
         if name:
             conditions.append(UserModel.name.contains(name))
