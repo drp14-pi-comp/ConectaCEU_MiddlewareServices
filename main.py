@@ -70,7 +70,7 @@ def create_app() -> FastAPI:
         description="ConectaCEU API",
         lifespan=lifespan,
         docs_url="/api/docs",
-        redoc_url="/api/redoc",
+        redoc_url=None,
         openapi_url="/api/openapi.json"
     )
     
