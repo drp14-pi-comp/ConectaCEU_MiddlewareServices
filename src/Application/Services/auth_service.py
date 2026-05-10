@@ -28,12 +28,13 @@ class AuthService:
     async def create_access_token(self, user_id: UUID, user_type_id: int) -> str:
         """Create JWT access token"""
         try:
-            expire = DateTimeHandler.now() + timedelta(minutes=config.settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+            now = DateTimeHandler.utc_now()
+            expire = now + timedelta(minutes=config.settings.ACCESS_TOKEN_EXPIRE_MINUTES)
             payload = {
                 "sub": str(user_id),
                 "user_type_id": user_type_id,
-                "exp": expire,
-                "iat": DateTimeHandler.now()
+                "exp": int(expire.timestamp()),
+                "iat": int(now.timestamp())
             }
             return jwt.encode(payload, config.settings.SECRET_KEY, algorithm=config.settings.JWT_ALGORITHM)
         except Exception as e:
