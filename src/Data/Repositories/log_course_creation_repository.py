@@ -1,6 +1,6 @@
 """Course creation log repository - Insert only"""
 from sqlalchemy.orm import Session
-from src.data.models.log_course_creation_model import LogCourseCreation as LogCourseCreationModel
+from src.data.models.log_course_creation_model import LogCourseCreationModel
 from src.data.repositories.base.base_repository import BaseRepository
 
 class LogCourseCreationRepository(BaseRepository):
@@ -11,14 +11,20 @@ class LogCourseCreationRepository(BaseRepository):
     
     async def log(
         self,
-        user_id: bytes,
+        name: str,
+        total_seat_limit: int,
+        workload: int,
+        active: bool,
         user_ip_address: str,
-        course_id: bytes
+        user_id: bytes
     ) -> LogCourseCreationModel:
         """Log a course creation"""
         log = LogCourseCreationModel(
-            user_id=user_id,
+            name=name,
+            total_seat_limit=total_seat_limit,
+            workload=workload,
+            active=active,
             user_ip_address=user_ip_address,
-            course_id=course_id
+            user_id=user_id
         )
         return await self.create(log)
