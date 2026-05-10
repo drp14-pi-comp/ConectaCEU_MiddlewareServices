@@ -28,14 +28,14 @@ class UserCreateDTO(BaseModel):
     id_document_front: DocumentCreateDTO
     id_document_back: DocumentCreateDTO
     user_photo: DocumentCreateDTO
-    health_certificate: Optional[DocumentCreateDTO]
+    health_certificate: Optional[DocumentCreateDTO] = Field(None)
 
     # Address
     address: AddressCreateDTO
 
     # Legal representatives
-    legal_representative_1: Optional[LegalRepresentativeCreateDTO]
-    legal_representative_2: Optional[LegalRepresentativeCreateDTO]
+    legal_representative_1: Optional[LegalRepresentativeCreateDTO] = Field(None)
+    legal_representative_2: Optional[LegalRepresentativeCreateDTO] = Field(None)
 
     # Flag to indicate if this is a public registration
     is_public_registration: bool = False

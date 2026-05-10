@@ -87,7 +87,7 @@ class UserService(BaseService):
                 if existing_email:
                     raise ValueError("E-mail pertence a outra pessoa")
             
-            if dto.legal_representative_1.document == dto.legal_representative_2.document:
+            if dto.legal_representative_1 and dto.legal_representative_2 and dto.legal_representative_1.document == dto.legal_representative_2.document:
                 raise ValueError("Os representantes legais não podem ser os mesmos")
             
             # ========== Determine Creation Path ==========
