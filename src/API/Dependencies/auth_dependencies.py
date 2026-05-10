@@ -66,7 +66,7 @@ def require_permission(*permissions: str):
             )
         
         for permission in permissions:
-            if not getattr(user_type, permission, False):
+            if not getattr(user_type, permission[0], False):
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail=f"Missing required permission: {permission}"
