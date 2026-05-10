@@ -12,7 +12,7 @@ from alembic import context
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 
 from src.data.db_context.base import Base
-from src.infrastructure.configuration.settings import config as app_config
+from src.infrastructure.configuration.settings import settings
 
 # Import all models so Alembic can detect them
 from src.data.models.user_model import UserModel
@@ -52,7 +52,7 @@ from src.data.models.log_user_activation_model import LogUserActivationModel
 config = context.config
 
 # Override sqlalchemy.url with our config
-config.set_main_option("sqlalchemy.url", app_config.settings.DATABASE_URL)
+config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
 
 # Interpret the config file for Python logging
 if config.config_file_name is not None:
