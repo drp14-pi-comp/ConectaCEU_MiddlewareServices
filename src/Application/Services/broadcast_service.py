@@ -77,8 +77,10 @@ class BroadcastService:
                                 to_email=user.email,
                                 subject="ConectaCEU - Comunicado",
                                 message=self._format_html_message(dto.message),
-                                document_1_base64=document_1,
-                                document_2_base64=document_2
+                                document_1_base64=document_1.fileBase64,
+                                document_2_base64=document_2.fileBase64,
+                                document_1_name=document_1.fileName,
+                                document_2_name=document_2.fileName
                             )
                             
                             if email_sent:

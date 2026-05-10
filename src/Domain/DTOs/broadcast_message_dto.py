@@ -7,7 +7,7 @@ class BroadcastMessageCreateDTO(BaseModel):
     message: str = Field(..., min_length=1, max_length=4000)
     
     # Documents as a list (max 2)
-    documents: List[str] = Field(
+    documents: List[BroadcastDocumentDTO] = Field(
         default_factory=list,
         max_length=2,
         description="Optional documents as base64 strings (max 2)"
@@ -47,3 +47,8 @@ class BroadcastMessageCreateDTO(BaseModel):
         if not v.strip():
             raise ValueError('Message cannot be empty')
         return v.strip()
+    
+class BroadcastDocumentDTO(BaseModel):
+    """Common structure for broadcast documents"""
+    fileName: str
+    fileBase64: str
