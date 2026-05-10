@@ -36,7 +36,7 @@ class ProfilesToExcludeRepository(BaseRepository):
         """Remove a user from the exclusion list."""
         exclusion = await self.get_by_user_id(user_id)
         if exclusion:
-            await self.session.delete(exclusion)
+            self.session.delete(exclusion)
             self.session.flush()
             return True
         return False
@@ -56,7 +56,10 @@ class ProfilesToExcludeRepository(BaseRepository):
         
         # Window ends 48 hours after next midnight
         cancellation_deadline = next_midnight + timedelta(hours=48)
-        
+
+        # Make it timezone-aware (Brazil timezone)
+        cancellation_deadline = cancellation_deadline.replace(tzinfo=DateTimeHandler.BRAZIL_TZ)
+
         return DateTimeHandler.now() <= cancellation_deadline
 
     async def get_exclusions_past_deadline(self) -> List[ProfilesToExcludeModel]:
