@@ -105,6 +105,15 @@ class ClassService(BaseService):
             
             # Create one class per shift type
             for shift_type_id in dto.shift_type_ids:
+                print('valida turno')
+                class_exists = await self.repository.class_exists(
+                    component_id=UUID(dto.course_component_id),
+                    shift_type_id=shift_type_id
+                )
+                if class_exists:
+                    shift_name = 'Manhã' if shift_type_id == 1 else 'Tarde' if shift_type_id == 2 else 'Noite'
+                    raise ValueError(f'Aula já existe para o componente no turno da {shift_name.lower()}')
+
                 # Create the class
                 class_entity = Class(
                     id=uuid4(),
@@ -183,7 +192,7 @@ class ClassService(BaseService):
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
     
-    async def find_classes(self, filters: ClassFilterDTO) -> dict:
+    async def find_classes(self, filters: ClassFilterDTO) -> list[ClassViewModel]:
         """Find classes with filters"""
         try:
             skip = (filters.page - 1) * filters.page_size
@@ -201,13 +210,7 @@ class ClassService(BaseService):
             entities = [ModelToEntityMapper.class_(model) for model in models]
             view_models = [EntityToViewModelMapper.class_(entity) for entity in entities]
             
-            return {
-                'items': view_models,
-                'total': total,
-                'page': filters.page,
-                'page_size': filters.page_size,
-                'total_pages': (total + filters.page_size - 1) // filters.page_size
-            }
+            return view_models
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
     

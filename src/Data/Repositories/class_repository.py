@@ -54,6 +54,20 @@ class ClassRepository(BaseRepository[ClassModel]):
         result = self.session.execute(stmt)
         return list(result.scalars().all())
     
+    async def class_exists(
+        self,
+        component_id: UUID,
+        shift_type_id: int,
+    ) -> bool:
+        """Validates if classes exist for the given component and shift"""
+        stmt = select(ClassModel).where(
+            ClassModel.component_id == component_id.bytes
+            and ClassModel.shift_type_id == shift_type_id
+            and ClassModel.active
+        )
+        classes = self.session.execute(stmt)
+        return classes.scalar_one_or_none() is not None
+    
     async def increment_seats(self, class_id: UUID) -> bool:
         """Increment seats in use"""
         class_ = await self.get_by_id(class_id)

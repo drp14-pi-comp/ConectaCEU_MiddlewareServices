@@ -11,7 +11,7 @@ from src.data.repositories.course_repository import CourseRepository
 from src.data.repositories.user_class_repository import UserClassRepository
 from src.data.db_context.database import get_db
 from src.api.dependencies.auth_dependencies import get_current_active_user
-from src.domain.dtos.class_dto import ClassBulkCreateDTO, ClassCreateDTO, ClassUpdateDTO, ClassFilterDTO
+from src.domain.dtos.class_dto import ClassBulkCreateDTO, ClassUpdateDTO, ClassFilterDTO
 from src.domain.view_models.class_view_model import ClassViewModel
 from src.domain.entities.user import User
 
@@ -102,7 +102,7 @@ async def activate_class(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get("/", response_model=dict)
+@router.get("/", response_model=list[ClassViewModel])
 async def list_classes(
     component_id: UUID = Query(None),
     shift_type_id: int = Query(None),
