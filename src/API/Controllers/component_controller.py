@@ -13,7 +13,7 @@ from src.domain.entities.user import User
 
 router = APIRouter(
     prefix="/component",
-    tags=["Course Component"],
+    tags=["Component"],
     dependencies=[Depends(get_current_active_user)]
 )
 

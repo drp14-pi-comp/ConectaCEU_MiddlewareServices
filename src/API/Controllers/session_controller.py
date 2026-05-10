@@ -15,7 +15,7 @@ from src.domain.entities.user import User
 
 router = APIRouter(
     prefix="/session",
-    tags=["Class Session"],
+    tags=["Session"],
     dependencies=[Depends(get_current_active_user)]
 )
 

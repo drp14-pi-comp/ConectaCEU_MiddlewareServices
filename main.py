@@ -20,13 +20,13 @@ from src.api.controllers.broadcast_controller import router as broadcast_router
 from src.api.controllers.user_controller import router as user_router
 from src.api.controllers.address_controller import router as address_router
 from src.api.controllers.course_controller import router as course_router
-from src.api.controllers.course_component_controller import router as component_router
+from src.api.controllers.component_controller import router as component_router
 from src.api.controllers.class_controller import router as class_router
-from src.api.controllers.class_session_controller import router as session_router
-from src.api.controllers.class_attendance_controller import router as class_attendance_router
+from src.api.controllers.session_controller import router as session_router
+from src.api.controllers.attendance_controller import router as attendance_router
 from src.api.controllers.enrollment_controller import router as enrollment_router
 from src.api.controllers.document_controller import router as document_router
-from src.api.controllers.legal_representative_controller import router as representative_router
+from src.api.controllers.representative_controller import router as representative_router
 from src.api.controllers.password_reset_controller import router as password_router
 from src.api.controllers.reference_controller import router as reference_router
 from src.api.controllers.report_controller import router as report_router
@@ -90,21 +90,21 @@ def create_app() -> FastAPI:
     register_exception_handlers(app)
     
     # Register API routes
-    app.include_router(auth_router, prefix="/api")
     app.include_router(address_router, prefix="/api")
+    app.include_router(attendance_router, prefix="/api")
+    app.include_router(auth_router, prefix="/api")
     app.include_router(broadcast_router, prefix="/api")
-    app.include_router(class_attendance_router, prefix="/api")
     app.include_router(class_router, prefix="/api")
-    app.include_router(session_router, prefix="/api")
     app.include_router(component_router, prefix="/api")
     app.include_router(course_router, prefix="/api")
     app.include_router(document_router, prefix="/api")
     app.include_router(enrollment_router, prefix="/api")
-    app.include_router(health_router)
-    app.include_router(representative_router, prefix="/api")
+    app.include_router(health_router, prefix="/api")
     app.include_router(password_router, prefix="/api")
     app.include_router(reference_router, prefix="/api")
     app.include_router(report_router, prefix="/api")
+    app.include_router(representative_router, prefix="/api")
+    app.include_router(session_router, prefix="/api")
     app.include_router(user_router, prefix="/api")
     
     return app

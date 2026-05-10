@@ -17,7 +17,7 @@ from src.domain.entities.user import User
 
 router = APIRouter(
     prefix="/representative",
-    tags=["Legal Representative"],
+    tags=["Representative"],
     dependencies=[Depends(get_current_active_user)]
 )
 
