@@ -90,37 +90,37 @@ class BroadcastService:
                             results['email_failed'] += 1
                     
                     # Send WhatsApp
-                    if dto.send_whatsapp and user.cellphone_number:
-                        try:
-                            whatsapp_sent = await self.whatsapp_service.send_whatsapp(
-                                to_phone=user.cellphone_number,
-                                message=dto.message,
-                                document_1_base64=document_1,
-                                document_2_base64=document_2
-                            )
+                    # if dto.send_whatsapp and user.cellphone_number:
+                    #     try:
+                    #         whatsapp_sent = await self.whatsapp_service.send_whatsapp(
+                    #             to_phone=user.cellphone_number,
+                    #             message=dto.message,
+                    #             document_1_base64=document_1,
+                    #             document_2_base64=document_2
+                    #         )
                             
-                            if whatsapp_sent:
-                                results['whatsapp_sent'] += 1
-                            else:
-                                results['whatsapp_failed'] += 1
-                        except Exception:
-                            results['whatsapp_failed'] += 1
+                    #         if whatsapp_sent:
+                    #             results['whatsapp_sent'] += 1
+                    #         else:
+                    #             results['whatsapp_failed'] += 1
+                    #     except Exception:
+                    #         results['whatsapp_failed'] += 1
                     
                     # Send SMS
-                    if dto.send_sms and user.cellphone_number:
-                        try:
-                            sms_sent = await self.sms_service.send_sms(
-                                to_phone=user.cellphone_number,
-                                message=dto.message[:160]
-                            )
+                    # if dto.send_sms and user.cellphone_number:
+                    #     try:
+                    #         sms_sent = await self.sms_service.send_sms(
+                    #             to_phone=user.cellphone_number,
+                    #             message=dto.message[:160]
+                    #         )
                             
-                            if sms_sent:
-                                results['sms_sent'] += 1
-                            else:
-                                results['sms_failed'] += 1
-                        except Exception:
-                            results['sms_failed'] += 1
-                            
+                    #         if sms_sent:
+                    #             results['sms_sent'] += 1
+                    #         else:
+                    #             results['sms_failed'] += 1
+                    #     except Exception:
+                    #         results['sms_failed'] += 1
+                    
                 except Exception:
                     results['total_errors'] += 1
             
