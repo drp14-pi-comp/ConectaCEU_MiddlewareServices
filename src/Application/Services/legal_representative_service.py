@@ -1,4 +1,5 @@
 """Legal representative service - business logic for Legal Representative entity"""
+from datetime import date
 import re
 from typing import List
 from uuid import UUID
@@ -6,6 +7,8 @@ from uuid import UUID
 from src.application.logging.application_logger import ApplicationLogger
 from src.data.models.legal_representative_model import LegalRepresentativeModel
 from src.data.models.user_model import UserModel
+from src.data.repositories.document_repository import DocumentRepository
+from src.data.repositories.document_validation_repository import DocumentValidationRepository
 from src.data.repositories.legal_representative_repository import LegalRepresentativeRepository
 from src.application.services.base_service import BaseService
 from src.application.mappers.dto_to_entity_mapper import DtoToEntityMapper
@@ -24,10 +27,14 @@ class LegalRepresentativeService(BaseService):
     def __init__(
         self,
         repository: LegalRepresentativeRepository,
+        document_repo: DocumentRepository,
+        document_validation_repo: DocumentValidationRepository,
         user_repo: UserRepository
     ):
         super().__init__(repository, 'legal_representative', mapper_class=ModelToEntityMapper)
         self.repository = repository
+        self.document_repo = document_repo
+        self.document_validation_repo = document_validation_repo
         self.user_repo = user_repo
     
     async def create_representative(self, dto: LegalRepresentativeCreateDTO) -> LegalRepresentativeViewModel:
@@ -94,8 +101,15 @@ class LegalRepresentativeService(BaseService):
         """Delete a legal representative"""
         try:
             representative: LegalRepresentativeModel = await self.repository.get_by_id(representative_id)
-            if self._can_delete_representative(representative):
-                await self.repository.delete(representative.id)
+            if await self._can_delete_representative(representative):
+                documents = await self.document_repo.get_by_legal_representative_id(representative_id)
+                for document in documents:
+                    document_validation = await self.document_validation_repo.get_by_document_id(document.id)
+                    await self.document_validation_repo.delete(bytes=document_validation.id)
+                    await self.document_repo.delete(bytes=document.id)
+                await self.repository.delete(representative_id)
+                self.repository.session.commit()
+                return True
             return False
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
@@ -103,9 +117,11 @@ class LegalRepresentativeService(BaseService):
     async def _can_delete_representative(self, representative: LegalRepresentativeModel) -> bool:
         """Validates if a representative can be deleted"""
         try:
-            user: UserModel = await self.user_repo.get_by_id(representative.user_id)
-            user_representatives_count: int = len(await self.get_user_representatives(user.id))
-            is_user_of_age: bool = (DateTimeHandler.now().date() - user.birthdate).days > 17 * 365
+            representative_id = UUID(bytes=representative.user_id)
+            user: UserModel = await self.user_repo.get_by_id(representative_id)
+            user_id = UUID(bytes=user.id)
+            user_representatives_count: int = len(await self.get_user_representatives(user_id))
+            is_user_of_age: bool = (DateTimeHandler.now().date() - user.birthdate.date()).days > 17 * 365
             return user_representatives_count > 1 or is_user_of_age
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)

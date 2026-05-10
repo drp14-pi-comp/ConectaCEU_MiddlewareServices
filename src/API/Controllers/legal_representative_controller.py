@@ -5,6 +5,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from src.application.services.legal_representative_service import LegalRepresentativeService
+from src.data.repositories.document_repository import DocumentRepository
+from src.data.repositories.document_validation_repository import DocumentValidationRepository
 from src.data.repositories.legal_representative_repository import LegalRepresentativeRepository
 from src.data.db_context.database import get_db
 from src.api.dependencies.auth_dependencies import get_current_active_user
@@ -23,8 +25,10 @@ router = APIRouter(
 def get_representative_service(db: Session = Depends(get_db)) -> LegalRepresentativeService:
     """Dependency injection for LegalRepresentativeService"""
     repository = LegalRepresentativeRepository(db)
+    document_repo = DocumentRepository(db)
+    document_validation_repo = DocumentValidationRepository(db)
     user_repo = UserRepository(db)
-    return LegalRepresentativeService(repository, user_repo)
+    return LegalRepresentativeService(repository, document_repo, document_validation_repo, user_repo)
 
 
 @router.post("/", response_model=LegalRepresentativeViewModel, status_code=status.HTTP_201_CREATED)
