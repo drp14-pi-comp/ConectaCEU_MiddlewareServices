@@ -117,7 +117,6 @@ class EmailService:
     async def send_password_reset_email(
         self,
         to_email: str,
-        user_name: str,
         reset_token: str,
         frontend_url: str
     ) -> bool:
@@ -130,7 +129,7 @@ class EmailService:
         <html>
             <body>
                 <h2>Recuperação de Senha</h2>
-                <p>Olá {user_name},</p>
+                <p>Olá,</p>
                 <p>Recebemos uma solicitação para redefinir sua senha.</p>
                 <p>Clique no link abaixo para criar uma nova senha:</p>
                 <p><a href="{reset_link}">{reset_link}</a></p>

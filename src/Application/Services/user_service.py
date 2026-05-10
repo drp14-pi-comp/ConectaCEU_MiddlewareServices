@@ -21,6 +21,7 @@ from src.application.mappers.update_mapper import UpdateMapper
 from src.domain.dtos.user_dto import DeactivateUserDTO, UserCreateDTO, UserUpdateDTO, UserLoginDTO, PasswordChangeDTO
 from src.domain.view_models.user_view_model import StudentUserViewModel, UserViewModel
 from src.infrastructure.handlers.datetime_handler import DateTimeHandler
+from src.infrastructure.handlers.password_hasher import PasswordHasher
 
 class UserService(BaseService):
     """Service for User business logic"""
@@ -71,10 +72,10 @@ class UserService(BaseService):
             
             # ========== Validations ==========
             # Validate passwords
-            self._validate_passwords(dto.password)
+            self._validate_password(dto.password)
 
             # Hash passwords
-            dto.password = self._hash_password(dto.password)
+            dto.password = PasswordHasher.hash_password(dto.password)
             dto.confirm_password = ''
 
             # Check if document already exists
@@ -464,11 +465,6 @@ class UserService(BaseService):
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
     
-    def _hash_password(self, password: str) -> str:
-        """Hash password using bcrypt"""
-        salt = bcrypt.gensalt()
-        return bcrypt.hashpw(password.encode('utf-8'), salt).decode('utf-8')
-    
     def _verify_password(self, plain_password: str, hashed_password: str) -> bool:
         """Verify password against hash"""
         return bcrypt.checkpw(
@@ -491,7 +487,7 @@ class UserService(BaseService):
         history_model = EntityToModelMapper.user_password_history(history)
         await self.password_history_service.add_password_hash_to_history(history_model)
 
-    def _validate_passwords(self, password: str) -> None:
+    def _validate_password(self, password: str) -> None:
         """
         Validate if passwords match and password strength requirements:
         - 8 to 128 characters

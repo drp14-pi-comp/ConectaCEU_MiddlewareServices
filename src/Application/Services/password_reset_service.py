@@ -7,6 +7,7 @@ from src.application.logging.application_logger import ApplicationLogger
 from src.data.repositories.user_repository import UserRepository
 from src.application.services.user_password_history_service import UserPasswordHistoryService
 from src.domain.dtos.user_dto import PasswordResetRequestDTO
+from src.infrastructure.handlers.password_hasher import PasswordHasher
 from src.infrastructure.messaging.email.email_service import EmailService
 from src.infrastructure.configuration.settings import settings
 from src.infrastructure.handlers.datetime_handler import DateTimeHandler
@@ -36,19 +37,20 @@ class PasswordResetService:
             Dict with status message
         """
         try:
+            RETURN_MESSAGE: str = "Se o e-mail estiver na nossa base de dados, uma mensagem será enviada"
             # Find user by email
             user = await self.user_repo.get_by_email(body.email)
             if not user:
                 # Don't reveal if user exists or not (security)
-                return {"message": "If the information matches, a reset email will be sent"}
+                return {"message": RETURN_MESSAGE}
             
             # Check if user is active
             if not user.active:
-                return {"message": "If the information matches, a reset email will be sent"}
+                return {"message": RETURN_MESSAGE}
             
             # Generate reset token
             reset_token = secrets.token_urlsafe(32)
-            token_expiry = DateTimeHandler.now() + timedelta(hours=1)
+            token_expiry = DateTimeHandler.utc_now() + timedelta(hours=1)
             
             # Save token to user
             user.password_reset_token = reset_token
@@ -60,12 +62,11 @@ class PasswordResetService:
             frontend_url = settings.APP_FRONTEND_URL
             await self.email_service.send_password_reset_email(
                 to_email=user.email,
-                user_name=user.name,
                 reset_token=reset_token,
                 frontend_url=frontend_url
             )
             
-            return {"message": "If the information matches, a reset email will be sent"}
+            return {"message": RETURN_MESSAGE}
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
     
@@ -83,16 +84,18 @@ class PasswordResetService:
             # Find user by reset token
             user = await self.user_repo.find_by_password_reset_token(token)
             if not user:
-                return {"valid": False, "reason": "Invalid or expired token"}
+                return {"valid": False, "reason": "Token inválido ou expirado"}
             
             # Check if token is expired
-            if user.password_reset_expires and user.password_reset_expires < DateTimeHandler.now():
-                return {"valid": False, "reason": "Token has expired"}
+            if user.password_reset_expires:
+                expires = user.password_reset_expires.replace(tzinfo=DateTimeHandler.UTC_TZ)
+                if expires < DateTimeHandler.utc_now():
+                    return {"valid": False, "reason": "Token expirado"}
             
             return {
                 "valid": True,
                 "user_id": str(UUID(bytes=user.id)),
-                "message": "Token is valid"
+                "message": "Token válido"
             }
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
@@ -118,8 +121,7 @@ class PasswordResetService:
             user = await self.user_repo.get_by_id(user_id)
             
             # Validate password strength
-            if len(new_password) < 8:
-                return {"success": False, "reason": "Password must be at least 8 characters"}
+            self._validate_password(new_password)
             
             # Check password history
             validation_result = await self.password_history_service.validate_password_change(
@@ -133,8 +135,7 @@ class PasswordResetService:
             
             # Hash and update password
             from src.application.services.auth_service import AuthService
-            auth_service = AuthService(self.user_repo)
-            hashed_password = auth_service._hash_password(new_password)
+            hashed_password = PasswordHasher.hash_password(new_password)
             
             success = await self.user_repo.update_password(user_id, hashed_password)
             self.user_repo.session.commit()
@@ -152,8 +153,42 @@ class PasswordResetService:
                 await self.user_repo.update(user)
                 self.user_repo.session.commit()
                 
-                return {"success": True, "message": "Password reset successfully"}
+                return {"success": True, "message": "Senha atualizada com sucesso!"}
             
-            return {"success": False, "reason": "Failed to update password"}
+            return {"success": False, "reason": "Falha ao atualizar senha"}
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
+
+    def _validate_password(self, password: str) -> None:
+        """
+        Validate if passwords match and password strength requirements:
+        - 8 to 128 characters
+        - At least one lowercase letter
+        - At least one uppercase letter
+        - At least one number
+        - At least one special character
+        """
+        import re
+        
+        # Check length
+        if len(password) < 8:
+            raise ValueError("A senha deve conter pelo menos 8 caracteres")
+        
+        if len(password) > 128:
+            raise ValueError("A senha deve conter no máximo 128 caracteres")
+        
+        # Check lowercase
+        if not re.search(r'[a-z]', password):
+            raise ValueError("A senha deve conter pelo menos uma letra minúscula")
+        
+        # Check uppercase
+        if not re.search(r'[A-Z]', password):
+            raise ValueError("A senha deve conter pelo menos uma letra maiúscula")
+        
+        # Check number
+        if not re.search(r'\d', password):
+            raise ValueError("A senha deve conter pelo menos um número")
+        
+        # Check special character
+        if not re.search(r'[!@#$%^&*(),.?":{}|<>_\-+=\[\]\\;/\'`~]', password):
+            raise ValueError("A senha deve conter pelo menos um caractere especial")
