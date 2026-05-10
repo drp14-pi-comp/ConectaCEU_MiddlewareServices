@@ -1,26 +1,24 @@
 """Email service for sending notifications with attachments"""
-from typing import Optional, List
+from typing import Optional
 import smtplib
 import base64
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
 from email import encoders
-import tempfile
-import os
 
-from src.infrastructure.configuration.settings import config
+from src.infrastructure.configuration.settings import settings
 
 class EmailService:
     """Service for sending emails with optional attachments"""
     
     def __init__(self):
-        self.smtp_host = config.get("Email.SmtpHost", "smtp.gmail.com")
-        self.smtp_port = config.get("Email.SmtpPort", 587)
-        self.smtp_user = config.get("Email.SmtpUser", "")
-        self.smtp_password = config.get("Email.SmtpPassword", "")
-        self.from_email = config.get("Email.FromEmail", "noreply@conectaceu.com")
-        self.from_name = config.get("Email.FromName", "ConectaCEU")
+        self.smtp_host = settings.EMAIL_SMTP_HOST
+        self.smtp_port = settings.EMAIL_SMTP_PORT
+        self.smtp_user = settings.EMAIL_SMTP_USER
+        self.smtp_password = settings.EMAIL_SMTP_PASSWORD
+        self.from_email = settings.EMAIL_FROM_EMAIL
+        self.from_name = settings.EMAIL_FROM_NAME
     
     async def send_broadcast_email(
         self,

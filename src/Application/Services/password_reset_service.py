@@ -8,7 +8,7 @@ from src.data.repositories.user_repository import UserRepository
 from src.application.services.user_password_history_service import UserPasswordHistoryService
 from src.domain.dtos.user_dto import PasswordResetRequestDTO
 from src.infrastructure.messaging.email.email_service import EmailService
-from src.infrastructure.configuration.settings import config
+from src.infrastructure.configuration.settings import settings
 from src.infrastructure.handlers.datetime_handler import DateTimeHandler
 
 class PasswordResetService:
@@ -57,7 +57,7 @@ class PasswordResetService:
             self.user_repo.session.commit()
             
             # Send email
-            frontend_url = config.get("App.FrontendUrl", "")
+            frontend_url = settings.APP_FRONTEND_URL
             await self.email_service.send_password_reset_email(
                 to_email=user.email,
                 user_name=user.name,

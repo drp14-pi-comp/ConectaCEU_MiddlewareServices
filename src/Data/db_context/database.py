@@ -4,17 +4,17 @@ from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.pool import QueuePool
 from typing import Generator
 
-from src.infrastructure.configuration.settings import config
+from src.infrastructure.configuration.settings import settings
 
 # Create engine with MySQL configuration
 engine = create_engine(
-    config.settings.DATABASE_URL,
+    settings.DATABASE_URL,
     poolclass=QueuePool,
-    pool_size=config.settings.DATABASE_POOL_SIZE,
-    max_overflow=config.settings.DATABASE_MAX_OVERFLOW,
-    pool_recycle=config.settings.DATABASE_POOL_RECYCLE,
-    pool_pre_ping=config.settings.DATABASE_POOL_PRE_PING,
-    echo=config.settings.DATABASE_ECHO,
+    pool_size=settings.DATABASE_POOL_SIZE,
+    max_overflow=settings.DATABASE_MAX_OVERFLOW,
+    pool_recycle=settings.DATABASE_POOL_RECYCLE,
+    pool_pre_ping=settings.DATABASE_POOL_PRE_PING,
+    echo=settings.DATABASE_ECHO,
     connect_args={
         "connect_timeout": 10,
         "charset": "utf8mb4",

@@ -2,15 +2,15 @@
 from typing import Optional
 import requests
 
-from src.infrastructure.configuration.settings import config
+from src.infrastructure.configuration.settings import settings
 
 class SmsService:
     """Service for sending SMS messages"""
     
     def __init__(self):
-        self.api_url = config.get("Sms.ApiUrl", "")
-        self.api_key = config.get("Sms.ApiKey", "")
-        self.from_number = config.get("Sms.FromNumber", "")
+        self.api_url = settings.SMS_API_URL
+        self.api_key = settings.SMS_API_KEY
+        self.from_number = settings.SMS_FROM_NUMBER
     
     async def send_sms(
         self,

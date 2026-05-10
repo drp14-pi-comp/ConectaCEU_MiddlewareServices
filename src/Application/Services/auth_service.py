@@ -8,7 +8,7 @@ from jose import jwt, JWTError
 from src.application.logging.application_logger import ApplicationLogger
 from src.data.repositories.profiles_to_exclude_repository import ProfilesToExcludeRepository
 from src.domain.dtos.auth_dto import LoginDTO
-from src.infrastructure.configuration.settings import config
+from src.infrastructure.configuration.settings import settings
 from src.data.repositories.user_repository import UserRepository
 from src.application.mappers.model_to_entity_mapper import ModelToEntityMapper
 from src.domain.entities.user import User
@@ -29,28 +29,28 @@ class AuthService:
         """Create JWT access token"""
         try:
             now = DateTimeHandler.utc_now()
-            expire = now + timedelta(minutes=config.settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+            expire = now + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
             payload = {
                 "sub": str(user_id),
                 "user_type_id": user_type_id,
                 "exp": int(expire.timestamp()),
                 "iat": int(now.timestamp())
             }
-            return jwt.encode(payload, config.settings.SECRET_KEY, algorithm=config.settings.JWT_ALGORITHM)
+            return jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
     
     async def create_refresh_token(self, user_id: UUID) -> str:
         """Create JWT refresh token"""
         try:
-            expire = DateTimeHandler.now() + timedelta(days=config.settings.REFRESH_TOKEN_EXPIRE_DAYS)
+            expire = DateTimeHandler.now() + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
             payload = {
                 "sub": str(user_id),
                 "exp": expire,
                 "iat": DateTimeHandler.now(),
                 "type": "refresh"
             }
-            return jwt.encode(payload, config.settings.SECRET_KEY, algorithm=config.settings.JWT_ALGORITHM)
+            return jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
     
@@ -59,8 +59,8 @@ class AuthService:
         try:
             payload = jwt.decode(
                 token,
-                config.settings.SECRET_KEY,
-                algorithms=[config.settings.JWT_ALGORITHM]
+                settings.SECRET_KEY,
+                algorithms=[settings.JWT_ALGORITHM]
             )
             return payload
         except JWTError:
@@ -147,7 +147,7 @@ class AuthService:
                 "access_token": access_token,
                 "refresh_token": refresh_token,
                 "token_type": "bearer",
-                "expires_in": config.settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+                "expires_in": settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
                 "user": {
                     "id": str(user_uuid),
                     "name": user.name,
@@ -189,7 +189,7 @@ class AuthService:
                 "access_token": access_token,
                 "refresh_token": new_refresh_token,
                 "token_type": "bearer",
-                "expires_in": config.settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
+                "expires_in": settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
             }
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)

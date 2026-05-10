@@ -10,8 +10,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
 from src.api.middleware.error_logging_middleware import ErrorLoggingMiddleware
-from src.infrastructure.configuration.settings import config
-from src.data.db_context.database import engine, SessionLocal
+from src.infrastructure.configuration.settings import settings
+from src.data.db_context.database import engine
 from src.api.middleware.exception_handler import register_exception_handlers
 
 # Import all routers
@@ -37,9 +37,9 @@ from src.api.controllers.health_controller import router as health_router
 async def lifespan(app: FastAPI):
     """Handle startup and shutdown events"""
     # Startup
-    print(f"🚀 Starting {config.settings.APP_NAME} v{config.settings.APP_VERSION}")
-    print(f"📌 Environment: {config.settings.ENVIRONMENT}")
-    print(f"🗄️ Database: {config.settings.DATABASE_NAME} on {config.settings.DATABASE_HOST}")
+    print(f"🚀 Starting {settings.APP_NAME} v{settings.APP_VERSION}")
+    print(f"📌 Environment: {settings.ENVIRONMENT}")
+    print(f"🗄️ Database: {settings.DATABASE_NAME} on {settings.DATABASE_HOST}")
     
     # Initialize database connection pool
     try:
@@ -65,8 +65,8 @@ async def lifespan(app: FastAPI):
 def create_app() -> FastAPI:
     """Application factory pattern"""
     app = FastAPI(
-        title=config.settings.APP_NAME,
-        version=config.settings.APP_VERSION,
+        title=settings.APP_NAME,
+        version=settings.APP_VERSION,
         description="ConectaCEU API",
         lifespan=lifespan,
         docs_url="/api/docs",
@@ -77,7 +77,7 @@ def create_app() -> FastAPI:
     # Configure CORS
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=config.settings.ALLOWED_ORIGINS,
+        allow_origins=settings.ALLOWED_ORIGINS,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],

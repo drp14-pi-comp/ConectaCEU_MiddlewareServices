@@ -2,16 +2,16 @@
 from typing import Optional, List
 import requests
 
-from src.infrastructure.configuration.settings import config
+from src.infrastructure.configuration.settings import settings
 
 class WhatsAppService:
     """Service for sending WhatsApp messages"""
     
     def __init__(self):
-        self.api_url = config.get("WhatsApp.ApiUrl", "")
-        self.phone_number_id = config.get("WhatsApp.PhoneNumber", "")
-        self.access_token = config.get("WhatsApp.AccessToken", "")
-        self.from_number = config.get("WhatsApp.FromNumber", "")
+        self.api_url = settings.WHATSAPP_API_URL
+        self.phone_number_id = settings.WHATSAPP_PHONE_NUMBER
+        self.access_token = settings.WHATSAPP_ACCESS_TOKEN
+        self.from_number = settings.WHATSAPP_FROM_NUMBER
     
     async def send_whatsapp(
         self,
