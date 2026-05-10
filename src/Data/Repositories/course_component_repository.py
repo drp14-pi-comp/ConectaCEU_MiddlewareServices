@@ -30,9 +30,11 @@ class CourseComponentRepository(BaseRepository[CourseComponentModel]):
         result = self.session.execute(stmt)
         return list(result.scalars().all())
     
-    async def component_exists(self, name: str, course_id: UUID) -> bool:
+    async def component_exists(self, name: str, course_id: Optional[UUID] = None) -> bool:
         """Get component by exact name"""
-        stmt = select(CourseComponentModel).where(CourseComponentModel.name == name and CourseComponentModel.course_id == course_id.bytes)
+        stmt = select(CourseComponentModel).where(CourseComponentModel.name == name)
+        if course_id:
+            stmt.where(CourseComponentModel.course_id == course_id.bytes)
         result = self.session.execute(stmt)
         return result.scalar_one_or_none() is not None
     
