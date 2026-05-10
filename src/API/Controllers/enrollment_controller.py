@@ -7,7 +7,6 @@ from src.application.services.user_class_service import UserClassService
 from src.data.repositories.user_class_repository import UserClassRepository
 from src.data.repositories.class_repository import ClassRepository
 from src.data.repositories.class_session_repository import ClassSessionRepository
-from src.data.repositories.course_component_repository import CourseComponentRepository
 from src.data.db_context.database import get_db
 from src.api.dependencies.auth_dependencies import get_current_active_user
 from src.domain.dtos.user_class_dto import UserClassEnrollDTO, UserClassBulkEnrollDTO
@@ -26,8 +25,7 @@ def get_user_class_service(db: Session = Depends(get_db)) -> UserClassService:
     repository = UserClassRepository(db)
     class_repo = ClassRepository(db)
     session_repo = ClassSessionRepository(db)
-    component_repo = CourseComponentRepository(db)
-    return UserClassService(repository, class_repo, session_repo, component_repo)
+    return UserClassService(repository, class_repo, session_repo)
 
 
 @router.post("/", response_model=UserClassViewModel, status_code=status.HTTP_201_CREATED)

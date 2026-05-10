@@ -49,6 +49,7 @@ class UserClassService(BaseService):
                     existing.active = True
                     saved_model = await self.repository.update(existing)
                     saved_entity = ModelToEntityMapper.user_class(saved_model)
+                    self.repository.session.commit()
                     return EntityToViewModelMapper.user_class(saved_entity)
             
             # Validate enrollment limits and shift conflicts
@@ -65,11 +66,12 @@ class UserClassService(BaseService):
             if enrolled_by_user_id:
                 from src.data.repositories.log_student_enrollment_repository import LogStudentEnrollmentRepository
                 log_repo = LogStudentEnrollmentRepository(self.repository.session)
+                course = await self._get_course_for_class(class_id)
                 await log_repo.log(
                     enrolled=True,
                     user_id=enrolled_by_user_id.bytes,
                     user_ip_address=user_ip_address or "unknown",
-                    course_id=self._get_course_id_for_class(class_id).bytes
+                    course_id=course.id
                 )
             
             self.repository.session.commit()
@@ -192,11 +194,13 @@ class UserClassService(BaseService):
             if unenrolled_by_user_id:
                 from src.data.repositories.log_student_enrollment_repository import LogStudentEnrollmentRepository
                 log_repo = LogStudentEnrollmentRepository(self.repository.session)
+                class_id = UUID(bytes=enrollment.class_id)
+                course = await self._get_course_for_class(class_id)
                 await log_repo.log(
                     enrolled=False,
                     user_id=unenrolled_by_user_id.bytes,
                     user_ip_address=user_ip_address or "unknown",
-                    course_id=self._get_course_id_for_class(enrollment.class_id).bytes
+                    course_id=course.id
                 )
 
             self.repository.session.commit()
@@ -293,7 +297,7 @@ class UserClassService(BaseService):
             for enrollment in active_enrollments:
                 shifts_enrolled.add(enrollment['shift_type_id'])
             
-            shift_names = {1: "morning", 2: "afternoon", 3: "evening"}
+            shift_names = {1: "Manhã", 2: "Tarde", 3: "Noite"}
             enrolled_shifts = [shift_names.get(s, f"shift_{s}") for s in shifts_enrolled]
             
             return {
@@ -358,6 +362,22 @@ class UserClassService(BaseService):
                 component_repo = CourseComponentRepository(self.class_repo.session)
                 component = await component_repo.get_by_id(UUID(bytes=class_.component_id))
                 return component
+            return None
+        except Exception as e:
+            await ApplicationLogger.log_error(e, reraise=True)
+    
+
+    async def _get_course_for_class(self, class_id: UUID):
+        """Get the course for a class"""
+        try:
+            from src.data.repositories.course_repository import CourseRepository
+            
+            class_ = await self.class_repo.get_by_id(class_id)
+            if class_:
+                component = await self._get_component_for_class(class_id)
+                course_repo = CourseRepository(self.class_repo.session)
+                course = await course_repo.get_by_id(UUID(bytes=component.course_id))
+                return course
             return None
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
