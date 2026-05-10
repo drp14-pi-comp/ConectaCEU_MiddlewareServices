@@ -48,9 +48,9 @@ class CourseComponentService(BaseService):
                 raise ValueError("Componente não encontrado")
             
             if dto.name:
-                component_exists = await self.repository.component_exists(dto.name, UUID(dto.course_id))
+                component_exists = await self.repository.component_exists(dto.name)
                 if component_exists and component_exists.id != model.id:
-                    raise ValueError("Componente já existe para este curso")
+                    raise ValueError("Componente já existe com este nome")
             
             entity = ModelToEntityMapper.course_component(model)
             updated_entity = UpdateMapper.course_component(entity, dto)
