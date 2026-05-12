@@ -4,6 +4,7 @@ from typing import Optional
 from uuid import UUID
 
 from src.application.logging.application_logger import ApplicationLogger
+from src.data.models.document_validation_model import DocumentValidationModel
 from src.data.repositories.class_attendance_repository import ClassAttendanceRepository
 from src.data.repositories.class_repository import ClassRepository
 from src.data.repositories.class_session_repository import ClassSessionRepository
@@ -250,6 +251,19 @@ class ClassAttendanceService(BaseService):
         doc_model = EntityToModelMapper.document(doc_entity)
         saved_doc = await self.document_repo.create(doc_model)
         document_id = UUID(bytes=saved_doc.id)
+
+        # Create document validation
+        from src.data.repositories.document_validation_repository import DocumentValidationRepository
+        doc_validation_repo = DocumentValidationRepository(self.repository.session)
+        doc_validation = DocumentValidationModel(
+            id=uuid4().bytes,
+            created_at=DateTimeHandler.now(),
+            updated_at=None,
+            rejection_reason=None,
+            document_validation_status_type_id=1,
+            document_id=UUID(bytes=saved_doc.id)
+        )
+        await doc_validation_repo.create(doc_validation)
         
         # Create new justification
         justification = StudentAbsenceJustification(
