@@ -3,6 +3,7 @@ from typing import List, Optional
 from uuid import UUID
 
 from src.application.logging.application_logger import ApplicationLogger
+from src.data.models.document_model import DocumentModel
 from src.data.repositories.document_validation_repository import DocumentValidationRepository
 from src.application.services.base_service import BaseService
 from src.application.mappers.dto_to_entity_mapper import DtoToEntityMapper
@@ -61,6 +62,9 @@ class DocumentValidationService(BaseService):
                 
                 model = EntityToModelMapper.document_validation(entity)
                 saved_model = await self.repository.create(model)
+
+            from src.data.repositories.document_repository import DocumentRepository
+            doc_repo = DocumentRepository(self.repository.session)
             
             # Log validation
             if performed_by_user_id:
@@ -68,8 +72,6 @@ class DocumentValidationService(BaseService):
                 log_repo = LogDocumentValidationRepository(self.repository.session)
                 
                 # Get document owner
-                from src.data.repositories.document_repository import DocumentRepository
-                doc_repo = DocumentRepository(self.repository.session)
                 document = await doc_repo.get_by_id(document_uuid)
                 
                 await log_repo.log(
@@ -81,6 +83,32 @@ class DocumentValidationService(BaseService):
                 )
             
             self.repository.session.commit()
+
+            # If approved, check if all documents for this user are approved to activate user
+            if dto.document_validation_status_type_id == 2:
+                from src.data.repositories.user_repository import UserRepository
+                user_repo = UserRepository(self.repository.session)
+                
+                document: DocumentModel = await doc_repo.get_by_id(document_uuid)
+                if document:
+                    print(document)
+                    user_uuid = UUID(bytes=document.user_id)
+                    documents = await doc_repo.get_by_user_id(user_uuid)
+                    
+                    all_approved = True
+                    for doc in documents:
+                        doc_uuid = UUID(bytes=doc.id)
+                        print(doc_uuid)
+                        doc_validation = await self.repository.get_by_document_id(doc_uuid)
+                        if not doc_validation or doc_validation.document_validation_status_type_id != 2:
+                            print('can\'t approve')
+                            all_approved = False
+                            break
+                    
+                    if all_approved:
+                        print('all approved')
+                        await user_repo.activate(user_uuid)
+                        self.repository.session.commit()
             
             saved_entity = ModelToEntityMapper.document_validation(saved_model)
             return EntityToViewModelMapper.document_validation(saved_entity)
