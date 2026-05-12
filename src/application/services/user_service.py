@@ -6,6 +6,7 @@ import bcrypt
 
 from src.application.logging.application_logger import ApplicationLogger
 from src.application.services.user_password_history_service import UserPasswordHistoryService
+from src.data.models.document_model import DocumentModel
 from src.data.repositories.address_repository import AddressRepository
 from src.data.repositories.document_repository import DocumentRepository
 from src.data.repositories.document_validation_repository import DocumentValidationRepository
@@ -148,7 +149,7 @@ class UserService(BaseService):
             )
             
             # ========== Create Documents ==========
-            async def _create_document(doc_dto, user_id_bytes, legal_rep_id_bytes=None):
+            async def _create_document(doc_dto, user_id_bytes, legal_rep_id_bytes=None) -> DocumentModel:
                 doc_entity = DtoToEntityMapper.document(doc_dto)
                 doc_entity.user_id = UUID(bytes=user_id_bytes)
                 if legal_rep_id_bytes:
@@ -156,29 +157,14 @@ class UserService(BaseService):
                 doc_model = EntityToModelMapper.document(doc_entity)
                 return await self.document_repo.create(doc_model)
             
-            saved_doc_front = await _create_document(dto.id_document_front, user_id_bytes)
-            saved_doc_back = await _create_document(dto.id_document_back, user_id_bytes)
-            saved_photo = await _create_document(dto.user_photo, user_id_bytes)
+            created_documents = []
+            created_documents.append(await _create_document(dto.id_document_front, user_id_bytes))
+            created_documents.append(await _create_document(dto.id_document_back, user_id_bytes))
+            created_documents.append(await _create_document(dto.user_photo, user_id_bytes))
             
             if dto.health_certificate:
-                await _create_document(dto.health_certificate, user_id_bytes)
-            
-            # ========== Create Document Validations ==========
-            if is_admin_or_secretary:
-                await self._auto_approve_documents([
-                    saved_doc_front, saved_doc_back, saved_photo
-                ])
-            else:
-                await self._create_pending_validations([
-                    saved_doc_front, saved_doc_back, saved_photo
-                ])
-            
-            # ========== Create Address ==========
-            address_entity = DtoToEntityMapper.address(dto.address)
-            address_entity.user_id = user_id
-            address_model = EntityToModelMapper.address(address_entity)
-            await self.address_repo.create(address_model)
-            
+                created_documents.append(await _create_document(dto.health_certificate, user_id_bytes))
+
             # ========== Create Legal Representatives ==========
             is_user_student = saved_model.user_type_id == 5  # Only creates representatives if user is student
             if is_user_student:
@@ -189,9 +175,9 @@ class UserService(BaseService):
                     saved_rep = await self.legal_rep_repo.create(rep_model)
                     rep_id_bytes = saved_rep.id
                     
-                    await _create_document(rep_dto.id_document_front, user_id_bytes, rep_id_bytes)
-                    await _create_document(rep_dto.id_document_back, user_id_bytes, rep_id_bytes)
-                    await _create_document(rep_dto.student_registry_authorization, user_id_bytes, rep_id_bytes)
+                    created_documents.append(await _create_document(rep_dto.id_document_front, user_id_bytes, rep_id_bytes))
+                    created_documents.append(await _create_document(rep_dto.id_document_back, user_id_bytes, rep_id_bytes))
+                    created_documents.append(await _create_document(rep_dto.student_registry_authorization, user_id_bytes, rep_id_bytes))
                     
                     return saved_rep
                 
@@ -200,6 +186,18 @@ class UserService(BaseService):
                 
                 if dto.legal_representative_2:
                     await _create_legal_representative(dto.legal_representative_2, user_id_bytes)
+            
+            # ========== Create Document Validations ==========
+            if is_admin_or_secretary:
+                await self._auto_approve_documents(created_documents)
+            else:
+                await self._create_pending_validations(created_documents)
+            
+            # ========== Create Address ==========
+            address_entity = DtoToEntityMapper.address(dto.address)
+            address_entity.user_id = user_id
+            address_model = EntityToModelMapper.address(address_entity)
+            await self.address_repo.create(address_model)
 
             self.repository.session.commit()
             
