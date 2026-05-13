@@ -55,6 +55,10 @@ class AppSettings(BaseSettings):
     WHATSAPP_PHONE_NUMBER: str = Field(default="")
     WHATSAPP_ACCESS_TOKEN: str = Field(default="")
     WHATSAPP_FROM_NUMBER: str = Field(default="")
+
+    # Deactivated profiles exclusion
+    EXCLUSION_HOURS: int = Field(default=168) # one week
+    BATCH_SIZE: int = Field(default=25)
     
     model_config = ConfigDict(
         env_file=".env",
