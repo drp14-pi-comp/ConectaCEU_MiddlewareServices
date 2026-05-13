@@ -13,6 +13,7 @@ from typing import AsyncGenerator
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
+# Models
 from sqlalchemy import and_, select
 from src.data.db_context.database import SessionLocal
 from src.data.models.user_model import UserModel
@@ -37,6 +38,7 @@ from src.data.models.shift_type_model import ShiftTypeModel
 from src.data.models.report_type_model import ReportTypeModel
 from src.data.models.profiles_to_exclude_model import ProfilesToExcludeModel
 from src.data.models.student_absence_justification_model import StudentAbsenceJustificationModel
+
 from src.infrastructure.handlers.datetime_handler import DateTimeHandler
 from src.infrastructure.configuration.settings import settings
 
