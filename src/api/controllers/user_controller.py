@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from src.application.services.user_service import UserService
 from src.application.services.user_password_history_service import UserPasswordHistoryService
+from src.data.models.user_model import UserModel
 from src.data.repositories.address_repository import AddressRepository
 from src.data.repositories.document_repository import DocumentRepository
 from src.data.repositories.document_validation_repository import DocumentValidationRepository
@@ -74,10 +75,16 @@ async def deactivate_user(
     service: UserService = Depends(get_user_service)
 ):
     """
-    Deactivate a user account. Admin (1) and Secretary (2) only.
+    Deactivate a user account. Admin (1), Secretary (2) only and Student (5).
     """
-    if current_user.user_type_id not in [1, 2]:
+    if current_user.user_type_id not in [1, 2, 5]:
         raise HTTPException(status_code=403, detail="Não autorizado")
+    
+    # Validates if student user is deactivating their own account
+    if current_user.user_type_id == 5:
+        user: UserModel = await service.get_by_id(UUID(dto.user_id))
+        if (user.id != current_user.id):
+            raise HTTPException(status_code=403, detail="Só pode desativar seu próprio usuário")
     
     try:
         user_ip = request.client.host if request.client else "unknown"
@@ -137,9 +144,14 @@ async def list_users(
     # Admins and Secretaries can list all users
     if current_user.user_type_id in [1, 2]:
         return await service.find_users(
-            name=name, document=document, email=email,
-            phoneNumber=phoneNumber, user_type_id=user_type_id,
-            active=active, page=page, page_size=page_size
+            name=name,
+            document=document,
+            email=email,
+            phoneNumber=phoneNumber,
+            user_type_id=user_type_id,
+            active=active,
+            page=page,
+            page_size=page_size
         )
     
     # Coordinators and Educators can only list students
