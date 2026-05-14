@@ -4,6 +4,7 @@ from uuid import UUID
 from src.data.models.document_type_model import DocumentTypeModel
 from src.data.models.document_validation_model import DocumentValidationModel
 from src.data.models.document_validation_status_type_model import DocumentValidationStatusTypeModel
+from src.data.models.enrollment_waiting_list_model import EnrollmentWaitingListModel
 from src.data.models.legal_representative_degree_model import LegalRepresentativeDegreeModel
 from src.data.models.profiles_to_exclude_model import ProfilesToExcludeModel
 from src.data.models.report_type_model import ReportTypeModel
@@ -27,6 +28,7 @@ from src.data.models.legal_representative_model import LegalRepresentativeModel
 from src.domain.entities.document_type import DocumentType
 from src.domain.entities.document_validation import DocumentValidation
 from src.domain.entities.document_validation_status_type import DocumentValidationStatusType
+from src.domain.entities.enrollment_waiting_list import EnrollmentWaitingList
 from src.domain.entities.legal_representative_degree import LegalRepresentativeDegree
 from src.domain.entities.profiles_to_exclude import ProfilesToExclude
 from src.domain.entities.report_type import ReportType
@@ -315,4 +317,15 @@ class ModelToEntityMapper:
             created_at=model.created_at,
             class_attendance_id=UUID(bytes=model.class_attendance_id),
             document_id=UUID(bytes=model.document_id) if model.document_id else None
+        )
+    
+    # ========== Enrollment Waiting List ==========
+    @staticmethod
+    def enrollment_waiting_list(model: EnrollmentWaitingListModel) -> EnrollmentWaitingList:
+        return EnrollmentWaitingList(
+            id=UUID(bytes=model.id),
+            created_at=model.created_at,
+            user_id=model.user_id,
+            class_id=model.class_id,
+            position=model.position
         )

@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, Request, HTTPException, status
 from sqlalchemy.orm import Session
 
 from src.application.services.user_class_service import UserClassService
+from src.data.repositories.enrollment_waiting_list_repository import EnrollmentWaitingListRepository
 from src.data.repositories.user_class_repository import UserClassRepository
 from src.data.repositories.class_repository import ClassRepository
 from src.data.repositories.class_session_repository import ClassSessionRepository
@@ -25,7 +26,8 @@ def get_user_class_service(db: Session = Depends(get_db)) -> UserClassService:
     repository = UserClassRepository(db)
     class_repo = ClassRepository(db)
     session_repo = ClassSessionRepository(db)
-    return UserClassService(repository, class_repo, session_repo)
+    waiting_list_repo = EnrollmentWaitingListRepository(db)
+    return UserClassService(repository, class_repo, session_repo, waiting_list_repo)
 
 
 @router.post("/", response_model=UserClassViewModel, status_code=status.HTTP_201_CREATED)

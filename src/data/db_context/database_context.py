@@ -25,6 +25,7 @@ from src.data.repositories.user_type_repository import UserTypeRepository
 from src.data.repositories.user_password_history_repository import UserPasswordHistoryRepository
 from src.data.repositories.shift_type_repository import ShiftTypeRepository
 from src.data.repositories.report_type_repository import ReportTypeRepository
+from src.data.repositories.enrollment_waiting_list_repository import EnrollmentWaitingListRepository
 
 # Log repositories
 from src.data.repositories.log_application_error_repository import LogApplicationErrorRepository
@@ -69,9 +70,10 @@ class DatabaseContext:
         self.report_types = ReportTypeRepository(self.session)
         self.legal_representative_degrees = LegalRepresentativeDegreeRepository(self.session)
         self.profiles_to_exclude = ProfilesToExcludeRepository(self.session)
-        self.student_absence_justification = StudentAbsenceJustificationRepository
+        self.student_absence_justification = StudentAbsenceJustificationRepository(self.session)
+        self.enrollment_waiting_list_repository = EnrollmentWaitingListRepository(self.session)
         
-        # Log repositories (write-only)
+        # Log repositories
         self.log_application_errors = LogApplicationErrorRepository(self.session)
         self.log_broadcast_messages = LogBroadcastMessageRepository(self.session)
         self.log_course_creations = LogCourseCreationRepository(self.session)

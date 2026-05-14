@@ -3,6 +3,8 @@ from typing import List, Optional
 from uuid import UUID
 
 from src.application.logging.application_logger import ApplicationLogger
+from src.data.models.enrollment_waiting_list_model import EnrollmentWaitingListModel
+from src.data.repositories.enrollment_waiting_list_repository import EnrollmentWaitingListRepository
 from src.data.repositories.user_class_repository import UserClassRepository
 from src.data.repositories.class_repository import ClassRepository
 from src.data.repositories.class_session_repository import ClassSessionRepository
@@ -23,12 +25,14 @@ class UserClassService(BaseService):
         self,
         repository: UserClassRepository,
         class_repo: ClassRepository,
-        class_session_repo: ClassSessionRepository
+        class_session_repo: ClassSessionRepository,
+        waiting_list_repo: EnrollmentWaitingListRepository
     ):
         super().__init__(repository, 'user_class', mapper_class=ModelToEntityMapper)
         self.repository = repository
         self.class_repo = class_repo
         self.class_session_repo = class_session_repo
+        self.waiting_list_repo = waiting_list_repo
     
     async def enroll_user(
         self,
@@ -38,19 +42,19 @@ class UserClassService(BaseService):
     ) -> UserClassViewModel:
         """Enroll a user in a class with validation"""
         try:
+            user_id = UUID(dto.user_id)
+            class_id = UUID(dto.class_id)
+
             # Validates if enrolling is allowed in the current month
             currentMonth: int = DateTimeHandler.now().date().month
             if currentMonth not in settings.ENROLLMENT_MONTHS:
                 raise PermissionError('O período de matrículas já se encerrou')
-
-            user_id = UUID(dto.user_id)
-            class_id = UUID(dto.class_id)
             
             # Check if already enrolled
             existing = await self.repository.get_by_user_and_class(user_id, class_id)
             if existing:
                 if existing.active:
-                    raise ValueError("User already enrolled in this class")
+                    raise ValueError("Usuário já matriculado")
                 else:
                     # Reactivate enrollment
                     existing.active = True
@@ -61,6 +65,14 @@ class UserClassService(BaseService):
             
             # Validate enrollment limits and shift conflicts
             await self._validate_enrollment_rules(user_id, class_id)
+
+            # Check if class has available seats
+            class_ = await self.class_repo.get_by_id(class_id)
+            component = await self._get_component_for_class(class_id)
+            
+            # If class is full, add to waiting list
+            if component and class_.seats_in_use >= component.seat_limit_per_class:
+                return await self._add_to_waiting_list(user_id, class_id)
             
             # Create new enrollment
             entity = DtoToEntityMapper.user_class(dto)
@@ -198,6 +210,9 @@ class UserClassService(BaseService):
                 # Decrement seats in use
                 await self.class_repo.decrement_seats(UUID(bytes=enrollment.class_id))
 
+                # Enroll next user from waiting list
+                await self._enroll_next_from_waiting_list(class_id)
+
             if unenrolled_by_user_id:
                 from src.data.repositories.log_student_enrollment_repository import LogStudentEnrollmentRepository
                 log_repo = LogStudentEnrollmentRepository(self.repository.session)
@@ -331,15 +346,15 @@ class UserClassService(BaseService):
             
             # Rule 1: Maximum 3 enrollments
             if len(active_enrollments) >= 3:
-                raise ValueError("User already enrolled in 3 classes (maximum limit reached)")
+                raise ValueError("Usuário já está com o limite de 3 matrículas ativas")
             
             # Get the shift of the new class
             new_class = await self.class_repo.get_by_id(new_class_id)
             if not new_class:
-                raise ValueError("Class not found")
+                raise ValueError("Class não encontrada")
             
             if not new_class.active:
-                raise ValueError("Cannot enroll in an inactive class")
+                raise ValueError("Não é possível matricular a uma class inativa")
             
             new_class_shift = new_class.shift_type_id
             
@@ -347,15 +362,13 @@ class UserClassService(BaseService):
             for enrollment in active_enrollments:
                 existing_class = await self.class_repo.get_by_id(UUID(bytes=enrollment.class_id))
                 if existing_class and existing_class.shift_type_id == new_class_shift:
-                    shift_names = {1: "morning", 2: "afternoon", 3: "evening"}
-                    shift_name = shift_names.get(new_class_shift, "same")
-                    raise ValueError(f"User already enrolled in a {shift_name} shift class")
+                    raise ValueError(f"Aluno já está matriculado a uma classe no mesmo turno")
             
             # Check if class has available seats
             component = await self._get_component_for_class(new_class_id)
             if component:
                 if new_class.seats_in_use >= component.seat_limit_per_class:
-                    raise ValueError("Class has no available seats")
+                    raise ValueError("Class não tem vagas disponíveis")
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
     
@@ -388,3 +401,47 @@ class UserClassService(BaseService):
             return None
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
+
+
+    async def _add_to_waiting_list(self, user_id: UUID, class_id: UUID) -> dict:
+        """Add user to the waiting list for a full class."""
+        # Check if already on list
+        existing = await self.waiting_list_repo.get_by_user_and_class(user_id, class_id)
+        if existing:
+            raise ValueError("Já na lista de espera")
+        
+        last_position = await self.waiting_list_repo.get_last_position(class_id)
+        
+        from uuid import uuid4
+        from src.domain.entities.enrollment_waiting_list import EnrollmentWaitingList
+        
+        entry = EnrollmentWaitingList(
+            id=uuid4(),
+            created_at=DateTimeHandler.now(),
+            user_id=user_id,
+            class_id=class_id,
+            position=last_position + 1
+        )
+        
+        model = EntityToModelMapper.enrollment_waiting_list(entry)
+        saved: EnrollmentWaitingListModel = await self.waiting_list_repo.create(model)
+        
+        return {
+            "message": "Limite de matrículas já atingido. Você está na lista de espera.",
+            "position": last_position + 1,
+            "waiting_list_id": str(UUID(bytes=saved.id))
+        }
+    
+    async def _enroll_next_from_waiting_list(self, class_id: UUID) -> None:
+        """Enroll the next user from the waiting list."""
+        next_in_line = await self.waiting_list_repo.get_next_in_line(class_id)
+        
+        if next_in_line:
+            user_id = UUID(bytes=next_in_line.user_id)
+            
+            # Remove from waiting list
+            await self.waiting_list_repo.remove_user(user_id, class_id)
+            
+            # Enroll
+            dto = UserClassEnrollDTO(user_id=str(user_id), class_id=str(class_id))
+            await self.enroll_user(dto)

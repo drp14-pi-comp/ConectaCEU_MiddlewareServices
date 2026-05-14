@@ -38,6 +38,7 @@ from src.data.models.shift_type_model import ShiftTypeModel
 from src.data.models.report_type_model import ReportTypeModel
 from src.data.models.profiles_to_exclude_model import ProfilesToExcludeModel
 from src.data.models.student_absence_justification_model import StudentAbsenceJustificationModel
+from data.repositories.enrollment_waiting_list_repository import EnrollmentWaitingListRepository
 
 from src.infrastructure.handlers.datetime_handler import DateTimeHandler
 from src.infrastructure.configuration.settings import settings
@@ -100,6 +101,52 @@ async def process_exclusions():
                 user.school = None
                 user.password = ""
                 user.document = ""
+
+            # Unenroll from all active classes
+            from src.data.models.user_class_model import UserClassModel
+
+            stmt = select(UserClassModel).where(
+                UserClassModel.user_id == user_id_bytes,
+                UserClassModel.active == True
+            )
+            active_enrollments = session.execute(stmt).scalars().all()
+
+            enrolled_class_ids = []
+            for enrollment in active_enrollments:
+                enrollment.active = False
+                enrolled_class_ids.append(enrollment.class_id)
+            print(f"  - Unenrolled from {len(active_enrollments)} class(es)")
+
+            # Enroll next from waiting list for each freed seat
+            from src.data.models.enrollment_waiting_list_model import EnrollmentWaitingListModel
+
+            for class_id_bytes in enrolled_class_ids:
+                # Get next in line
+                stmt = (
+                    select(EnrollmentWaitingListModel)
+                    .where(EnrollmentWaitingListModel.class_id == class_id_bytes)
+                    .order_by(EnrollmentWaitingListModel.position)
+                    .limit(1)
+                )
+                next_in_line = session.execute(stmt).scalar_one_or_none()
+                
+                if next_in_line:
+                    # Create enrollment for the waiting user
+                    from uuid import uuid4
+                    new_enrollment = UserClassModel(
+                        id=uuid4().bytes,
+                        created_at=DateTimeHandler.now(),
+                        updated_at=None,
+                        active=True,
+                        user_id=next_in_line.user_id,
+                        class_id=class_id_bytes
+                    )
+                    session.add(new_enrollment)
+                    
+                    # Remove from waiting list
+                    session.delete(next_in_line)
+                    
+                    print(f"  - Enrolled waiting user for class")
 
             # Anonymize addresses
             stmt = select(AddressModel).where(AddressModel.user_id == user_id_bytes)

@@ -2,10 +2,12 @@
 from uuid import UUID
 
 from src.data.models.document_validation_model import DocumentValidationModel
+from src.data.models.enrollment_waiting_list_model import EnrollmentWaitingListModel
 from src.data.models.profiles_to_exclude_model import ProfilesToExcludeModel
 from src.data.models.student_absence_justification_model import StudentAbsenceJustificationModel
 from src.data.models.user_password_history_model import UserPasswordHistoryModel
 from src.domain.entities.document_validation import DocumentValidation
+from src.domain.entities.enrollment_waiting_list import EnrollmentWaitingList
 from src.domain.entities.profiles_to_exclude import ProfilesToExclude
 from src.domain.entities.student_absence_justification import StudentAbsenceJustification
 from src.domain.entities.user import User
@@ -218,4 +220,15 @@ class EntityToModelMapper:
             id=entity.id.bytes,
             created_at=entity.created_at,
             user_id=entity.user_id.bytes
+        )
+    
+    # ========== Enrollment Waiting List ==========
+    @staticmethod
+    def enrollment_waiting_list(entity: EnrollmentWaitingList) -> EnrollmentWaitingListModel:
+        return EnrollmentWaitingListModel(
+            id=entity.id.bytes,
+            created_at=entity.created_at,
+            user_id=entity.user_id,
+            class_id=entity.class_id,
+            position=entity.position
         )
