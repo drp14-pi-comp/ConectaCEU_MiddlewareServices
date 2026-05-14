@@ -1,49 +1,46 @@
-"""User class enrollment service - business logic for User Class entity"""
+"""User course enrollment service - business logic for User Course entity"""
 from typing import List, Optional
 from uuid import UUID
 
 from src.application.logging.application_logger import ApplicationLogger
 from src.data.models.enrollment_waiting_list_model import EnrollmentWaitingListModel
+from src.data.repositories.course_repository import CourseRepository
 from src.data.repositories.enrollment_waiting_list_repository import EnrollmentWaitingListRepository
-from src.data.repositories.user_class_repository import UserClassRepository
-from src.data.repositories.class_repository import ClassRepository
-from src.data.repositories.class_session_repository import ClassSessionRepository
+from src.data.repositories.user_course_repository import UserCourseRepository
 from src.application.services.base_service import BaseService
 from src.application.mappers.dto_to_entity_mapper import DtoToEntityMapper
 from src.application.mappers.entity_to_model_mapper import EntityToModelMapper
 from src.application.mappers.model_to_entity_mapper import ModelToEntityMapper
 from src.application.mappers.entity_to_view_model_mapper import EntityToViewModelMapper
-from src.domain.dtos.user_class_dto import UserClassEnrollDTO, UserClassBulkEnrollDTO
-from src.domain.view_models.user_class_view_model import UserClassViewModel
+from src.domain.dtos.user_course_dto import UserCourseEnrollDTO, UserCourseBulkEnrollDTO
+from src.domain.view_models.user_course_view_model import UserCourseViewModel
 from src.infrastructure.configuration.settings import settings
 from src.infrastructure.handlers.datetime_handler import DateTimeHandler
 
-class UserClassService(BaseService):
-    """Service for User Class enrollment business logic"""
+class UserCourseService(BaseService):
+    """Service for User Course enrollment business logic"""
     
     def __init__(
         self,
-        repository: UserClassRepository,
-        class_repo: ClassRepository,
-        class_session_repo: ClassSessionRepository,
+        repository: UserCourseRepository,
+        course_repo: CourseRepository,
         waiting_list_repo: EnrollmentWaitingListRepository
     ):
-        super().__init__(repository, 'user_class', mapper_class=ModelToEntityMapper)
+        super().__init__(repository, 'user_course', mapper_class=ModelToEntityMapper)
         self.repository = repository
-        self.class_repo = class_repo
-        self.class_session_repo = class_session_repo
+        self.course_repo = course_repo
         self.waiting_list_repo = waiting_list_repo
     
     async def enroll_user(
         self,
-        dto: UserClassEnrollDTO,
+        dto: UserCourseEnrollDTO,
         enrolled_by_user_id: Optional[UUID] = None,
         user_ip_address: Optional[str] = None
-    ) -> UserClassViewModel:
-        """Enroll a user in a class with validation"""
+    ) -> UserCourseViewModel:
+        """Enroll a user in a course with validation"""
         try:
             user_id = UUID(dto.user_id)
-            class_id = UUID(dto.class_id)
+            course_id = UUID(dto.course_id)
 
             # Validates if enrolling is allowed in the current month
             currentMonth: int = DateTimeHandler.now().date().month
@@ -51,7 +48,7 @@ class UserClassService(BaseService):
                 raise PermissionError('O período de matrículas já se encerrou')
             
             # Check if already enrolled
-            existing = await self.repository.get_by_user_and_class(user_id, class_id)
+            existing = await self.repository.get_by_user_and_course(user_id, course_id)
             if existing:
                 if existing.active:
                     raise ValueError("Usuário já matriculado")
@@ -59,65 +56,57 @@ class UserClassService(BaseService):
                     # Reactivate enrollment
                     existing.active = True
                     saved_model = await self.repository.update(existing)
-                    saved_entity = ModelToEntityMapper.user_class(saved_model)
+                    saved_entity = ModelToEntityMapper.user_course(saved_model)
                     self.repository.session.commit()
-                    return EntityToViewModelMapper.user_class(saved_entity)
+                    return EntityToViewModelMapper.user_course(saved_entity)
             
-            # Validate enrollment limits and shift conflicts
-            await self._validate_enrollment_rules(user_id, class_id)
+            # Validate enrollment rules
+            await self._validate_enrollment_rules(user_id, course_id)
 
-            # Check if class has available seats
-            class_ = await self.class_repo.get_by_id(class_id)
-            component = await self._get_component_for_class(class_id)
-            
-            # If class is full, add to waiting list
-            if component and class_.seats_in_use >= component.seat_limit_per_class:
-                return await self._add_to_waiting_list(user_id, class_id)
-            
+            # Check if course has available seats
+            course = await self.course_repo.get_by_id(course_id)
+            enrollments = await self.repository.get_active_by_course_id(course_id)
+            if len(enrollments) >= course.total_seat_limit:
+                return await self._add_to_waiting_list(user_id, course_id)
+
             # Create new enrollment
-            entity = DtoToEntityMapper.user_class(dto)
-            model = EntityToModelMapper.user_class(entity)
+            entity = DtoToEntityMapper.user_course(dto)
+            model = EntityToModelMapper.user_course(entity)
             saved_model = await self.repository.create(model)
-            
-            # Increment seats in use
-            await self.class_repo.increment_seats(class_id)
 
             if enrolled_by_user_id:
                 from src.data.repositories.log_student_enrollment_repository import LogStudentEnrollmentRepository
                 log_repo = LogStudentEnrollmentRepository(self.repository.session)
-                course = await self._get_course_for_class(class_id)
                 await log_repo.log(
                     enrolled=True,
                     user_id=enrolled_by_user_id.bytes,
                     user_ip_address=user_ip_address or "unknown",
-                    course_id=course.id
+                    course_id=course_id.bytes
                 )
             
             self.repository.session.commit()
             
-            saved_entity = ModelToEntityMapper.user_class(saved_model)
-            return EntityToViewModelMapper.user_class(saved_entity)
+            saved_entity = ModelToEntityMapper.user_course(saved_model)
+            return EntityToViewModelMapper.user_course(saved_entity)
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
     
-    async def validate_bulk_enrollment(self, class_id: UUID, user_ids: List[str]) -> dict:
+    async def validate_bulk_enrollment(self, course_id: UUID, user_ids: List[str]) -> dict:
         """
-        Validate if users can be enrolled in a class.
+        Validate if users can be enrolled in a course.
         Returns validation result with available seats and any issues.
         """
         try:
-            class_ = await self.class_repo.get_by_id(class_id)
-            if not class_:
-                return {'valid': False, 'reason': 'Class not found'}
+            course = await self.course_repo.get_by_id(course_id)
+
+            if not course:
+                return {'valid': False, 'reason': 'Curso não encontrado'}
             
-            if not class_.active:
-                return {'valid': False, 'reason': 'Class is inactive'}
+            if not course.active:
+                return {'valid': False, 'reason': 'Curso inativo'}
             
-            component = await self._get_component_for_class(class_id)
-            if not component:
-                return {'valid': False, 'reason': 'Component not found'}
-            
-            available_seats = component.seat_limit_per_class - class_.seats_in_use
+            enrollments = await self.repository.get_active_by_course_id(course_id)
+            available_seats = course.total_seat_limit - len(enrollments)
             requested = len(user_ids)
             
             if requested > available_seats:
@@ -133,13 +122,13 @@ class UserClassService(BaseService):
             for user_id in user_ids:
                 try:
                     user_uuid = UUID(user_id)
-                    existing = await self.repository.get_by_user_and_class(user_uuid, class_id)
+                    existing = await self.repository.get_by_user_and_course(user_uuid, course_id)
                     if existing and existing.active:
                         issues.append({'user_id': user_id, 'issue': 'Already enrolled'})
                         continue
                     
                     try:
-                        await self._validate_enrollment_rules(user_uuid, class_id)
+                        await self._validate_enrollment_rules(user_uuid, course_id)
                     except ValueError as e:
                         issues.append({'user_id': user_id, 'issue': str(e)})
                 except ValueError:
@@ -157,15 +146,15 @@ class UserClassService(BaseService):
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
 
-    async def bulk_enroll(self, dto: UserClassBulkEnrollDTO) -> dict:
+    async def bulk_enroll(self, dto: UserCourseBulkEnrollDTO) -> dict:
         """Bulk enroll users after validation"""
         try:
-            validation = await self.validate_bulk_enrollment(UUID(dto.class_id), dto.user_ids)
+            validation = await self.validate_bulk_enrollment(UUID(dto.course_id), dto.user_ids)
             
             if not validation['valid']:
                 return {
                     'success': False,
-                    'class_id': dto.class_id,
+                    'course_id': dto.course_id,
                     'validation': validation,
                     'enrolled': [],
                     'failed': validation['issues']
@@ -173,7 +162,7 @@ class UserClassService(BaseService):
             
             enrolled = []
             for user_id in dto.user_ids:
-                enroll_dto = UserClassEnrollDTO(user_id=user_id, class_id=dto.class_id)
+                enroll_dto = UserCourseEnrollDTO(user_id=user_id, course_id=dto.course_id)
                 result = await self.enroll_user(enroll_dto)
                 enrolled.append(result)
             
@@ -181,7 +170,7 @@ class UserClassService(BaseService):
             
             return {
                 'success': True,
-                'class_id': dto.class_id,
+                'course_id': dto.course_id,
                 'enrolled_count': len(enrolled),
                 'available_seats_remaining': validation['available_seats'] - len(enrolled),
                 'enrolled': enrolled
@@ -195,11 +184,13 @@ class UserClassService(BaseService):
         unenrolled_by_user_id: Optional[UUID] = None,
         user_ip_address: Optional[str] = None
     ) -> bool:
-        """Unenroll a user from a class"""
+        """Unenroll a user from a course"""
         try:
             enrollment = await self.repository.get_by_id(enrollment_id)
             if not enrollment:
                 raise ValueError("Enrollment not found")
+            
+            course_id = UUID(enrollment.course_id)
             
             if not enrollment.active:
                 raise ValueError("Enrollment already inactive")
@@ -207,22 +198,17 @@ class UserClassService(BaseService):
             result = await self.repository.deactivate_enrollment(enrollment_id)
             
             if result:
-                # Decrement seats in use
-                await self.class_repo.decrement_seats(UUID(bytes=enrollment.class_id))
-
                 # Enroll next user from waiting list
-                await self._enroll_next_from_waiting_list(class_id)
+                await self._enroll_next_from_waiting_list(course_id)
 
             if unenrolled_by_user_id:
                 from src.data.repositories.log_student_enrollment_repository import LogStudentEnrollmentRepository
                 log_repo = LogStudentEnrollmentRepository(self.repository.session)
-                class_id = UUID(bytes=enrollment.class_id)
-                course = await self._get_course_for_class(class_id)
                 await log_repo.log(
                     enrolled=False,
                     user_id=unenrolled_by_user_id.bytes,
                     user_ip_address=user_ip_address or "unknown",
-                    course_id=course.id
+                    course_id=course_id.bytes
                 )
 
             self.repository.session.commit()
@@ -231,28 +217,28 @@ class UserClassService(BaseService):
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
     
-    async def get_user_enrollments(self, user_id: UUID) -> List[UserClassViewModel]:
+    async def get_user_enrollments(self, user_id: UUID) -> List[UserCourseViewModel]:
         """Get all enrollments for a user"""
         try:
             models = await self.repository.get_by_user_id(user_id)
-            entities = [ModelToEntityMapper.user_class(model) for model in models]
-            return [EntityToViewModelMapper.user_class(entity) for entity in entities]
+            entities = [ModelToEntityMapper.user_course(model) for model in models]
+            return [EntityToViewModelMapper.user_course(entity) for entity in entities]
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
     
     async def get_user_active_enrollments_with_details(self, user_id: UUID) -> List[dict]:
-        """Get user's active enrollments with class and shift details"""
+        """Get user's active enrollments with course and shift details"""
         try:
             active_enrollments = await self.repository.get_active_by_user_id(user_id)
             
             enrollments_with_details = []
             for enrollment in active_enrollments:
-                class_ = await self.class_repo.get_by_id(UUID(bytes=enrollment.class_id))
-                if class_:
+                course = await self.course_repo.get_by_id(UUID(bytes=enrollment.course_id))
+                if course:
                     enrollments_with_details.append({
                         'enrollment_id': UUID(bytes=enrollment.id),
-                        'class_id': UUID(bytes=class_.id),
-                        'shift_type_id': class_.shift_type_id,
+                        'course_id': UUID(bytes=course.id),
+                        'shift_type_id': course.shift_type_id,
                         'enrolled_at': enrollment.created_at
                     })
             
@@ -260,53 +246,21 @@ class UserClassService(BaseService):
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
     
-    async def get_class_enrollments(self, class_id: UUID) -> List[UserClassViewModel]:
-        """Get all enrollments for a class"""
+    async def get_course_enrollments(self, course_id: UUID) -> List[UserCourseViewModel]:
+        """Get all enrollments for a course"""
         try:
-            models = await self.repository.get_by_class_id(class_id)
-            entities = [ModelToEntityMapper.user_class(model) for model in models]
-            return [EntityToViewModelMapper.user_class(entity) for entity in entities]
+            models = await self.repository.get_by_course_id(course_id)
+            entities = [ModelToEntityMapper.user_course(model) for model in models]
+            return [EntityToViewModelMapper.user_course(entity) for entity in entities]
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
     
-    async def get_active_class_enrollments(self, class_id: UUID) -> List[UserClassViewModel]:
-        """Get active enrollments for a class"""
+    async def get_active_course_enrollments(self, course_id: UUID) -> List[UserCourseViewModel]:
+        """Get active enrollments for a course"""
         try:
-            models = await self.repository.get_active_by_class_id(class_id)
-            entities = [ModelToEntityMapper.user_class(model) for model in models]
-            return [EntityToViewModelMapper.user_class(entity) for entity in entities]
-        except Exception as e:
-            await ApplicationLogger.log_error(e, reraise=True)
-    
-    async def check_enrollment_eligibility(self, user_id: UUID, class_id: UUID) -> dict:
-        """
-        Check if a user can enroll in a class without actually enrolling.
-        Returns eligibility status and any restriction reasons.
-        """
-        try:
-            await self._validate_enrollment_rules(user_id, class_id)
-            
-            # Check available seats
-            class_ = await self.class_repo.get_by_id(class_id)
-            component = await self._get_component_for_class(class_id)
-            
-            available_seats = 0
-            if component and class_:
-                available_seats = component.seat_limit_per_class - class_.seats_in_use
-            
-            return {
-                'eligible': True,
-                'restrictions': [],
-                'available_seats': available_seats,
-                'current_enrollments': len(await self.repository.get_active_by_user_id(user_id))
-            }
-        except ValueError as e:
-            return {
-                'eligible': False,
-                'restrictions': [str(e)],
-                'available_seats': 0,
-                'current_enrollments': len(await self.repository.get_active_by_user_id(user_id))
-            }
+            models = await self.repository.get_active_by_course_id(course_id)
+            entities = [ModelToEntityMapper.user_course(model) for model in models]
+            return [EntityToViewModelMapper.user_course(entity) for entity in entities]
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
     
@@ -334,83 +288,38 @@ class UserClassService(BaseService):
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
     
-    async def _validate_enrollment_rules(self, user_id: UUID, new_class_id: UUID) -> None:
+    async def _validate_enrollment_rules(self, user_id: UUID, new_course_id: UUID) -> None:
         """
         Validate enrollment business rules:
         1. Maximum 3 enrollments per user
-        2. Cannot enroll in multiple classes with the same shift
+        2. Cannot enroll in multiple courses with the same shift
         """
         try:
             # Get user's active enrollments
             active_enrollments = await self.repository.get_active_by_user_id(user_id)
             
-            # Rule 1: Maximum 3 enrollments
+            # Maximum 3 of enrollments
             if len(active_enrollments) >= 3:
-                raise ValueError("Usuário já está com o limite de 3 matrículas ativas")
+                raise ValueError("Aluno já está com o limite de 3 matrículas ativas")
             
-            # Get the shift of the new class
-            new_class = await self.class_repo.get_by_id(new_class_id)
-            if not new_class:
-                raise ValueError("Class não encontrada")
+            new_course = await self.course_repo.get_by_id(new_course_id)
             
-            if not new_class.active:
-                raise ValueError("Não é possível matricular a uma class inativa")
-            
-            new_class_shift = new_class.shift_type_id
-            
-            # Rule 2: Check for shift conflicts with existing enrollments
-            for enrollment in active_enrollments:
-                existing_class = await self.class_repo.get_by_id(UUID(bytes=enrollment.class_id))
-                if existing_class and existing_class.shift_type_id == new_class_shift:
-                    raise ValueError(f"Aluno já está matriculado a uma classe no mesmo turno")
-            
-            # Check if class has available seats
-            component = await self._get_component_for_class(new_class_id)
-            if component:
-                if new_class.seats_in_use >= component.seat_limit_per_class:
-                    raise ValueError("Class não tem vagas disponíveis")
-        except Exception as e:
-            await ApplicationLogger.log_error(e, reraise=True)
-    
-    async def _get_component_for_class(self, class_id: UUID):
-        """Get the component for a class"""
-        try:
-            from src.data.repositories.course_component_repository import CourseComponentRepository
-            
-            class_ = await self.class_repo.get_by_id(class_id)
-            if class_:
-                component_repo = CourseComponentRepository(self.class_repo.session)
-                component = await component_repo.get_by_id(UUID(bytes=class_.component_id))
-                return component
-            return None
-        except Exception as e:
-            await ApplicationLogger.log_error(e, reraise=True)
-    
+            for active_enrollment in active_enrollments:
+                active_course = await self.course_repo.get_by_id(active_enrollment.course_id)
+                if new_course.name == active_course.name:
+                    raise ValueError("Aluno já tem matricula para este curso em outro turno")
 
-    async def _get_course_for_class(self, class_id: UUID):
-        """Get the course for a class"""
-        try:
-            from src.data.repositories.course_repository import CourseRepository
-            
-            class_ = await self.class_repo.get_by_id(class_id)
-            if class_:
-                component = await self._get_component_for_class(class_id)
-                course_repo = CourseRepository(self.class_repo.session)
-                course = await course_repo.get_by_id(UUID(bytes=component.course_id))
-                return course
-            return None
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
 
-
-    async def _add_to_waiting_list(self, user_id: UUID, class_id: UUID) -> dict:
-        """Add user to the waiting list for a full class."""
+    async def _add_to_waiting_list(self, user_id: UUID, course_id: UUID) -> dict:
+        """Add user to the waiting list for a full course."""
         # Check if already on list
-        existing = await self.waiting_list_repo.get_by_user_and_class(user_id, class_id)
+        existing = await self.waiting_list_repo.get_by_user_and_course(user_id, course_id)
         if existing:
             raise ValueError("Já na lista de espera")
         
-        last_position = await self.waiting_list_repo.get_last_position(class_id)
+        last_position = await self.waiting_list_repo.get_last_position(course_id)
         
         from uuid import uuid4
         from src.domain.entities.enrollment_waiting_list import EnrollmentWaitingList
@@ -419,7 +328,7 @@ class UserClassService(BaseService):
             id=uuid4(),
             created_at=DateTimeHandler.now(),
             user_id=user_id,
-            class_id=class_id,
+            course_id=course_id,
             position=last_position + 1
         )
         
@@ -432,16 +341,16 @@ class UserClassService(BaseService):
             "waiting_list_id": str(UUID(bytes=saved.id))
         }
     
-    async def _enroll_next_from_waiting_list(self, class_id: UUID) -> None:
+    async def _enroll_next_from_waiting_list(self, course_id: UUID) -> None:
         """Enroll the next user from the waiting list."""
-        next_in_line = await self.waiting_list_repo.get_next_in_line(class_id)
+        next_in_line = await self.waiting_list_repo.get_next_in_line(course_id)
         
         if next_in_line:
             user_id = UUID(bytes=next_in_line.user_id)
             
             # Remove from waiting list
-            await self.waiting_list_repo.remove_user(user_id, class_id)
+            await self.waiting_list_repo.remove_user(user_id, course_id)
             
             # Enroll
-            dto = UserClassEnrollDTO(user_id=str(user_id), class_id=str(class_id))
+            dto = UserCourseEnrollDTO(user_id=str(user_id), course_id=str(course_id))
             await self.enroll_user(dto)

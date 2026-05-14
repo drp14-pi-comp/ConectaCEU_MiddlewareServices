@@ -8,7 +8,7 @@ from src.data.repositories.class_repository import ClassRepository
 from src.data.repositories.class_session_repository import ClassSessionRepository
 from src.data.repositories.course_component_repository import CourseComponentRepository
 from src.data.repositories.course_repository import CourseRepository
-from src.data.repositories.user_class_repository import UserClassRepository
+from src.data.repositories.user_course_repository import UserCourseRepository
 from src.application.services.base_service import BaseService
 from src.application.mappers.dto_to_entity_mapper import DtoToEntityMapper
 from src.application.mappers.entity_to_model_mapper import EntityToModelMapper
@@ -28,14 +28,14 @@ class ClassService(BaseService):
         self,
         repository: ClassRepository,
         component_repo: CourseComponentRepository,
-        user_class_repo: UserClassRepository,
+        user_course_repo: UserCourseRepository,
         course_repo: CourseRepository,
         class_session_repo: ClassSessionRepository
     ):
         super().__init__(repository, 'class_', mapper_class=ModelToEntityMapper)
         self.repository = repository
         self.component_repo = component_repo
-        self.user_class_repo = user_class_repo
+        self.user_course_repo = user_course_repo
         self.course_repo = course_repo
         self.class_session_repo = class_session_repo
     
@@ -214,10 +214,10 @@ class ClassService(BaseService):
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
     
-    async def deactivate_class(self, class_id: UUID) -> bool:
+    async def deactivate_class(self, course_id: UUID) -> bool:
         """Deactivate a class and all its active enrollments"""
         try:
-            class_ = await self.repository.get_by_id(class_id)
+            class_ = await self.repository.get_by_id(course_id)
             if not class_:
                 raise ValueError("Class not found")
             
@@ -225,21 +225,21 @@ class ClassService(BaseService):
                 raise ValueError("Class already deactivated")
             
             # Get all active enrollments for this class
-            active_enrollments = await self.user_class_repo.get_active_by_class_id(class_id)
+            active_enrollments = await self.user_course_repo.get_active_by_course_id(course_id)
             
             # Deactivate all enrollments and log the action
             for enrollment in active_enrollments:
                 enrollment.active = False
-                await self.user_class_repo.update(enrollment)
+                await self.user_course_repo.update(enrollment)
             
             # Deactivate the class
-            result = await self.repository.deactivate(class_id)
+            result = await self.repository.deactivate(course_id)
             self.repository.session.commit()
             
             # Return summary
             return {
                 'success': result,
-                'class_id': class_id,
+                'class_id': course_id,
                 'unenrolled_students': len(active_enrollments)
             }
         except Exception as e:

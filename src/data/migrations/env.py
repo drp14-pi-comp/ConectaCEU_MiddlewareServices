@@ -22,7 +22,7 @@ from src.data.models.course_component_model import CourseComponentModel
 from src.data.models.class_model import ClassModel
 from src.data.models.class_session_model import ClassSessionModel
 from src.data.models.class_attendance_model import ClassAttendanceModel
-from src.data.models.user_class_model import UserClassModel
+from src.data.models.user_course_model import UserCourseModel
 from src.data.models.document_model import DocumentModel
 from src.data.models.document_type_model import DocumentTypeModel
 from src.data.models.document_validation_model import DocumentValidationModel

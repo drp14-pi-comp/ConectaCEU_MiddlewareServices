@@ -10,7 +10,7 @@ class EnrollmentWaitingList(BaseModel):
     id: UUID
     created_at: datetime
     user_id: UUID
-    class_id: UUID
+    course_id: UUID
     position: int
 
     model_config = ConfigDict(from_attributes=True)

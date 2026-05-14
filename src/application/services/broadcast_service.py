@@ -3,12 +3,12 @@ from typing import AsyncGenerator, List, Optional
 from uuid import UUID
 
 from src.application.logging.application_logger import ApplicationLogger
-from src.data.models.user_class_model import UserClassModel
+from src.data.models.user_course_model import UserCourseModel
 from src.data.models.user_model import UserModel
 from src.data.repositories.class_repository import ClassRepository
 from src.data.repositories.course_component_repository import CourseComponentRepository
 from src.data.repositories.user_repository import UserRepository
-from src.data.repositories.user_class_repository import UserClassRepository
+from src.data.repositories.user_course_repository import UserCourseRepository
 from src.data.repositories.log_broadcast_message_repository import LogBroadcastMessageRepository
 from src.infrastructure.messaging.email.email_service import EmailService
 from src.infrastructure.messaging.sms.sms_service import SmsService
@@ -21,7 +21,7 @@ class BroadcastService:
     def __init__(
         self,
         user_repo: UserRepository,
-        user_class_repo: UserClassRepository,
+        user_course_repo: UserCourseRepository,
         log_repo: LogBroadcastMessageRepository,
         component_repo: CourseComponentRepository,
         class_repo: ClassRepository,
@@ -30,7 +30,7 @@ class BroadcastService:
         whatsapp_service: WhatsAppService
     ):
         self.user_repo = user_repo
-        self.user_class_repo = user_class_repo
+        self.user_course_repo = user_course_repo
         self.log_repo = log_repo
         self.component_repo = component_repo
         self.class_repo = class_repo
@@ -227,14 +227,14 @@ class BroadcastService:
                         seen_ids.add(user.id)
                         yield user
 
-    async def _stream_enrollments(self, class_id: UUID) -> AsyncGenerator[UserClassModel]:
+    async def _stream_enrollments(self, course_id: UUID) -> AsyncGenerator[UserCourseModel]:
         """Stream active enrollments for a class"""
         page_size = 100
         page = 0
         
         while True:
-            enrollments = await self.user_class_repo.get_active_by_class_id(
-                class_id,
+            enrollments = await self.user_course_repo.get_active_by_course_id(
+                course_id,
                 skip=page * page_size,
                 limit=page_size
             )

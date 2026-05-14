@@ -11,7 +11,7 @@ from src.data.repositories.class_session_repository import ClassSessionRepositor
 from src.data.repositories.course_component_repository import CourseComponentRepository
 from src.data.repositories.document_repository import DocumentRepository
 from src.data.repositories.student_absence_justification_repository import StudentAbsenceJustificationRepository
-from src.data.repositories.user_class_repository import UserClassRepository
+from src.data.repositories.user_course_repository import UserCourseRepository
 from src.application.services.base_service import BaseService
 from src.application.mappers.entity_to_model_mapper import EntityToModelMapper
 from src.application.mappers.model_to_entity_mapper import ModelToEntityMapper
@@ -26,7 +26,7 @@ class ClassAttendanceService(BaseService):
     def __init__(
         self, 
         repository: ClassAttendanceRepository,
-        user_class_repo: UserClassRepository,
+        user_course_repo: UserCourseRepository,
         class_repo: ClassRepository,
         session_repo: ClassSessionRepository,
         component_repo: CourseComponentRepository,
@@ -35,7 +35,7 @@ class ClassAttendanceService(BaseService):
     ):
         super().__init__(repository, 'class_attendance', mapper_class=ModelToEntityMapper)
         self.repository = repository
-        self.user_class_repo = user_class_repo
+        self.user_course_repo = user_course_repo
         self.class_repo = class_repo
         self.session_repo = session_repo
         self.component_repo = component_repo
@@ -152,55 +152,64 @@ class ClassAttendanceService(BaseService):
             session_repo = ClassSessionRepository(self.repository.session)
             
             # Get all enrollments for the user
-            enrollments = await self.user_class_repo.get_active_by_user_id(user_id)
+            enrollments = await self.user_course_repo.get_active_by_user_id(user_id)
             all_sessions = []
             
             for enrollment in enrollments:
-                class_id = UUID(bytes=enrollment.class_id)
-                
-                # Get all sessions for this class
-                if date:
-                    # Filter by specific date
-                    class_sessions = await session_repo.get_by_date_range(
-                        class_id,
-                        datetime.combine(date, datetime.min.time()),
-                        datetime.combine(date, datetime.max.time())
-                    )
-                else:
-                    # Get all sessions
-                    class_sessions = await session_repo.get_by_class_id(class_id)
-                
-                for session in class_sessions:
-                    session_id = UUID(bytes=session.id)
-                    
-                    # Get attendance for this session
-                    attendance = await self.repository.get_by_user_and_session(user_id, session_id)
-                    
-                    # Determine attendance status
-                    is_past = session.date.date() < DateTimeHandler.now().date()
-                    attendance_status = None  # Default for future sessions
-                    
-                    if attendance:
-                        attendance_status = attendance.attended
-                    elif is_past:
-                        attendance_status = False  # Past session without attendance = absent
-                    
-                    # Apply attendance filter
-                    if attended is not None:
-                        if attended and attendance_status is not True:
-                            continue
-                        if not attended and attendance_status is not False:
-                            continue
-                    
-                    all_sessions.append({
-                        'session_id': session_id,
-                        'date': session.date,
-                        'class_id': class_id,
-                        'attended': attendance_status,
-                        'is_past': is_past,
-                        'is_future': not is_past,
-                        'attendance_id': UUID(bytes=attendance.id) if attendance else None
-                    })
+                course_id = UUID(bytes=enrollment.course_id)
+                components = await self.component_repo.get_by_course_id(course_id)
+
+                for component in components:
+                    component_id = UUID(bytes=component.id)
+
+                    classes = await self.class_repo.get_by_component_id(component_id)
+
+                    for class_ in classes:
+                        class_id = UUID(class_)
+
+                        # Get all sessions for this class
+                        if date:
+                            # Filter by specific date
+                            class_sessions = await session_repo.get_by_date_range(
+                                class_id,
+                                datetime.combine(date, datetime.min.time()),
+                                datetime.combine(date, datetime.max.time())
+                            )
+                        else:
+                            # Get all sessions
+                            class_sessions = await session_repo.get_by_class_id(class_id)
+                        
+                        for session in class_sessions:
+                            session_id = UUID(bytes=session.id)
+                            
+                            # Get attendance for this session
+                            attendance = await self.repository.get_by_user_and_session(user_id, session_id)
+                            
+                            # Determine attendance status
+                            is_past = session.date.date() < DateTimeHandler.now().date()
+                            attendance_status = None  # Default for future sessions
+                            
+                            if attendance:
+                                attendance_status = attendance.attended
+                            elif is_past:
+                                attendance_status = False  # Past session without attendance = absent
+                            
+                            # Apply attendance filter
+                            if attended is not None:
+                                if attended and attendance_status is not True:
+                                    continue
+                                if not attended and attendance_status is not False:
+                                    continue
+                            
+                            all_sessions.append({
+                                'session_id': session_id,
+                                'date': session.date,
+                                'class_id': class_id,
+                                'attended': attendance_status,
+                                'is_past': is_past,
+                                'is_future': not is_past,
+                                'attendance_id': UUID(bytes=attendance.id) if attendance else None
+                            })
             
             # Sort by date
             all_sessions.sort(key=lambda s: s['date'], reverse=True)

@@ -13,7 +13,7 @@ from src.data.repositories.course_component_repository import CourseComponentRep
 from src.data.repositories.class_repository import ClassRepository
 from src.data.repositories.class_session_repository import ClassSessionRepository
 from src.data.repositories.class_attendance_repository import ClassAttendanceRepository
-from src.data.repositories.user_class_repository import UserClassRepository
+from src.data.repositories.user_course_repository import UserCourseRepository
 from src.data.repositories.document_repository import DocumentRepository
 from src.data.repositories.document_type_repository import DocumentTypeRepository
 from src.data.repositories.document_validation_repository import DocumentValidationRepository
@@ -56,7 +56,7 @@ class DatabaseContext:
         self.classes = ClassRepository(self.session)
         self.class_sessions = ClassSessionRepository(self.session)
         self.class_attendances = ClassAttendanceRepository(self.session)
-        self.user_classes = UserClassRepository(self.session)
+        self.user_courses = UserCourseRepository(self.session)
         self.documents = DocumentRepository(self.session)
         self.document_types = DocumentTypeRepository(self.session)
         self.document_validations = DocumentValidationRepository(self.session)
@@ -71,7 +71,7 @@ class DatabaseContext:
         self.legal_representative_degrees = LegalRepresentativeDegreeRepository(self.session)
         self.profiles_to_exclude = ProfilesToExcludeRepository(self.session)
         self.student_absence_justification = StudentAbsenceJustificationRepository(self.session)
-        self.enrollment_waiting_list_repository = EnrollmentWaitingListRepository(self.session)
+        self.enrollment_waiting_list = EnrollmentWaitingListRepository(self.session)
         
         # Log repositories
         self.log_application_errors = LogApplicationErrorRepository(self.session)

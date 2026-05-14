@@ -10,5 +10,5 @@ class EnrollmentWaitingListModel(Base):
     id = Column(BINARY(16), primary_key=True, default=lambda: uuid.uuid4().bytes)
     created_at = Column(DateTime, default=func.now(), nullable=False)
     user_id = Column(BINARY(16), ForeignKey('user.id'), nullable=False)
-    class_id = Column(BINARY(16), ForeignKey('class.id'), nullable=False)
+    course_id = Column(BINARY(16), ForeignKey('course.id'), nullable=False)
     position = Column(Integer, nullable=False)  # Queue position

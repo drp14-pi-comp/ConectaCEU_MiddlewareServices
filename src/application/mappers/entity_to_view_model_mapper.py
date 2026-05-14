@@ -8,7 +8,7 @@ from src.domain.entities.course_component import CourseComponent
 from src.domain.entities.class_ import Class
 from src.domain.entities.class_session import ClassSession
 from src.domain.entities.class_attendance import ClassAttendance
-from src.domain.entities.user_class import UserClass
+from src.domain.entities.user_course import UserCourse
 from src.domain.entities.document import Document
 from src.domain.entities.legal_representative import LegalRepresentative
 from src.domain.entities.user_password_history import UserPasswordHistory
@@ -32,7 +32,7 @@ from src.domain.view_models.course_component_view_model import CourseComponentVi
 from src.domain.view_models.class_view_model import ClassViewModel
 from src.domain.view_models.class_session_view_model import ClassSessionViewModel
 from src.domain.view_models.class_attendance_view_model import ClassAttendanceViewModel
-from src.domain.view_models.user_class_view_model import UserClassViewModel
+from src.domain.view_models.user_course_view_model import UserCourseViewModel
 from src.domain.view_models.document_view_model import DocumentViewModel
 from src.domain.view_models.legal_representative_view_model import LegalRepresentativeViewModel
 from src.domain.view_models.user_sex_type_view_model import UserSexTypeViewModel
@@ -149,16 +149,16 @@ class EntityToViewModelMapper:
             class_session_id=entity.class_session_id
         )
     
-    # ========== User Class ==========
+    # ========== User Course ==========
     @staticmethod
-    def user_class(entity: UserClass) -> UserClassViewModel:
-        return UserClassViewModel(
+    def user_course(entity: UserCourse) -> UserCourseViewModel:
+        return UserCourseViewModel(
             id=entity.id,
             created_at=entity.created_at,
             updated_at=entity.updated_at,
             active=entity.active,
             user_id=entity.user_id,
-            class_id=entity.class_id
+            course_id=entity.course_id
         )
     
     # ========== Document ==========

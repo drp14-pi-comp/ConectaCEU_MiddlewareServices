@@ -9,7 +9,7 @@ from src.domain.entities.course_component import CourseComponent
 from src.domain.entities.class_ import Class
 from src.domain.entities.class_session import ClassSession
 from src.domain.entities.class_attendance import ClassAttendance
-from src.domain.entities.user_class import UserClass
+from src.domain.entities.user_course import UserCourse
 from src.domain.entities.document import Document
 from src.domain.entities.document_validation import DocumentValidation
 from src.domain.entities.legal_representative import LegalRepresentative
@@ -29,7 +29,7 @@ from src.domain.dtos.course_component_dto import CourseComponentCreateDTO
 from src.domain.dtos.class_dto import ClassCreateDTO
 from src.domain.dtos.class_session_dto import ClassSessionCreateDTO
 from src.domain.dtos.class_attendance_dto import ClassAttendanceCreateDTO
-from src.domain.dtos.user_class_dto import UserClassEnrollDTO
+from src.domain.dtos.user_course_dto import UserCourseEnrollDTO
 from src.domain.dtos.document_dto import DocumentCreateDTO
 from src.domain.dtos.document_validation_dto import DocumentValidationDTO
 from src.domain.dtos.legal_representative_dto import LegalRepresentativeCreateDTO
@@ -148,16 +148,16 @@ class DtoToEntityMapper:
             class_session_id=UUID(dto.class_session_id)
         )
     
-    # ========== User Class ==========
+    # ========== User Course ==========
     @staticmethod
-    def user_class(dto: UserClassEnrollDTO) -> UserClass:
-        return UserClass(
+    def user_course(dto: UserCourseEnrollDTO) -> UserCourse:
+        return UserCourse(
             id=uuid4(),
             created_at=DateTimeHandler.now(),
             updated_at=None,
             active=True,
             user_id=UUID(dto.user_id) if dto.user_id is not None else UuidExtender.empty(),
-            class_id=UUID(dto.class_id)
+            course_id=UUID(dto.course_id)
         )
     
     # ========== Document ==========

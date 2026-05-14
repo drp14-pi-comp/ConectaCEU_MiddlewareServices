@@ -1,17 +1,15 @@
-"""User class enrollment controller"""
+"""User course enrollment controller"""
 from uuid import UUID
 from fastapi import APIRouter, Depends, Request, HTTPException, status
 from sqlalchemy.orm import Session
 
-from src.application.services.user_class_service import UserClassService
+from src.application.services.user_course_service import UserCourseService
 from src.data.repositories.enrollment_waiting_list_repository import EnrollmentWaitingListRepository
-from src.data.repositories.user_class_repository import UserClassRepository
-from src.data.repositories.class_repository import ClassRepository
-from src.data.repositories.class_session_repository import ClassSessionRepository
+from src.data.repositories.user_course_repository import UserCourseRepository
 from src.data.db_context.database import get_db
 from src.api.dependencies.auth_dependencies import get_current_active_user
-from src.domain.dtos.user_class_dto import UserClassEnrollDTO, UserClassBulkEnrollDTO
-from src.domain.view_models.user_class_view_model import UserClassViewModel
+from src.domain.dtos.user_course_dto import UserCourseEnrollDTO, UserCourseBulkEnrollDTO
+from src.domain.view_models.user_course_view_model import UserCourseViewModel
 from src.domain.entities.user import User
 
 router = APIRouter(
@@ -21,21 +19,19 @@ router = APIRouter(
 )
 
 
-def get_user_class_service(db: Session = Depends(get_db)) -> UserClassService:
-    """Dependency injection for UserClassService"""
-    repository = UserClassRepository(db)
-    class_repo = ClassRepository(db)
-    session_repo = ClassSessionRepository(db)
+def get_user_course_service(db: Session = Depends(get_db)) -> UserCourseService:
+    """Dependency injection for UserCourseService"""
+    repository = UserCourseRepository(db)
     waiting_list_repo = EnrollmentWaitingListRepository(db)
-    return UserClassService(repository, class_repo, session_repo, waiting_list_repo)
+    return UserCourseService(repository, waiting_list_repo)
 
 
-@router.post("/", response_model=UserClassViewModel, status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=UserCourseViewModel, status_code=status.HTTP_201_CREATED)
 async def enroll_user(
     request: Request,
-    dto: UserClassEnrollDTO,
+    dto: UserCourseEnrollDTO,
     current_user: User = Depends(get_current_active_user),
-    service: UserClassService = Depends(get_user_class_service)
+    service: UserCourseService = Depends(get_user_course_service)
 ):
     """Enroll a user in a class."""
     try:
@@ -51,9 +47,9 @@ async def enroll_user(
 
 @router.post("/bulk")
 async def bulk_enroll(
-    dto: UserClassBulkEnrollDTO,
+    dto: UserCourseBulkEnrollDTO,
     current_user: User = Depends(get_current_active_user),
-    service: UserClassService = Depends(get_user_class_service)
+    service: UserCourseService = Depends(get_user_course_service)
 ):
     """
     Bulk enroll users in a class.
@@ -65,11 +61,11 @@ async def bulk_enroll(
     return await service.bulk_enroll(dto)
 
 
-@router.get("/user/{user_id}", response_model=list[UserClassViewModel])
+@router.get("/user/{user_id}", response_model=list[UserCourseViewModel])
 async def get_user_enrollments(
     user_id: UUID,
     current_user: User = Depends(get_current_active_user),
-    service: UserClassService = Depends(get_user_class_service)
+    service: UserCourseService = Depends(get_user_course_service)
 ):
     """
     Get all enrollments for a user.
@@ -86,7 +82,7 @@ async def get_user_enrollments(
 async def get_enrollment_summary(
     user_id: UUID,
     current_user: User = Depends(get_current_active_user),
-    service: UserClassService = Depends(get_user_class_service)
+    service: UserCourseService = Depends(get_user_course_service)
 ):
     """
     Get enrollment summary for a user.
@@ -99,11 +95,11 @@ async def get_enrollment_summary(
     return await service.get_enrollment_summary(user_id)
 
 
-@router.get("/class/{class_id}", response_model=list[UserClassViewModel])
+@router.get("/class/{class_id}", response_model=list[UserCourseViewModel])
 async def get_class_enrollments(
     class_id: UUID,
     current_user: User = Depends(get_current_active_user),
-    service: UserClassService = Depends(get_user_class_service)
+    service: UserCourseService = Depends(get_user_course_service)
 ):
     """
     Get all enrollments for a class.
@@ -112,7 +108,7 @@ async def get_class_enrollments(
     if current_user.user_type_id not in [1, 2, 3, 4]:
         raise HTTPException(status_code=403, detail="Only staff can view class enrollments")
     
-    return await service.get_class_enrollments(class_id)
+    return await service.get_course_enrollments(class_id)
 
 
 @router.patch("/{enrollment_id}/unenroll")
@@ -120,7 +116,7 @@ async def unenroll_user(
     request: Request,
     enrollment_id: UUID,
     current_user: User = Depends(get_current_active_user),
-    service: UserClassService = Depends(get_user_class_service)
+    service: UserCourseService = Depends(get_user_course_service)
 ):
     """Unenroll a user from a class."""
     try:

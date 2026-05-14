@@ -21,7 +21,7 @@ from src.data.models.course_component_model import CourseComponentModel
 from src.data.models.class_model import ClassModel
 from src.data.models.class_session_model import ClassSessionModel
 from src.data.models.class_attendance_model import ClassAttendanceModel
-from src.data.models.user_class_model import UserClassModel
+from src.data.models.user_course_model import UserCourseModel
 from src.data.models.document_model import DocumentModel
 from src.data.models.legal_representative_model import LegalRepresentativeModel
 
@@ -41,7 +41,7 @@ from src.domain.entities.course_component import CourseComponent
 from src.domain.entities.class_ import Class
 from src.domain.entities.class_session import ClassSession
 from src.domain.entities.class_attendance import ClassAttendance
-from src.domain.entities.user_class import UserClass
+from src.domain.entities.user_course import UserCourse
 from src.domain.entities.document import Document
 from src.domain.entities.legal_representative import LegalRepresentative
 from src.domain.entities.user_gender_type import UserGenderType
@@ -157,16 +157,16 @@ class ModelToEntityMapper:
             class_session_id=UUID(bytes=model.class_session_id)
         )
     
-    # ========== User Class ==========
+    # ========== User Course ==========
     @staticmethod
-    def user_class(model: UserClassModel) -> UserClass:
-        return UserClass(
+    def user_course(model: UserCourseModel) -> UserCourse:
+        return UserCourse(
             id=UUID(bytes=model.id),
             created_at=model.created_at,
             updated_at=model.updated_at,
             active=model.active,
             user_id=UUID(bytes=model.user_id),
-            class_id=UUID(bytes=model.class_id)
+            course_id=UUID(bytes=model.course_id)
         )
     
     # ========== Document ==========
@@ -326,6 +326,6 @@ class ModelToEntityMapper:
             id=UUID(bytes=model.id),
             created_at=model.created_at,
             user_id=model.user_id,
-            class_id=model.class_id,
+            course_id=model.course_id,
             position=model.position
         )

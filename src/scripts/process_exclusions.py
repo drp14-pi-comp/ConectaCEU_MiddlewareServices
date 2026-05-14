@@ -23,7 +23,7 @@ from src.data.models.course_component_model import CourseComponentModel
 from src.data.models.class_model import ClassModel
 from src.data.models.class_session_model import ClassSessionModel
 from src.data.models.class_attendance_model import ClassAttendanceModel
-from src.data.models.user_class_model import UserClassModel
+from src.data.models.user_course_model import UserCourseModel
 from src.data.models.document_model import DocumentModel
 from src.data.models.document_type_model import DocumentTypeModel
 from src.data.models.document_validation_model import DocumentValidationModel
@@ -103,28 +103,28 @@ async def process_exclusions():
                 user.document = ""
 
             # Unenroll from all active classes
-            from src.data.models.user_class_model import UserClassModel
+            from src.data.models.user_course_model import UserCourseModel
 
-            stmt = select(UserClassModel).where(
-                UserClassModel.user_id == user_id_bytes,
-                UserClassModel.active == True
+            stmt = select(UserCourseModel).where(
+                UserCourseModel.user_id == user_id_bytes,
+                UserCourseModel.active == True
             )
             active_enrollments = session.execute(stmt).scalars().all()
 
-            enrolled_class_ids = []
+            enrolled_course_ids = []
             for enrollment in active_enrollments:
                 enrollment.active = False
-                enrolled_class_ids.append(enrollment.class_id)
+                enrolled_course_ids.append(enrollment.course_id)
             print(f"  - Unenrolled from {len(active_enrollments)} class(es)")
 
             # Enroll next from waiting list for each freed seat
             from src.data.models.enrollment_waiting_list_model import EnrollmentWaitingListModel
 
-            for class_id_bytes in enrolled_class_ids:
+            for course_id_bytes in enrolled_course_ids:
                 # Get next in line
                 stmt = (
                     select(EnrollmentWaitingListModel)
-                    .where(EnrollmentWaitingListModel.class_id == class_id_bytes)
+                    .where(EnrollmentWaitingListModel.course_id == course_id_bytes)
                     .order_by(EnrollmentWaitingListModel.position)
                     .limit(1)
                 )
@@ -133,13 +133,13 @@ async def process_exclusions():
                 if next_in_line:
                     # Create enrollment for the waiting user
                     from uuid import uuid4
-                    new_enrollment = UserClassModel(
+                    new_enrollment = UserCourseModel(
                         id=uuid4().bytes,
                         created_at=DateTimeHandler.now(),
                         updated_at=None,
                         active=True,
                         user_id=next_in_line.user_id,
-                        class_id=class_id_bytes
+                        class_id=course_id_bytes
                     )
                     session.add(new_enrollment)
                     

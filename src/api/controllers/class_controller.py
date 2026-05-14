@@ -8,7 +8,7 @@ from src.data.repositories.class_repository import ClassRepository
 from src.data.repositories.class_session_repository import ClassSessionRepository
 from src.data.repositories.course_component_repository import CourseComponentRepository
 from src.data.repositories.course_repository import CourseRepository
-from src.data.repositories.user_class_repository import UserClassRepository
+from src.data.repositories.user_course_repository import UserCourseRepository
 from src.data.db_context.database import get_db
 from src.api.dependencies.auth_dependencies import get_current_active_user
 from src.domain.dtos.class_dto import ClassBulkCreateDTO, ClassUpdateDTO, ClassFilterDTO
@@ -26,10 +26,10 @@ def get_class_service(db: Session = Depends(get_db)) -> ClassService:
     """Dependency injection for ClassService"""
     class_repo = ClassRepository(db)
     component_repo = CourseComponentRepository(db)
-    user_class_repo = UserClassRepository(db)
+    user_course_repo = UserCourseRepository(db)
     course_repo = CourseRepository(db)
     session_repo = ClassSessionRepository(db)
-    return ClassService(class_repo, component_repo, user_class_repo, course_repo, session_repo)
+    return ClassService(class_repo, component_repo, user_course_repo, course_repo, session_repo)
 
 
 @router.post("/", status_code=status.HTTP_201_CREATED)
