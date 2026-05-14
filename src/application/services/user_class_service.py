@@ -13,6 +13,8 @@ from src.application.mappers.model_to_entity_mapper import ModelToEntityMapper
 from src.application.mappers.entity_to_view_model_mapper import EntityToViewModelMapper
 from src.domain.dtos.user_class_dto import UserClassEnrollDTO, UserClassBulkEnrollDTO
 from src.domain.view_models.user_class_view_model import UserClassViewModel
+from src.infrastructure.configuration.settings import settings
+from src.infrastructure.handlers.datetime_handler import DateTimeHandler
 
 class UserClassService(BaseService):
     """Service for User Class enrollment business logic"""
@@ -36,6 +38,11 @@ class UserClassService(BaseService):
     ) -> UserClassViewModel:
         """Enroll a user in a class with validation"""
         try:
+            # Validates if enrolling is allowed in the current month
+            currentMonth: int = DateTimeHandler.now().date().month
+            if currentMonth not in settings.ENROLLMENT_MONTHS:
+                raise PermissionError('O período de matrículas já se encerrou')
+
             user_id = UUID(dto.user_id)
             class_id = UUID(dto.class_id)
             

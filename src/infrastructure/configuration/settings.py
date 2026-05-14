@@ -58,12 +58,15 @@ class AppSettings(BaseSettings):
     
     BATCH_SIZE: int = Field(default=25)
 
-    # Deactivated profiles exclusion
-    EXCLUSION_HOURS: int = Field(default=168) # one week
-
     # Student deactivation base on unjustified absences
     ABSENCE_DAYS: int = Field(default=7)
     MIN_CONSECUTIVE_UNJUSTIFIED: int = Field(default=3)
+
+    # Deactivated profiles exclusion
+    EXCLUSION_HOURS: int = Field(default=168) # one week
+    
+    # Enrollment
+    ENROLLMENT_MONTHS: list[int] = Field(default=[])
     
     model_config = ConfigDict(
         env_file=".env",
