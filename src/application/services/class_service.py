@@ -5,7 +5,6 @@ from uuid import UUID, uuid4
 
 from src.application.logging.application_logger import ApplicationLogger
 from src.data.repositories.class_repository import ClassRepository
-from src.data.repositories.class_session_repository import ClassSessionRepository
 from src.data.repositories.course_component_repository import CourseComponentRepository
 from src.data.repositories.course_repository import CourseRepository
 from src.data.repositories.user_course_repository import UserCourseRepository
@@ -17,7 +16,6 @@ from src.application.mappers.entity_to_view_model_mapper import EntityToViewMode
 from src.application.mappers.update_mapper import UpdateMapper
 from src.domain.dtos.class_dto import ClassBulkCreateDTO, ClassCreateDTO, ClassUpdateDTO, ClassFilterDTO
 from src.domain.entities.class_ import Class
-from src.domain.entities.class_session import ClassSession
 from src.domain.view_models.class_view_model import ClassViewModel
 from src.infrastructure.handlers.datetime_handler import DateTimeHandler
 
@@ -29,15 +27,13 @@ class ClassService(BaseService):
         repository: ClassRepository,
         component_repo: CourseComponentRepository,
         user_course_repo: UserCourseRepository,
-        course_repo: CourseRepository,
-        class_session_repo: ClassSessionRepository
+        course_repo: CourseRepository
     ):
         super().__init__(repository, 'class_', mapper_class=ModelToEntityMapper)
         self.repository = repository
         self.component_repo = component_repo
         self.user_course_repo = user_course_repo
         self.course_repo = course_repo
-        self.class_session_repo = class_session_repo
     
     async def create_class(self, dto: ClassCreateDTO) -> ClassViewModel:
         """Create a new class"""
@@ -58,122 +54,53 @@ class ClassService(BaseService):
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
     
-    async def bulk_create_classes_with_sessions(self, dto: ClassBulkCreateDTO) -> dict:
-        """
-        Create multiple classes (one per shift) with sessions based on date range.
-        This handles the form submission from the class/session creation page.
-        """
-        try:
-            course_id = UUID(dto.course_id)
-            component_id = UUID(dto.course_component_id)
-            
-            # Validate course exists
-            course = await self.course_repo.get_by_id(course_id)
-            if not course:
-                raise ValueError("Course not found")
-            
-            # Validate component exists and belongs to course
-            component = await self.component_repo.get_by_id(component_id)
-            if not component:
-                raise ValueError("Component not found")
-            if UUID(bytes=component.course_id) != course_id:
-                raise ValueError("Component does not belong to this course")
-            
-            # Validate component is active
-            if not component.active:
-                raise ValueError("Component is not active")
-            
-            # Validate seat limits against component
-            if dto.total_seat_limit_per_class > component.seat_limit_per_class:
-                raise ValueError(
-                    f"Total seat limit ({dto.total_seat_limit_per_class}) "
-                    f"exceeds component seat limit ({component.seat_limit_per_class})"
-                )
-            
-            # Generate session dates based on date range and days of week
-            session_dates = self._generate_session_dates(
-                dto.start_date,
-                dto.end_date,
-                dto.days_of_week
+    async def bulk_create_classes(self, dto: ClassBulkCreateDTO) -> dict:
+        """Create one class per date in the range"""
+        component = await self.component_repo.get_by_id(UUID(dto.course_component_id))
+        if not component:
+            raise ValueError("Componente não encontrado")
+        
+        dates = self._generate_class_dates(dto.start_date, dto.end_date, dto.days_of_week)
+        
+        if not dates:
+            raise ValueError("Nenhuma data encontrada no período e dias selecionados")
+        
+        created = []
+        skipped = []
+        
+        for class_date in dates:
+            # Check if class already exists for this component and date
+            existing = await self.repository.get_by_date_and_component(
+                component_id=UUID(dto.course_component_id),
+                date=class_date
             )
+            if existing:
+                skipped.append(class_date.isoformat())
+                continue
             
-            if not session_dates:
-                raise ValueError("No valid session dates found in the given range and days")
-            
-            created_classes = []
-            created_sessions = []
-            
-            # Create one class per shift type
-            for shift_type_id in dto.shift_type_ids:
-                print('valida turno')
-                class_exists = await self.repository.class_exists(
-                    component_id=UUID(dto.course_component_id),
-                    shift_type_id=shift_type_id
-                )
-                if class_exists:
-                    shift_name = 'Manhã' if shift_type_id == 1 else 'Tarde' if shift_type_id == 2 else 'Noite'
-                    raise ValueError(f'Aula já existe para o componente no turno da {shift_name.lower()}')
-
-                # Create the class
-                class_entity = Class(
-                    id=uuid4(),
-                    created_at=DateTimeHandler.now(),
-                    updated_at=None,
-                    seats_in_use=0,
-                    active=True,
-                    component_id=component_id,
-                    shift_type_id=shift_type_id
-                )
-                
-                class_model = EntityToModelMapper.class_(class_entity)
-                saved_class = await self.repository.create(class_model)
-                class_id = UUID(bytes=saved_class.id)
-                
-                class_info = {
-                    'class_id': class_id,
-                    'shift_type_id': shift_type_id,
-                    'total_seats': dto.total_seat_limit_per_class,
-                    'enrollment_limit': dto.enrollment_seat_limit,
-                    'sessions_created': 0
-                }
-                
-                # Create sessions for this class
-                for session_date in session_dates:
-                    session_entity = ClassSession(
-                        id=uuid4(),
-                        created_at=DateTimeHandler.now(),
-                        updated_at=None,
-                        date=datetime.combine(session_date, datetime.min.time()),
-                        class_id=class_id
-                    )
-                    
-                    session_model = EntityToModelMapper.class_session(session_entity)
-                    saved_session = await self.class_session_repo.create(session_model)
-                    
-                    created_sessions.append({
-                        'session_id': UUID(bytes=saved_session.id),
-                        'date': session_date.isoformat(),
-                        'class_id': class_id
-                    })
-                    
-                    class_info['sessions_created'] += 1
-                
-                created_classes.append(class_info)
-
-            self.repository.session.commit()
-            
-            return {
-                'course_id': course_id,
-                'component_id': component_id,
-                'component_name': component.name,
-                'total_classes_created': len(created_classes),
-                'total_sessions_created': len(created_sessions),
-                'session_dates': [d.isoformat() for d in session_dates],
-                'classes': created_classes,
-                'sessions': created_sessions
-            }
-        except Exception as e:
-            await ApplicationLogger.log_error(e, reraise=True)
+            entity = Class(
+                id=uuid4(),
+                created_at=DateTimeHandler.now(),
+                updated_at=None,
+                seats_in_use=0,
+                active=True,
+                date=datetime.combine(class_date, datetime.min.time()),
+                course_component_id=UUID(dto.course_component_id)
+            )
+            model = EntityToModelMapper.class_(entity)
+            await self.repository.create(model)
+            created.append(class_date.isoformat())
+        
+        self.repository.session.commit()
+        
+        return {
+            'component_id': dto.course_component_id,
+            'total_dates': len(dates),
+            'created': len(created),
+            'skipped': len(skipped),
+            'created_dates': created,
+            'skipped_dates': skipped
+        }
     
     async def update_class(self, class_id: UUID, dto: ClassUpdateDTO) -> ClassViewModel:
         """Update a class"""
@@ -199,7 +126,6 @@ class ClassService(BaseService):
             
             models = await self.repository.find_by_filters(
                 component_id=UUID(filters.component_id) if filters.component_id else None,
-                shift_type_id=filters.shift_type_id,
                 active=filters.active,
                 skip=skip,
                 limit=filters.page_size
@@ -256,7 +182,7 @@ class ClassService(BaseService):
                 raise ValueError("Class already active")
             
             # Check if component is active
-            component = await self.component_repo.get_by_id(UUID(bytes=class_.component_id))
+            component = await self.component_repo.get_by_id(UUID(bytes=class_.course_component_id))
             if not component or not component.active:
                 raise ValueError("Cannot activate class because component is inactive")
             
@@ -274,7 +200,7 @@ class ClassService(BaseService):
             if not class_:
                 raise ValueError("Class not found")
             
-            component = await self.component_repo.get_by_id(UUID(bytes=class_.component_id))
+            component = await self.component_repo.get_by_id(UUID(bytes=class_.course_component_id))
             
             return {
                 'class_id': class_id,
@@ -285,14 +211,14 @@ class ClassService(BaseService):
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
 
-    def _generate_session_dates(
+    def _generate_class_dates(
         self,
         start_date: date,
         end_date: date,
         days_of_week: List[int]
     ) -> List[date]:
         """
-        Generate session dates within a range for specific days of week.
+        Generate class dates within a range for specific days of week.
         
         Args:
             start_date: Start of date range
@@ -304,12 +230,12 @@ class ClassService(BaseService):
         """
         from datetime import timedelta
         
-        session_dates = []
+        class_dates = []
         current_date = start_date
         
         while current_date <= end_date:
             if current_date.weekday() in days_of_week:
-                session_dates.append(current_date)
+                class_dates.append(current_date)
             current_date += timedelta(days=1)
         
-        return session_dates
+        return class_dates

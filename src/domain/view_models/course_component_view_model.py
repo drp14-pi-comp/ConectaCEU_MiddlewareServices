@@ -10,7 +10,6 @@ class CourseComponentViewModel(BaseModel):
     updated_at: Optional[datetime]
     name: str
     description: str
-    seat_limit_per_class: int
     active: bool
     course_id: UUID
     

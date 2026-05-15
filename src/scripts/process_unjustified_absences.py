@@ -21,7 +21,6 @@ from src.data.models.address_model import AddressModel
 from src.data.models.course_model import CourseModel
 from src.data.models.course_component_model import CourseComponentModel
 from src.data.models.class_model import ClassModel
-from src.data.models.class_session_model import ClassSessionModel
 from src.data.models.class_attendance_model import ClassAttendanceModel
 from src.data.models.user_course_model import UserCourseModel
 from src.data.models.document_model import DocumentModel
@@ -38,7 +37,7 @@ from src.data.models.shift_type_model import ShiftTypeModel
 from src.data.models.report_type_model import ReportTypeModel
 from src.data.models.profiles_to_exclude_model import ProfilesToExcludeModel
 from src.data.models.student_absence_justification_model import StudentAbsenceJustificationModel
-from data.repositories.enrollment_waiting_list_repository import EnrollmentWaitingListRepository
+from src.data.repositories.enrollment_waiting_list_repository import EnrollmentWaitingListRepository
 
 from src.infrastructure.handlers.datetime_handler import DateTimeHandler
 from src.infrastructure.configuration.settings import settings
@@ -76,15 +75,15 @@ async def stream_users_with_unjustified_absences() -> AsyncGenerator[tuple[UserM
             stmt = (
                 select(ClassAttendanceModel)
                 .join(UserModel, ClassAttendanceModel.user_id == UserModel.id)
-                .join(ClassSessionModel, ClassAttendanceModel.class_session_id == ClassSessionModel.id)
+                .join(ClassModel, ClassAttendanceModel.class_id == ClassModel.id)
                 .where(
                     and_(
                         UserModel.active == True,
                         ClassAttendanceModel.attended == False,
-                        ClassSessionModel.date < cutoff_date
+                        ClassModel.date < cutoff_date
                     )
                 )
-                .order_by(ClassAttendanceModel.user_id, ClassSessionModel.date)
+                .order_by(ClassAttendanceModel.user_id, ClassModel.date)
                 .offset(offset)
                 .limit(BATCH_SIZE)
             )

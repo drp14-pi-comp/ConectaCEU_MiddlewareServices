@@ -13,10 +13,10 @@ class ClassAttendanceRepository(BaseRepository[ClassAttendanceModel]):
     def __init__(self, session: Session):
         super().__init__(session, ClassAttendanceModel)
     
-    async def get_by_session_id(self, session_id: UUID) -> List[ClassAttendanceModel]:
-        """Get all attendance records for a session"""
+    async def get_by_class_id(self, class_id: UUID) -> List[ClassAttendanceModel]:
+        """Get all attendance records for a class"""
         stmt = select(ClassAttendanceModel).where(
-            ClassAttendanceModel.class_session_id == session_id.bytes
+            ClassAttendanceModel.class_id == class_id.bytes
         )
         result = self.session.execute(stmt)
         return list(result.scalars().all())
@@ -29,11 +29,13 @@ class ClassAttendanceRepository(BaseRepository[ClassAttendanceModel]):
         result = self.session.execute(stmt)
         return list(result.scalars().all())
     
-    async def get_by_user_and_session(self, user_id: UUID, session_id: UUID) -> Optional[ClassAttendanceModel]:
-        """Get attendance record for specific user and session"""
+    async def get_by_user_and_class(self, user_id: UUID, class_id: UUID) -> Optional[ClassAttendanceModel]:
+        """Get attendance record for specific user and class"""
         stmt = select(ClassAttendanceModel).where(
-            ClassAttendanceModel.user_id == user_id.bytes,
-            ClassAttendanceModel.class_session_id == session_id.bytes
+            and_(
+                ClassAttendanceModel.user_id == user_id.bytes,
+                ClassAttendanceModel.class_id == class_id.bytes
+            )
         )
         result = self.session.execute(stmt)
         return result.scalar_one_or_none()
@@ -53,12 +55,12 @@ class ClassAttendanceRepository(BaseRepository[ClassAttendanceModel]):
         self.session.flush()
         return attendances
     
-    async def get_attendance_summary(self, session_id: UUID) -> dict:
-        """Get attendance summary for a session"""
+    async def get_attendance_summary(self, class_id: UUID) -> dict:
+        """Get attendance summary for a class"""
         stmt = select(
             func.count().label('total'),
             func.sum(ClassAttendanceModel.attended.cast(Integer)).label('present')
-        ).where(ClassAttendanceModel.class_session_id == session_id.bytes)
+        ).where(ClassAttendanceModel.class_id == class_id.bytes)
         
         result = self.session.execute(stmt)
         row = result.first()
@@ -75,17 +77,14 @@ class ClassAttendanceRepository(BaseRepository[ClassAttendanceModel]):
     
     async def get_user_attendance_summary(self, user_id: UUID, class_id: UUID) -> dict:
         """Get attendance summary for a user in a specific class"""
-        from src.data.models.class_session_model import ClassSessionModel
-        
         stmt = select(
             func.count().label('total'),
             func.sum(ClassAttendanceModel.attended.cast(Integer)).label('present')
-        ).join(
-            ClassSessionModel,
-            ClassAttendanceModel.class_session_id == ClassSessionModel.id
         ).where(
-            ClassAttendanceModel.user_id == user_id.bytes,
-            ClassSessionModel.class_id == class_id.bytes
+            and_(
+                ClassAttendanceModel.user_id == user_id.bytes,
+                ClassAttendanceModel.class_id == class_id.bytes
+            )
         )
         
         result = self.session.execute(stmt)
@@ -95,7 +94,7 @@ class ClassAttendanceRepository(BaseRepository[ClassAttendanceModel]):
         present = row.present or 0
         
         return {
-            'total_sessions': total,
+            'total_classes': total,
             'attended': present,
             'missed': total - present,
             'attendance_rate': (present / total * 100) if total > 0 else 0

@@ -8,7 +8,6 @@ class CourseComponentModel(UuidPkUpdatableBaseModel):
     
     name = Column(String(100), unique=True, nullable=False)
     description = Column(String(500), unique=True, nullable=False)
-    seat_limit_per_class = Column(Integer, nullable=False)
     active = Column(Boolean, nullable=False, default=True)
     
     # Foreign keys

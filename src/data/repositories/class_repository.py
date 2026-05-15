@@ -1,4 +1,5 @@
 """Class repository"""
+from datetime import date
 from typing import List, Optional
 from uuid import UUID
 from sqlalchemy.orm import Session
@@ -15,14 +16,14 @@ class ClassRepository(BaseRepository[ClassModel]):
     
     async def get_by_component_id(self, component_id: UUID) -> List[ClassModel]:
         """Get all classes for a component"""
-        stmt = select(ClassModel).where(ClassModel.component_id == component_id.bytes)
+        stmt = select(ClassModel).where(ClassModel.course_component_id == component_id.bytes)
         result = self.session.execute(stmt)
         return list(result.scalars().all())
     
     async def get_active_by_component_id(self, component_id: UUID) -> List[ClassModel]:
         """Get all active classes for a component"""
         stmt = select(ClassModel).where(
-            ClassModel.component_id == component_id.bytes,
+            ClassModel.course_component_id == component_id.bytes,
             ClassModel.active == True
         )
         result = self.session.execute(stmt)
@@ -31,7 +32,6 @@ class ClassRepository(BaseRepository[ClassModel]):
     async def find_by_filters(
         self,
         component_id: Optional[UUID] = None,
-        shift_type_id: Optional[int] = None,
         active: Optional[bool] = None,
         skip: int = 0,
         limit: int = 100
@@ -40,9 +40,7 @@ class ClassRepository(BaseRepository[ClassModel]):
         conditions = []
         
         if component_id:
-            conditions.append(ClassModel.component_id == component_id.bytes)
-        if shift_type_id:
-            conditions.append(ClassModel.shift_type_id == shift_type_id)
+            conditions.append(ClassModel.course_component_id == component_id.bytes)
         if active is not None:
             conditions.append(ClassModel.active == active)
         
@@ -54,15 +52,11 @@ class ClassRepository(BaseRepository[ClassModel]):
         result = self.session.execute(stmt)
         return list(result.scalars().all())
     
-    async def class_exists(
-        self,
-        component_id: UUID,
-        shift_type_id: int,
+    async def class_exists(self, component_id: UUID
     ) -> bool:
         """Validates if classes exist for the given component and shift"""
         stmt = select(ClassModel).where(
-            ClassModel.component_id == component_id.bytes
-            and ClassModel.shift_type_id == shift_type_id
+            ClassModel.course_component_id == component_id.bytes
             and ClassModel.active
         )
         classes = self.session.execute(stmt)
@@ -103,3 +97,19 @@ class ClassRepository(BaseRepository[ClassModel]):
             self.session.flush()
             return True
         return False
+    
+    async def get_by_date_and_component(self, component_id: UUID, date: date) -> Optional[ClassModel]:
+        """Check if a class exists for a component on a specific date"""
+        from datetime import datetime as dt
+        start = dt.combine(date, dt.min.time())
+        end = dt.combine(date, dt.max.time())
+        
+        stmt = select(ClassModel).where(
+            and_(
+                ClassModel.course_component_id == component_id.bytes,
+                ClassModel.date >= start,
+                ClassModel.date <= end
+            )
+        )
+        result = self.session.execute(stmt)
+        return result.scalar_one_or_none()

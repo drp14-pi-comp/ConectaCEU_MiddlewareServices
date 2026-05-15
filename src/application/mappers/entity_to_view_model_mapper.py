@@ -6,7 +6,6 @@ from src.domain.entities.address import Address
 from src.domain.entities.course import Course
 from src.domain.entities.course_component import CourseComponent
 from src.domain.entities.class_ import Class
-from src.domain.entities.class_session import ClassSession
 from src.domain.entities.class_attendance import ClassAttendance
 from src.domain.entities.user_course import UserCourse
 from src.domain.entities.document import Document
@@ -30,7 +29,6 @@ from src.domain.view_models.address_view_model import AddressViewModel
 from src.domain.view_models.course_view_model import CourseViewModel
 from src.domain.view_models.course_component_view_model import CourseComponentViewModel
 from src.domain.view_models.class_view_model import ClassViewModel
-from src.domain.view_models.class_session_view_model import ClassSessionViewModel
 from src.domain.view_models.class_attendance_view_model import ClassAttendanceViewModel
 from src.domain.view_models.user_course_view_model import UserCourseViewModel
 from src.domain.view_models.document_view_model import DocumentViewModel
@@ -96,7 +94,8 @@ class EntityToViewModelMapper:
             workload=entity.workload,
             active=entity.active,
             responsible_educator_1=entity.responsible_educator_1,
-            responsible_educator_2=entity.responsible_educator_2
+            responsible_educator_2=entity.responsible_educator_2,
+            shift_type_id=entity.shift_type_id
         )
     
     # ========== Course Component ==========
@@ -108,7 +107,6 @@ class EntityToViewModelMapper:
             updated_at=entity.updated_at,
             name=entity.name,
             description=entity.description,
-            seat_limit_per_class=entity.seat_limit_per_class,
             active=entity.active,
             course_id=entity.course_id
         )
@@ -122,19 +120,8 @@ class EntityToViewModelMapper:
             updated_at=entity.updated_at,
             seats_in_use=entity.seats_in_use,
             active=entity.active,
-            component_id=entity.component_id,
-            shift_type_id=entity.shift_type_id
-        )
-    
-    # ========== Class Session ==========
-    @staticmethod
-    def class_session(entity: ClassSession) -> ClassSessionViewModel:
-        return ClassSessionViewModel(
-            id=entity.id,
-            created_at=entity.created_at,
-            updated_at=entity.updated_at,
             date=entity.date,
-            class_id=entity.class_id
+            component_id=entity.course_component_id
         )
     
     # ========== Class Attendance ==========
@@ -146,7 +133,7 @@ class EntityToViewModelMapper:
             updated_at=entity.updated_at,
             attended=entity.attended,
             user_id=entity.user_id,
-            class_session_id=entity.class_session_id
+            class_id=entity.class_id
         )
     
     # ========== User Course ==========

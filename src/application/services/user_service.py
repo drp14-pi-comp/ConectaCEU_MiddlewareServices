@@ -324,7 +324,8 @@ class UserService(BaseService):
             exclusion = ProfilesToExclude(
                 id=uuid4(),
                 created_at=DateTimeHandler.now(),
-                user_id=user_id
+                user_id=user_id,
+                processed=False
             )
             
             exclusion_model = EntityToModelMapper.profiles_to_exclude(exclusion)

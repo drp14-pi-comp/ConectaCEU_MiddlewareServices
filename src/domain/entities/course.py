@@ -18,6 +18,7 @@ class Course(BaseModel):
     active: bool = True
     responsible_educator_1: UUID
     responsible_educator_2: Optional[UUID] = None
+    shift_type_id: int = Field(...)
     
     model_config = ConfigDict(from_attributes=True)
     

@@ -1,4 +1,4 @@
-"""Database context - equivalent to .NET DbContext"""
+"""Database context"""
 from typing import AsyncGenerator, Optional
 from sqlalchemy.orm import Session
 
@@ -11,7 +11,6 @@ from src.data.repositories.address_repository import AddressRepository
 from src.data.repositories.course_repository import CourseRepository
 from src.data.repositories.course_component_repository import CourseComponentRepository
 from src.data.repositories.class_repository import ClassRepository
-from src.data.repositories.class_session_repository import ClassSessionRepository
 from src.data.repositories.class_attendance_repository import ClassAttendanceRepository
 from src.data.repositories.user_course_repository import UserCourseRepository
 from src.data.repositories.document_repository import DocumentRepository
@@ -54,7 +53,6 @@ class DatabaseContext:
         self.courses = CourseRepository(self.session)
         self.course_components = CourseComponentRepository(self.session)
         self.classes = ClassRepository(self.session)
-        self.class_sessions = ClassSessionRepository(self.session)
         self.class_attendances = ClassAttendanceRepository(self.session)
         self.user_courses = UserCourseRepository(self.session)
         self.documents = DocumentRepository(self.session)

@@ -12,7 +12,6 @@ class CourseComponent(BaseModel):
     updated_at: Optional[datetime] = None
     name: str = Field(..., min_length=3, max_length=100)
     description: str = Field(..., min_length=10, max_length=500)
-    seat_limit_per_class: int = Field(..., ge=1)
     active: bool = True
     course_id: UUID
     

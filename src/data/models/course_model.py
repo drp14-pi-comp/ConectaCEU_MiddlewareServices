@@ -14,3 +14,4 @@ class CourseModel(UuidPkUpdatableBaseModel):
     # Foreign keys
     responsible_educator_1 = Column(BINARY(16), ForeignKey('user.id'), nullable=False)
     responsible_educator_2 = Column(BINARY(16), ForeignKey('user.id'), nullable=True)
+    shift_type_id = Column(Integer, ForeignKey('shift_type.id'), nullable=False)

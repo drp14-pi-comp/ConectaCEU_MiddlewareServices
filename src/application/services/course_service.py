@@ -59,14 +59,6 @@ class CourseService(BaseService):
             # Convert DTO -> Entity
             entity = DtoToEntityMapper.course(dto)
             
-            # Validate seat limits logic
-            total_component_seats = sum(c.seat_limit_per_class for c in dto.components)
-            if total_component_seats > dto.total_seat_limit:
-                raise ValueError(
-                    f"Sum of component seat limits ({total_component_seats}) "
-                    f"cannot exceed total course seat limit ({dto.total_seat_limit})"
-                )
-            
             # Convert Entity -> Model and save
             model = EntityToModelMapper.course(entity)
             saved_model = await self.repository.create(model)

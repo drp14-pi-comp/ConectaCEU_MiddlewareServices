@@ -32,9 +32,11 @@ class CourseComponentRepository(BaseRepository[CourseComponentModel]):
     
     async def component_exists(self, name: str, course_id: Optional[UUID] = None) -> bool:
         """Get component by exact name"""
-        stmt = select(CourseComponentModel).where(CourseComponentModel.name == name)
+        from sqlalchemy import and_
+        conditions = [CourseComponentModel.name == name]
         if course_id:
-            stmt.where(CourseComponentModel.course_id == course_id.bytes)
+            conditions.append(CourseComponentModel.course_id == course_id.bytes)
+        stmt = select(CourseComponentModel).where(and_(*conditions))
         result = self.session.execute(stmt)
         return result.scalar_one_or_none() is not None
     

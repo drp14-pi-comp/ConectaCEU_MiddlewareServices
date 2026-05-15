@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, Request, HTTPException, status
 from sqlalchemy.orm import Session
 
 from src.application.services.user_course_service import UserCourseService
+from src.data.repositories.course_repository import CourseRepository
 from src.data.repositories.enrollment_waiting_list_repository import EnrollmentWaitingListRepository
 from src.data.repositories.user_course_repository import UserCourseRepository
 from src.data.db_context.database import get_db
@@ -22,8 +23,9 @@ router = APIRouter(
 def get_user_course_service(db: Session = Depends(get_db)) -> UserCourseService:
     """Dependency injection for UserCourseService"""
     repository = UserCourseRepository(db)
+    course_repo = CourseRepository(db)
     waiting_list_repo = EnrollmentWaitingListRepository(db)
-    return UserCourseService(repository, waiting_list_repo)
+    return UserCourseService(repository, course_repo, waiting_list_repo)
 
 
 @router.post("/", response_model=UserCourseViewModel, status_code=status.HTTP_201_CREATED)
@@ -41,7 +43,7 @@ async def enroll_user(
             enrolled_by_user_id=current_user.id,
             user_ip_address=user_ip
         )
-    except ValueError as e:
+    except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 

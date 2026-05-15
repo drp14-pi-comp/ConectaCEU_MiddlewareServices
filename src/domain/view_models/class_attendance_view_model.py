@@ -10,6 +10,6 @@ class ClassAttendanceViewModel(BaseModel):
     updated_at: Optional[datetime]
     attended: bool
     user_id: UUID
-    class_session_id: UUID
+    class_id: UUID
     
     model_config = ConfigDict(from_attributes=True)

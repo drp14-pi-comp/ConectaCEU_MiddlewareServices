@@ -16,6 +16,7 @@ class CourseViewModel(BaseModel):
     active: bool
     responsible_educator_1: UUID
     responsible_educator_2: Optional[UUID] = None
+    shift_type_id: int
 
     course_components: Optional[List[CourseComponentViewModel]] = None
     

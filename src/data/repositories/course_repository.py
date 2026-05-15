@@ -24,10 +24,10 @@ class CourseRepository(BaseRepository[CourseModel]):
         name: Optional[str] = None,
         active: Optional[bool] = None,
         educator_id: Optional[UUID] = None,
+        shift_type_id: Optional[int] = None,
         skip: int = 0,
         limit: int = 100
     ) -> List[CourseModel]:
-        """Find courses with filters"""
         conditions = []
         
         if name:
@@ -41,6 +41,8 @@ class CourseRepository(BaseRepository[CourseModel]):
                     CourseModel.responsible_educator_2 == educator_id.bytes
                 )
             )
+        if shift_type_id is not None:
+            conditions.append(CourseModel.shift_type_id == shift_type_id)
         
         stmt = select(CourseModel)
         if conditions:

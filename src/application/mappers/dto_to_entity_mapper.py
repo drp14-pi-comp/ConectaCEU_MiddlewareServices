@@ -7,7 +7,6 @@ from src.domain.entities.address import Address
 from src.domain.entities.course import Course
 from src.domain.entities.course_component import CourseComponent
 from src.domain.entities.class_ import Class
-from src.domain.entities.class_session import ClassSession
 from src.domain.entities.class_attendance import ClassAttendance
 from src.domain.entities.user_course import UserCourse
 from src.domain.entities.document import Document
@@ -27,7 +26,6 @@ from src.domain.dtos.address_dto import AddressCreateDTO
 from src.domain.dtos.course_dto import CourseCreateDTO
 from src.domain.dtos.course_component_dto import CourseComponentCreateDTO
 from src.domain.dtos.class_dto import ClassCreateDTO
-from src.domain.dtos.class_session_dto import ClassSessionCreateDTO
 from src.domain.dtos.class_attendance_dto import ClassAttendanceCreateDTO
 from src.domain.dtos.user_course_dto import UserCourseEnrollDTO
 from src.domain.dtos.document_dto import DocumentCreateDTO
@@ -95,7 +93,8 @@ class DtoToEntityMapper:
             workload=dto.workload,
             active=True,
             responsible_educator_1=UUID(dto.responsible_educator_1),
-            responsible_educator_2=UUID(dto.responsible_educator_2) if dto.responsible_educator_2 else None
+            responsible_educator_2=UUID(dto.responsible_educator_2) if dto.responsible_educator_2 else None,
+            shift_type_id=dto.shift_type_id
         )
     
     # ========== Course Component ==========
@@ -107,7 +106,6 @@ class DtoToEntityMapper:
             updated_at=None,
             name=dto.name,
             description=dto.description,
-            seat_limit_per_class=dto.seat_limit_per_class,
             active=True,
             course_id=UUID(dto.course_id)
         )
@@ -121,19 +119,9 @@ class DtoToEntityMapper:
             updated_at=None,
             seats_in_use=0,
             active=True,
-            component_id=UUID(dto.component_id),
-            shift_type_id=dto.shift_type_id
-        )
-    
-    # ========== Class Session ==========
-    @staticmethod
-    def class_session(dto: ClassSessionCreateDTO) -> ClassSession:
-        return ClassSession(
-            id=uuid4(),
-            created_at=DateTimeHandler.now(),
-            updated_at=None,
             date=dto.date,
-            class_id=UUID(dto.class_id)
+            course_component_id=UUID(dto.component_id),
+            shift_type_id=dto.shift_type_id
         )
     
     # ========== Class Attendance ==========
@@ -145,7 +133,7 @@ class DtoToEntityMapper:
             updated_at=None,
             attended=False,
             user_id=UUID(dto.user_id) if dto.user_id is not None else UuidExtender.empty(),
-            class_session_id=UUID(dto.class_session_id)
+            class_id=UUID(dto.class_id)
         )
     
     # ========== User Course ==========

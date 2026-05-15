@@ -7,7 +7,6 @@ from src.application.logging.application_logger import ApplicationLogger
 from src.data.models.document_validation_model import DocumentValidationModel
 from src.data.repositories.class_attendance_repository import ClassAttendanceRepository
 from src.data.repositories.class_repository import ClassRepository
-from src.data.repositories.class_session_repository import ClassSessionRepository
 from src.data.repositories.course_component_repository import CourseComponentRepository
 from src.data.repositories.document_repository import DocumentRepository
 from src.data.repositories.student_absence_justification_repository import StudentAbsenceJustificationRepository
@@ -28,7 +27,6 @@ class ClassAttendanceService(BaseService):
         repository: ClassAttendanceRepository,
         user_course_repo: UserCourseRepository,
         class_repo: ClassRepository,
-        session_repo: ClassSessionRepository,
         component_repo: CourseComponentRepository,
         document_repo: DocumentRepository,
         absence_justification_repo: StudentAbsenceJustificationRepository
@@ -37,27 +35,26 @@ class ClassAttendanceService(BaseService):
         self.repository = repository
         self.user_course_repo = user_course_repo
         self.class_repo = class_repo
-        self.session_repo = session_repo
         self.component_repo = component_repo
         self.document_repo = document_repo
         self.absence_justification_repo = absence_justification_repo
     
     async def take_attendance(self, dto: BulkClassAttendanceCreateDTO) -> dict:
-        """
-        Takes attendance for a session in one go.
-        Client sends the complete list of students with their status.
-        Creates or updates attendance records directly.
-        """
-        session_id = UUID(dto.class_session_id)
+        class_id = UUID(dto.class_id)
         
-        # Validate session exists
-        session = await self.session_repo.get_by_id(session_id)
-        if not session:
-            raise ValueError("Sessão não encontrada")
+        class_ = await self.class_repo.get_by_id(class_id)
+        if not class_:
+            raise ValueError("Aula não encontrada")
         
-        # Validate session date
-        if session.date.date() > DateTimeHandler.now().date():
+        if class_.date.date() > DateTimeHandler.now().date():
             raise ValueError("Não é possível registrar chamada antes da data")
+        
+        # Get the course for this class
+        component = await self.component_repo.get_by_id(UUID(bytes=class_.course_component_id))
+        if not component:
+            raise ValueError("Componente não encontrado")
+        
+        course_id = UUID(bytes=component.course_id)
         
         created = 0
         updated = 0
@@ -65,16 +62,18 @@ class ClassAttendanceService(BaseService):
         for entry in dto.attendances:
             user_id = UUID(entry.user_id)
             
-            # Check if attendance record already exists
-            existing = await self.repository.get_by_user_and_session(user_id, session_id)
+            # Validate user is enrolled in the course
+            enrollment = await self.user_course_repo.get_by_user_and_course(user_id, course_id)
+            if not enrollment or not enrollment.active:
+                continue  # Skip users not enrolled in this course
+            
+            existing = await self.repository.get_by_user_and_class(user_id, class_id)
             
             if existing:
-                # Update existing record
                 existing.attended = entry.attended
                 await self.repository.update(existing)
                 updated += 1
             else:
-                # Create new record
                 from uuid import uuid4
                 from src.domain.entities.class_attendance import ClassAttendance
                 
@@ -84,33 +83,33 @@ class ClassAttendanceService(BaseService):
                     updated_at=None,
                     attended=entry.attended,
                     user_id=user_id,
-                    class_session_id=session_id
+                    class_id=class_id
                 )
                 model = EntityToModelMapper.class_attendance(attendance)
                 await self.repository.create(model)
                 created += 1
         
         self.repository.session.commit()
-        summary = await self.repository.get_attendance_summary(session_id)
+        summary = await self.repository.get_attendance_summary(class_id)
         
         return {
-            'session_id': str(session_id),
+            'class_id': str(class_id),
             'created': created,
             'updated': updated,
             'summary': summary
         }
     
-    async def get_session_attendance(self, session_id: UUID) -> dict:
+    async def get_class_attendance(self, class_id: UUID) -> dict:
         try:
-            """Get attendance for a session"""
-            attendances = await self.repository.get_by_session_id(session_id)
-            summary = await self.repository.get_attendance_summary(session_id)
+            """Get attendance for a class"""
+            attendances = await self.repository.get_by_class_id(class_id)
+            summary = await self.repository.get_attendance_summary(class_id)
             
             entities = [ModelToEntityMapper.class_attendance(a) for a in attendances]
             view_models = [EntityToViewModelMapper.class_attendance(e) for e in entities]
             
             return {
-                'session_id': session_id,
+                'class_id': class_id,
                 'attendances': view_models,
                 'summary': summary
             }
@@ -124,7 +123,7 @@ class ClassAttendanceService(BaseService):
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
     
-    async def get_user_sessions(
+    async def get_user_classes(
         self,
         user_id: UUID,
         date: Optional[date] = None,
@@ -133,27 +132,22 @@ class ClassAttendanceService(BaseService):
         page_size: int = 10
     ) -> dict:
         """
-        Get all sessions for a user with optional filters.
-        Shows future sessions too (with attended = None).
+        Get all classes for a user with optional filters.
+        Shows future classes too (with attended = None).
         
         Args:
-            user_id: User to get sessions for
+            user_id: User to get classes for
             date: Optional filter by specific date
             attended: Optional filter by attendance status (None = all, including future)
             page: Page number
             page_size: Items per page
         
         Returns:
-            Dict with paginated session list
+            Dict with paginated class list
         """
         try:
-            from src.data.repositories.class_session_repository import ClassSessionRepository
-            
-            session_repo = ClassSessionRepository(self.repository.session)
-            
-            # Get all enrollments for the user
             enrollments = await self.user_course_repo.get_active_by_user_id(user_id)
-            all_sessions = []
+            all_classes = []
             
             for enrollment in enrollments:
                 course_id = UUID(bytes=enrollment.course_id)
@@ -161,66 +155,44 @@ class ClassAttendanceService(BaseService):
 
                 for component in components:
                     component_id = UUID(bytes=component.id)
-
                     classes = await self.class_repo.get_by_component_id(component_id)
 
                     for class_ in classes:
-                        class_id = UUID(class_)
-
-                        # Get all sessions for this class
-                        if date:
-                            # Filter by specific date
-                            class_sessions = await session_repo.get_by_date_range(
-                                class_id,
-                                datetime.combine(date, datetime.min.time()),
-                                datetime.combine(date, datetime.max.time())
-                            )
-                        else:
-                            # Get all sessions
-                            class_sessions = await session_repo.get_by_class_id(class_id)
+                        class_id = UUID(bytes=class_.id)
                         
-                        for session in class_sessions:
-                            session_id = UUID(bytes=session.id)
-                            
-                            # Get attendance for this session
-                            attendance = await self.repository.get_by_user_and_session(user_id, session_id)
-                            
-                            # Determine attendance status
-                            is_past = session.date.date() < DateTimeHandler.now().date()
-                            attendance_status = None  # Default for future sessions
-                            
-                            if attendance:
-                                attendance_status = attendance.attended
-                            elif is_past:
-                                attendance_status = False  # Past session without attendance = absent
-                            
-                            # Apply attendance filter
-                            if attended is not None:
-                                if attended and attendance_status is not True:
-                                    continue
-                                if not attended and attendance_status is not False:
-                                    continue
-                            
-                            all_sessions.append({
-                                'session_id': session_id,
-                                'date': session.date,
-                                'class_id': class_id,
-                                'attended': attendance_status,
-                                'is_past': is_past,
-                                'is_future': not is_past,
-                                'attendance_id': UUID(bytes=attendance.id) if attendance else None
-                            })
+                        if date and class_.date.date() != date:
+                            continue
+                        
+                        attendance = await self.repository.get_by_user_and_class(user_id, class_id)
+                        
+                        is_past = class_.date.date() < DateTimeHandler.now().date()
+                        attendance_status = None
+                        
+                        if attendance:
+                            attendance_status = attendance.attended
+                        elif is_past:
+                            attendance_status = False
+                        
+                        if attended is not None:
+                            if attended and attendance_status is not True:
+                                continue
+                            if not attended and attendance_status is not False:
+                                continue
+                        
+                        all_classes.append({
+                            'class_id': class_id,
+                            'date': class_.date,
+                            'attended': attendance_status,
+                            'is_past': is_past,
+                            'is_future': not is_past,
+                            'attendance_id': UUID(bytes=attendance.id) if attendance else None
+                        })
             
-            # Sort by date
-            all_sessions.sort(key=lambda s: s['date'], reverse=True)
-            
-            # Paginate
+            all_classes.sort(key=lambda c: c['date'], reverse=True)
             skip = (page - 1) * page_size
-            items = all_sessions[skip:skip + page_size]
+            items = all_classes[skip:skip + page_size]
             
-            return {
-                'items': items,
-            }
+            return {'items': items}
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
 

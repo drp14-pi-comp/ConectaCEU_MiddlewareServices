@@ -10,4 +10,4 @@ class ClassAttendanceModel(UuidPkUpdatableBaseModel):
     
     # Foreign keys
     user_id = Column(BINARY(16), ForeignKey('user.id'), nullable=False)
-    class_session_id = Column(BINARY(16), ForeignKey('class_session.id'), nullable=False)
+    class_id = Column(BINARY(16), ForeignKey('class.id'), nullable=False)

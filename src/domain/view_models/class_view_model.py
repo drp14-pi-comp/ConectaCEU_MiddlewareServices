@@ -10,7 +10,7 @@ class ClassViewModel(BaseModel):
     updated_at: Optional[datetime]
     seats_in_use: int
     active: bool
+    date: datetime
     component_id: UUID
-    shift_type_id: int
     
     model_config = ConfigDict(from_attributes=True)

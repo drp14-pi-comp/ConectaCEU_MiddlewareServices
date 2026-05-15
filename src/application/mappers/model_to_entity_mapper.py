@@ -19,7 +19,6 @@ from src.data.models.address_model import AddressModel
 from src.data.models.course_model import CourseModel
 from src.data.models.course_component_model import CourseComponentModel
 from src.data.models.class_model import ClassModel
-from src.data.models.class_session_model import ClassSessionModel
 from src.data.models.class_attendance_model import ClassAttendanceModel
 from src.data.models.user_course_model import UserCourseModel
 from src.data.models.document_model import DocumentModel
@@ -39,7 +38,6 @@ from src.domain.entities.address import Address
 from src.domain.entities.course import Course
 from src.domain.entities.course_component import CourseComponent
 from src.domain.entities.class_ import Class
-from src.domain.entities.class_session import ClassSession
 from src.domain.entities.class_attendance import ClassAttendance
 from src.domain.entities.user_course import UserCourse
 from src.domain.entities.document import Document
@@ -104,7 +102,8 @@ class ModelToEntityMapper:
             workload=model.workload,
             active=model.active,
             responsible_educator_1=UUID(bytes=model.responsible_educator_1),
-            responsible_educator_2=UUID(bytes=model.responsible_educator_2) if model.responsible_educator_2 else None
+            responsible_educator_2=UUID(bytes=model.responsible_educator_2) if model.responsible_educator_2 else None,
+            shift_type_id=model.shift_type_id
         )
     
     # ========== Course Component ==========
@@ -116,7 +115,6 @@ class ModelToEntityMapper:
             updated_at=model.updated_at,
             name=model.name,
             description=model.description,
-            seat_limit_per_class=model.seat_limit_per_class,
             active=model.active,
             course_id=UUID(bytes=model.course_id)
         )
@@ -130,22 +128,11 @@ class ModelToEntityMapper:
             updated_at=model.updated_at,
             seats_in_use=model.seats_in_use,
             active=model.active,
-            component_id=UUID(bytes=model.component_id),
-            shift_type_id=model.shift_type_id
-        )
-    
-    # ========== Class Session ==========
-    @staticmethod
-    def class_session(model: ClassSessionModel) -> ClassSession:
-        return ClassSession(
-            id=UUID(bytes=model.id),
-            created_at=model.created_at,
-            updated_at=model.updated_at,
             date=model.date,
-            class_id=UUID(bytes=model.class_id)
+            course_component_id=UUID(bytes=model.course_component_id)
         )
     
-    # ========== Attendance ==========
+    # ========== Class attendance ==========
     @staticmethod
     def class_attendance(model: ClassAttendanceModel) -> ClassAttendance:
         return ClassAttendance(
@@ -154,7 +141,7 @@ class ModelToEntityMapper:
             updated_at=model.updated_at,
             attended=model.attended,
             user_id=UUID(bytes=model.user_id),
-            class_session_id=UUID(bytes=model.class_session_id)
+            class_id=UUID(bytes=model.class_id)
         )
     
     # ========== User Course ==========

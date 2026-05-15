@@ -20,7 +20,6 @@ from src.data.models.address_model import AddressModel
 from src.data.models.course_model import CourseModel
 from src.data.models.course_component_model import CourseComponentModel
 from src.data.models.class_model import ClassModel
-from src.data.models.class_session_model import ClassSessionModel
 from src.data.models.class_attendance_model import ClassAttendanceModel
 from src.data.models.user_course_model import UserCourseModel
 from src.data.models.document_model import DocumentModel

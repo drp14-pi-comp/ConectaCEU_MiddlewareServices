@@ -12,11 +12,7 @@ class Class(BaseModel):
     updated_at: Optional[datetime] = None
     seats_in_use: int = Field(0, ge=0)
     active: bool = True
-    component_id: UUID
-    shift_type_id: int
+    date: datetime
+    course_component_id: UUID
     
     model_config = ConfigDict(from_attributes=True)
-    
-    def has_available_seats(self, seat_limit: int) -> bool:
-        """Check if class has available seats"""
-        return self.seats_in_use < seat_limit

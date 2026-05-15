@@ -107,6 +107,7 @@ async def list_courses(
     name: str = Query(None),
     active: bool = Query(None),
     educator_id: UUID = Query(None),
+    shift_type_id: int = Query(None),
     page: int = Query(1, ge=1),
     page_size: int = Query(10, ge=1, le=100),
     service: CourseService = Depends(get_course_service)
@@ -116,6 +117,7 @@ async def list_courses(
         name=name,
         active=active,
         educator_id=str(educator_id) if educator_id else None,
+        shift_type_id=shift_type_id,
         page=page,
         page_size=page_size
     )

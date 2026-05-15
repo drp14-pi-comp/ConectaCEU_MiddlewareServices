@@ -5,7 +5,6 @@ from sqlalchemy.orm import Session
 
 from src.application.services.class_service import ClassService
 from src.data.repositories.class_repository import ClassRepository
-from src.data.repositories.class_session_repository import ClassSessionRepository
 from src.data.repositories.course_component_repository import CourseComponentRepository
 from src.data.repositories.course_repository import CourseRepository
 from src.data.repositories.user_course_repository import UserCourseRepository
@@ -28,8 +27,7 @@ def get_class_service(db: Session = Depends(get_db)) -> ClassService:
     component_repo = CourseComponentRepository(db)
     user_course_repo = UserCourseRepository(db)
     course_repo = CourseRepository(db)
-    session_repo = ClassSessionRepository(db)
-    return ClassService(class_repo, component_repo, user_course_repo, course_repo, session_repo)
+    return ClassService(class_repo, component_repo, user_course_repo, course_repo)
 
 
 @router.post("/", status_code=status.HTTP_201_CREATED)
@@ -38,12 +36,12 @@ async def bulk_create_classes(
     current_user: User = Depends(get_current_active_user),
     service: ClassService = Depends(get_class_service)
 ):
-    """Create multiple classes with sessions. Admin (1), Coordinator (3), Educator (4) only."""
+    """Create multiple classes. Admin (1), Coordinator (3), Educator (4) only."""
     if current_user.user_type_id not in [1, 3, 4]:
         raise HTTPException(status_code=403, detail="Only admins, coordinators, and educators can create classes")
     
     try:
-        return await service.bulk_create_classes_with_sessions(dto)
+        return await service.bulk_create_classes(dto)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -105,7 +103,6 @@ async def activate_class(
 @router.get("/", response_model=list[ClassViewModel])
 async def list_classes(
     component_id: UUID = Query(None),
-    shift_type_id: int = Query(None),
     active: bool = Query(None),
     page: int = Query(1, ge=1),
     page_size: int = Query(10, ge=1, le=100),
@@ -114,7 +111,6 @@ async def list_classes(
     """List classes with filters."""
     filters = ClassFilterDTO(
         component_id=str(component_id) if component_id else None,
-        shift_type_id=shift_type_id,
         active=active,
         page=page,
         page_size=page_size

@@ -11,6 +11,7 @@ class CourseCreateDTO(BaseModel):
     workload: int = Field(..., ge=1)
     responsible_educator_1: str  # UUID as string
     responsible_educator_2: Optional[str] = None  # UUID as string
+    shift_type_id: int
     components: list[CourseComponentCreateDTO]
 
 class CourseUpdateDTO(BaseModel):
@@ -20,16 +21,14 @@ class CourseUpdateDTO(BaseModel):
     workload: Optional[int] = Field(None, ge=1)
     responsible_educator_1: Optional[str] = None
     responsible_educator_2: Optional[str] = None
+    shift_type_id: Optional[int] = None
     active: Optional[bool] = None
-    
-    def get_non_none_fields(self) -> dict:
-        """Return only fields that are not None"""
-        return {k: v for k, v in self.model_dump().items() if v is not None}
 
 class CourseFilterDTO(BaseModel):
     """DTO for filtering courses"""
     name: Optional[str] = None
     active: Optional[bool] = None
     responsible_educator_1: Optional[str] = None
+    shift_type_id: Optional[int] = None
     page: int = Field(1, ge=1)
     page_size: int = Field(10, ge=1, le=100)
