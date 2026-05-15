@@ -58,6 +58,5 @@ def get_db() -> Generator[Session, None, None]:
 def get_db_session() -> Session:
     """
     Get a database session for non-FastAPI contexts (console apps, scripts).
-    Remember to close it manually!
     """
     return SessionLocal()
