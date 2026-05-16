@@ -46,7 +46,7 @@ EXCLUSION_HOURS = settings.EXCLUSION_HOURS
 BATCH_SIZE = settings.BATCH_SIZE
 
 
-async def _stream_exclusions() -> AsyncGenerator[ProfilesToExcludeModel]:
+async def _stream_exclusions() -> AsyncGenerator[ProfilesToExcludeModel, None]:
     """Yield exclusion entries one batch at a time."""
     session = SessionLocal()
     try:

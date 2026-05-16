@@ -148,7 +148,7 @@ class BroadcastService:
         self,
         user_ids: Optional[List[str]] = None,
         course_id: Optional[str] = None
-    ) -> AsyncGenerator[UserModel]:
+    ) -> AsyncGenerator[UserModel, None]:
         """
         Stream recipients one at a time from different sources.
         Yields one user at a time to avoid loading all into memory.
@@ -227,7 +227,7 @@ class BroadcastService:
                         seen_ids.add(user.id)
                         yield user
 
-    async def _stream_enrollments(self, course_id: UUID) -> AsyncGenerator[UserCourseModel]:
+    async def _stream_enrollments(self, course_id: UUID) -> AsyncGenerator[UserCourseModel, None]:
         """Stream active enrollments for a class"""
         page_size = 100
         page = 0

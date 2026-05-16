@@ -116,7 +116,7 @@ class DatabaseContext:
 
 
 # Dependency for FastAPI
-async def get_db_context() -> AsyncGenerator[DatabaseContext]:
+async def get_db_context() -> AsyncGenerator[DatabaseContext, None]:
     """Dependency injection for DatabaseContext"""
     context = DatabaseContext()
     try:

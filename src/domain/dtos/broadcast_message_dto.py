@@ -2,6 +2,11 @@
 from typing import Optional, List
 from pydantic import BaseModel, Field, field_validator
 
+class BroadcastDocumentDTO(BaseModel):
+    """Common structure for broadcast documents"""
+    fileNameWithExtension: str = Field(..., min_length=5, max_length=30)
+    fileBase64: str =  Field(..., min_length=1)
+
 class BroadcastMessageCreateDTO(BaseModel):
     """DTO for creating a broadcast message"""
     subject: str = Field(..., min_length=10, max_length=40)
@@ -47,8 +52,3 @@ class BroadcastMessageCreateDTO(BaseModel):
         if not v.strip():
             raise ValueError('Message cannot be empty')
         return v.strip()
-    
-class BroadcastDocumentDTO(BaseModel):
-    """Common structure for broadcast documents"""
-    fileNameWithExtension: str = Field(..., min_length=5, max_length=30)
-    fileBase64: str =  Field(..., min_length=1)
