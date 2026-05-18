@@ -67,12 +67,14 @@ async def get_user_documents(
 
 @router.get("/{document_id}", response_model=DocumentViewModel)
 async def get_document(
+    request: Request,
     document_id: UUID,
     current_user: User = Depends(get_current_active_user),
     service: DocumentService = Depends(get_document_service)
 ):
     """Get document by ID."""
-    document = await service.get_by_id(document_id)
+    user_ip = request.client.host if request.client else "unknown"
+    document = await service.get_document_by_id(document_id, current_user.id, user_ip)
     if not document:
         raise HTTPException(status_code=404, detail="Document not found")
     
@@ -80,26 +82,6 @@ async def get_document(
         raise HTTPException(status_code=403, detail="Can only view your own documents")
     
     return document
-
-
-@router.get("/{document_id}/download")
-async def download_document(
-    request: Request,
-    document_id: UUID,
-    current_user: User = Depends(get_current_active_user),
-    service: DocumentService = Depends(get_document_service)
-):
-    """Download a document."""
-    try:
-        user_ip = request.client.host if request.client else "unknown"
-        result = await service.get_document_for_download(
-            document_id,
-            current_user.id,
-            user_ip
-        )
-        return result
-    except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
 
 
 # Document validation

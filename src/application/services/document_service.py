@@ -45,7 +45,7 @@ class DocumentService(BaseService):
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
     
-    async def get_document_for_download(
+    async def get_document_by_id(
         self, 
         document_id: UUID,
         user_id: UUID,
