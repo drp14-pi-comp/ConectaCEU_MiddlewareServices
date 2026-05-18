@@ -112,11 +112,6 @@ class AuthService:
             if not await self._verify_password(body.password, user.password):
                 return None
             
-            # Check if account is locked
-            if hasattr(user, 'locked_until') and user.locked_until:
-                if user.locked_until > DateTimeHandler.now():
-                    return None
-            
             # Generate tokens
             user_uuid = UUID(bytes=user.id)
             has_pending_deactivation = await self.profiles_to_exclude_repo.is_within_cancellation_window(user_uuid)

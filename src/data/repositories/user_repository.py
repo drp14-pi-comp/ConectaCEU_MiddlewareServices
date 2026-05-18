@@ -14,7 +14,7 @@ class UserRepository(BaseRepository[UserModel]):
         super().__init__(session, UserModel)
     
     async def get_by_document(self, document: str) -> Optional[UserModel]:
-        """Get user by document (CPF)"""
+        """Get user by document"""
         stmt = select(UserModel).where(UserModel.document == document)
         result = self.session.execute(stmt)
         return result.scalar_one_or_none()

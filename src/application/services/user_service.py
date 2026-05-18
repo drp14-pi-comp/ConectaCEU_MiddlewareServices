@@ -233,25 +233,6 @@ class UserService(BaseService):
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
     
-    async def authenticate(self, dto: UserLoginDTO) -> Optional[UserViewModel]:
-        """Authenticate user with document and password"""
-        try:
-            user = await self.repository.get_by_document(dto.document)
-            if not user:
-                return None
-            
-            if not user.active:
-                raise ValueError("Conta do usuário desativada")
-            
-            if not self._verify_password(dto.password, user.password):
-                return None
-            
-            entity = ModelToEntityMapper.user(user)
-
-            return EntityToViewModelMapper.user(entity)
-        except Exception as e:
-            await ApplicationLogger.log_error(e, reraise=True)
-    
     async def change_password(self, user_id: UUID, dto: PasswordChangeDTO) -> bool:
         """Change user password with validation"""
         try:
