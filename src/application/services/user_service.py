@@ -19,6 +19,7 @@ from src.application.mappers.entity_to_model_mapper import EntityToModelMapper
 from src.application.mappers.model_to_entity_mapper import ModelToEntityMapper
 from src.application.mappers.entity_to_view_model_mapper import EntityToViewModelMapper
 from src.application.mappers.update_mapper import UpdateMapper
+from src.domain.dtos.document_dto import DocumentCreateDTO
 from src.domain.dtos.user_dto import DeactivateUserDTO, UserCreateDTO, UserUpdateDTO, UserLoginDTO, PasswordChangeDTO
 from src.domain.view_models.user_view_model import StudentUserViewModel, UserViewModel
 from src.infrastructure.handlers.datetime_handler import DateTimeHandler
@@ -144,7 +145,10 @@ class UserService(BaseService):
             )
             
             # ========== Create Documents ==========
-            async def _create_document(doc_dto, user_id_bytes, legal_rep_id_bytes=None) -> DocumentModel:
+            async def _create_document(doc_dto: DocumentCreateDTO, user_id_bytes, legal_rep_id_bytes=None) -> DocumentModel:
+                id_document_types = [1, 2, 3]
+                if doc_dto.document_type_id in id_document_types and doc_dto.is_front is None:
+                    raise ValueError('Documentos de identidade precisam estar declarados como frente ou verso')
                 doc_entity = DtoToEntityMapper.document(doc_dto)
                 doc_entity.user_id = UUID(bytes=user_id_bytes)
                 if legal_rep_id_bytes:
