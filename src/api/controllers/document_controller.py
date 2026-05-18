@@ -60,7 +60,7 @@ async def get_user_documents(
     - Users can view their own documents
     """
     if current_user.user_type_id not in [1, 2] and current_user.id != user_id:
-        raise HTTPException(status_code=403, detail="Can only view your own documents")
+        raise HTTPException(status_code=403, detail="Só pode ver seus próprios documentos")
     
     return await service.get_user_documents(user_id)
 
@@ -76,12 +76,30 @@ async def get_document(
     user_ip = request.client.host if request.client else "unknown"
     document = await service.get_document_by_id(document_id, current_user.id, user_ip)
     if not document:
-        raise HTTPException(status_code=404, detail="Document not found")
+        raise HTTPException(status_code=404, detail="Nenhum documento encontrado")
     
     if current_user.user_type_id not in [1, 2] and document.user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Can only view your own documents")
+        raise HTTPException(status_code=403, detail="Só pode ver seus próprios documentos")
     
     return document
+
+@router.get("/type/{document_type_id}", response_model=List[DocumentViewModel])
+async def get_document_by_type(
+    request: Request,
+    document_type_id: int,
+    current_user: User = Depends(get_current_active_user),
+    service: DocumentService = Depends(get_document_service)
+):
+    """Get document by type."""
+    user_ip = request.client.host if request.client else "unknown"
+    documents = await service.get_documents_by_type(document_type_id, current_user.id, user_ip)
+    if not documents:
+        raise HTTPException(status_code=404, detail="Nenhum documento encontrado")
+    
+    if current_user.user_type_id not in [1, 2] and any(doc.user_id != current_user.id for doc in documents):
+        raise HTTPException(status_code=403, detail="Só pode ver seus próprios documentos")
+    
+    return documents
 
 
 # Document validation
