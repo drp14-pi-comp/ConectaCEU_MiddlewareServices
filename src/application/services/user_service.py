@@ -273,14 +273,13 @@ class UserService(BaseService):
             await ApplicationLogger.log_error(e, reraise=True)
     
     async def deactivate_user(
-        self, 
+        self,
+        user_id: UUID,
         dto: DeactivateUserDTO,
         performed_by_user_id: Optional[UUID] = None,
         user_ip_address: Optional[str] = None
     ) -> bool:
         """Deactivate user account and add to exclusion list"""
-        user_id = UUID(dto.user_id)
-
         user = await self.repository.get_by_id(user_id)
         if not user:
             raise ValueError("Usuário não encontrado")

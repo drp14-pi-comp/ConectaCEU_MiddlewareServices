@@ -70,6 +70,7 @@ async def create_user(
 @router.patch("/{user_id}/deactivate")
 async def deactivate_user(
     request: Request,
+    user_id: UUID,
     dto: DeactivateUserDTO,
     current_user: User = Depends(get_current_active_user),
     service: UserService = Depends(get_user_service)
@@ -82,13 +83,14 @@ async def deactivate_user(
     
     # Validates if student user is deactivating their own account
     if current_user.user_type_id == 5:
-        user: UserModel = await service.get_by_id(UUID(dto.user_id))
+        user: UserModel = await service.get_by_id(user_id)
         if (user.id != current_user.id):
             raise HTTPException(status_code=403, detail="Só pode desativar seu próprio usuário")
     
     try:
         user_ip = request.client.host if request.client else "unknown"
         result = await service.deactivate_user(
+            user_id,
             dto,
             performed_by_user_id=current_user.id,
             user_ip_address=user_ip

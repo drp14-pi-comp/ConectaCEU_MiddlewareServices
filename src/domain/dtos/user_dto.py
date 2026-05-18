@@ -63,7 +63,6 @@ class UserUpdateDTO(BaseModel):
 
 class DeactivateUserDTO(BaseModel):
     """DTO for deactivation an user"""
-    user_id: str  # UUID as string
     reason: str = Field(min_length=10)
 
 class UserLoginDTO(BaseModel):
