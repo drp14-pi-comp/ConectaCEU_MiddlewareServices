@@ -114,15 +114,10 @@ class UserService(BaseService):
             
             # ========== Business Rules ==========
             is_minor = (DateTimeHandler.now().date() - dto.birthdate).days < 18 * 365
-            is_over_70 = (DateTimeHandler.now().date() - dto.birthdate).days > 70 * 365
 
-            # Minors must have legal representative (regardless of user type)
+            # Minors must have legal representative
             if is_minor and not dto.legal_representative_1:
                 raise ValueError("Menores de idade devem ter pelo menos 1 (um) representante legal")
-            
-            # Over 70 must have health certificate
-            if is_public and is_over_70 and not dto.health_certificate:
-                raise ValueError("Usuários com mais de 70 (setenta) anos precisam de atestados de saúde")
             
             # ========== Create User ==========
             entity = DtoToEntityMapper.user(dto)
