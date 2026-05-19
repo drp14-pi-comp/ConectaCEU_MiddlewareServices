@@ -29,6 +29,8 @@ class DocumentService(BaseService):
     async def upload_document(self, dto: DocumentCreateDTO) -> DocumentViewModel:
         """Upload a new document"""
         try:
+            if len(dto.base64) <= 0:
+                raise ValueError('Conteúdo do documento não pode ser vazio')
             if not dto.user_id:
                 raise ValueError('Documento precisa estar atrelado a um usuário')
             user = await self.user_repo.get_by_id(UUID(dto.user_id))

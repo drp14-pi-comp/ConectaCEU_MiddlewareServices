@@ -146,6 +146,8 @@ class UserService(BaseService):
             
             # ========== Create Documents ==========
             async def _create_document(doc_dto: DocumentCreateDTO, user_id_bytes, legal_rep_id_bytes=None) -> DocumentModel:
+                if len(doc_dto.base64) <= 0:
+                    raise ValueError('Conteúdo do documento não pode ser vazio')
                 id_document_types = [1, 2, 3]
                 if doc_dto.document_type_id in id_document_types and doc_dto.is_front is None:
                     raise ValueError('Documentos de identidade precisam estar declarados como frente ou verso')
