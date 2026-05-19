@@ -62,10 +62,12 @@ class DocumentService(BaseService):
             from src.data.repositories.log_document_request_repository import LogDocumentRequestRepository
             log_repo = LogDocumentRequestRepository(self.repository.session)
             await log_repo.log(
-                document_type_id=document.document_type_id,
+                document_id=document.id,
                 user_id=user_id.bytes,
                 user_ip_address=user_ip_address
             )
+
+            self.repository.session.commit()
             
             entity = ModelToEntityMapper.document(document)
 
@@ -75,8 +77,9 @@ class DocumentService(BaseService):
         
     async def get_documents_by_type(
         self,
-        document_type_id: int,
         user_id: UUID,
+        document_type_id: int,
+        logged_user_id: UUID,
         user_ip_address: str
     ) -> List[DocumentViewModel]:
         """Get a document by type"""
@@ -85,14 +88,17 @@ class DocumentService(BaseService):
             if not documents or len(documents) <= 0:
                 raise ValueError("Nenhum documento encontrado")
             
-            # Log document request
-            from src.data.repositories.log_document_request_repository import LogDocumentRequestRepository
-            log_repo = LogDocumentRequestRepository(self.repository.session)
-            await log_repo.log(
-                document_type_id=document_type_id,
-                user_id=user_id.bytes,
-                user_ip_address=user_ip_address
-            )
+            for document in documents:
+                # Log document request
+                from src.data.repositories.log_document_request_repository import LogDocumentRequestRepository
+                log_repo = LogDocumentRequestRepository(self.repository.session)
+                await log_repo.log(
+                    document_id=document.id,
+                    user_id=logged_user_id.bytes,
+                    user_ip_address=user_ip_address
+                )
+
+            self.repository.session.commit()
             
             entities = [ModelToEntityMapper.document(model) for model in documents]
 

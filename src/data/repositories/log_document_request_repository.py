@@ -11,13 +11,13 @@ class LogDocumentRequestRepository(BaseRepository):
     
     async def log(
         self,
-        document_type_id: int,
+        document_id: bytes,
         user_id: bytes,
         user_ip_address: str
     ) -> LogDocumentRequestModel:
         """Log a document request"""
         log = LogDocumentRequestModel(
-            document_type_id=document_type_id,
+            document_id=document_id,
             user_id=user_id,
             user_ip_address=user_ip_address
         )

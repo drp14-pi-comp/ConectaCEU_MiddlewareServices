@@ -9,7 +9,7 @@ class LogDocumentRequest(BaseModel):
     id: UUID
     created_at: datetime
     user_ip_address: str
-    document_type_id: int
+    document_id: UUID
     user_id: UUID
     
     model_config = ConfigDict(from_attributes=True)

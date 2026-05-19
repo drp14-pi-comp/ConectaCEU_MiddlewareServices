@@ -83,20 +83,21 @@ async def get_document(
     
     return document
 
-@router.get("/type/{document_type_id}", response_model=List[DocumentViewModel])
+@router.get("user/{user_id}/type/{document_type_id}", response_model=List[DocumentViewModel])
 async def get_document_by_type(
     request: Request,
+    user_id: UUID,
     document_type_id: int,
     current_user: User = Depends(get_current_active_user),
     service: DocumentService = Depends(get_document_service)
 ):
     """Get document by type."""
     user_ip = request.client.host if request.client else "unknown"
-    documents = await service.get_documents_by_type(document_type_id, current_user.id, user_ip)
+    documents = await service.get_documents_by_type(user_id, document_type_id, current_user.id, user_ip)
     if not documents:
         raise HTTPException(status_code=404, detail="Nenhum documento encontrado")
     
-    if current_user.user_type_id not in [1, 2] and any(doc.user_id != current_user.id for doc in documents):
+    if current_user.user_type_id not in [1, 2] and user_id != current_user.id:
         raise HTTPException(status_code=403, detail="Só pode ver seus próprios documentos")
     
     return documents

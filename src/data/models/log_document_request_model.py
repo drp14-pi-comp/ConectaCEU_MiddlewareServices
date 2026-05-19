@@ -1,5 +1,5 @@
 """Document request logging model"""
-from sqlalchemy import Column, Integer, String, ForeignKey
+from sqlalchemy import Column, String, ForeignKey
 from sqlalchemy.dialects.mysql import BINARY
 from src.data.db_context.base import LogBaseModel
 
@@ -9,5 +9,5 @@ class LogDocumentRequestModel(LogBaseModel):
     user_ip_address = Column(String(39), nullable=False)
     
     # Foreign keys
-    document_type_id = Column(Integer, ForeignKey('document_type.id'), nullable=False)
+    document_id = Column(BINARY(16), ForeignKey('document.id'), nullable=False)
     user_id = Column(BINARY(16), ForeignKey('user.id'), nullable=False)
