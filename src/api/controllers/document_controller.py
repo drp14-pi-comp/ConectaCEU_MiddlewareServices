@@ -45,7 +45,8 @@ async def upload_document(
 ):
     """Upload a new document."""
     try:
-        if dto.user_id and current_user.id != dto.user_id:
+        # Students can only upload their own documents
+        if current_user.user_type_id == 5 and dto.user_id and current_user.id != dto.user_id:
             ValueError('Só pode enviar seus próprios documentos')
         return await service.upload_document(dto)
     except ValueError as e:
