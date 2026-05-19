@@ -46,26 +46,6 @@ async def bulk_create_classes(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.put("/{class_id}", response_model=ClassViewModel)
-async def update_class(
-    class_id: UUID,
-    dto: ClassUpdateDTO,
-    current_user: User = Depends(get_current_active_user),
-    service: ClassService = Depends(get_class_service)
-):
-    """Update a class. Admin (1), Coordinator (3), Educator (4) only."""
-    if current_user.user_type_id not in [1, 3, 4]:
-        raise HTTPException(status_code=403, detail="Only admins, coordinators, and educators can update classes")
-    
-    try:
-        class_ = await service.update_class(class_id, dto)
-        if not class_:
-            raise HTTPException(status_code=404, detail="Class not found")
-        return class_
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-
 @router.patch("/{class_id}/deactivate")
 async def deactivate_class(
     class_id: UUID,

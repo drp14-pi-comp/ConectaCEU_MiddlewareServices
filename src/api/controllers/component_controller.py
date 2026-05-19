@@ -40,26 +40,6 @@ async def create_component(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.put("/{component_id}", response_model=CourseComponentViewModel)
-async def update_component(
-    component_id: UUID,
-    dto: CourseComponentUpdateDTO,
-    current_user: User = Depends(get_current_active_user),
-    service: CourseComponentService = Depends(get_component_service)
-):
-    """Update a component. Admin (1), Coordinator (3), Educator (4) only."""
-    if current_user.user_type_id not in [1, 3, 4]:
-        raise HTTPException(status_code=403, detail="Only admins, coordinators, and educators can update components")
-    
-    try:
-        component = await service.update_component(component_id, dto)
-        if not component:
-            raise HTTPException(status_code=404, detail="Component not found")
-        return component
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-
 @router.patch("/{component_id}/deactivate")
 async def deactivate_component(
     component_id: UUID,

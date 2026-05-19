@@ -48,26 +48,6 @@ async def create_course(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.put("/{course_id}", response_model=CourseViewModel)
-async def update_course(
-    course_id: UUID,
-    dto: CourseUpdateDTO,
-    current_user: User = Depends(get_current_active_user),
-    service: CourseService = Depends(get_course_service)
-):
-    """Update a course. Admin (1), Coordinator (3), Educator (4) only."""
-    if current_user.user_type_id not in [1, 3, 4]:
-        raise HTTPException(status_code=403, detail="Only admins, coordinators, and educators can update courses")
-    
-    try:
-        course = await service.update_course(course_id, dto)
-        if not course:
-            raise HTTPException(status_code=404, detail="Course not found")
-        return course
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-
 @router.patch("/{course_id}/deactivate")
 async def deactivate_course(
     course_id: UUID,
