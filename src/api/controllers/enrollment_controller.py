@@ -97,9 +97,9 @@ async def get_enrollment_summary(
     return await service.get_enrollment_summary(user_id)
 
 
-@router.get("/class/{class_id}", response_model=list[UserCourseViewModel])
-async def get_class_enrollments(
-    class_id: UUID,
+@router.get("/course/{course_id}", response_model=list[UserCourseViewModel])
+async def get_course_enrollments(
+    course_id: UUID,
     current_user: User = Depends(get_current_active_user),
     service: UserCourseService = Depends(get_user_course_service)
 ):
@@ -107,10 +107,10 @@ async def get_class_enrollments(
     Get all enrollments for a class.
     Admin (1), Secretary (2), Coordinator (3), Educator (4) only.
     """
-    if current_user.user_type_id not in [1, 2, 3, 4]:
+    if current_user.user_type_id == 5:
         raise HTTPException(status_code=403, detail="Only staff can view class enrollments")
     
-    return await service.get_course_enrollments(class_id)
+    return await service.get_course_enrollments(course_id)
 
 
 @router.patch("/{enrollment_id}/unenroll")
