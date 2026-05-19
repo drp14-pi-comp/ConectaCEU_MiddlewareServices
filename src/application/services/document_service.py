@@ -13,6 +13,7 @@ from src.application.mappers.entity_to_view_model_mapper import EntityToViewMode
 from src.data.repositories.user_repository import UserRepository
 from src.domain.dtos.document_dto import DocumentCreateDTO
 from src.domain.view_models.document_view_model import DocumentViewModel
+from src.infrastructure.handlers.datetime_handler import DateTimeHandler
 
 class DocumentService(BaseService):
     """Service for Document business logic"""
@@ -44,6 +45,7 @@ class DocumentService(BaseService):
                 self.repository.update(existing_document)
             else:
                 saved_model = await self.repository.create(model)
+            self._create_pending_validation(model)
             self.repository.session.commit()
             saved_entity = ModelToEntityMapper.document(saved_model)
             return EntityToViewModelMapper.document(saved_entity)
@@ -132,3 +134,22 @@ class DocumentService(BaseService):
             return result
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
+
+    async def _create_pending_validation(self, document: DocumentModel) -> None:
+        """Create pending validation for secretary review"""
+        from uuid import uuid4
+        from src.domain.entities.document_validation import DocumentValidation
+        from src.application.mappers.entity_to_model_mapper import EntityToModelMapper
+        from src.data.repositories.document_validation_repository import DocumentValidationRepository
+        doc_validation_repo = DocumentValidationRepository(self.repository.session)
+        
+        validation = DocumentValidation(
+            id=uuid4(),
+            created_at=DateTimeHandler.now(),
+            updated_at=None,
+            rejection_reason=None,
+            document_validation_status_type_id=1,  # Pending
+            document_id=UUID(bytes=document.id)
+        )
+        validation_model = EntityToModelMapper.document_validation(validation)
+        await doc_validation_repo.create(validation_model)
