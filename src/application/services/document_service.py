@@ -10,19 +10,30 @@ from src.application.mappers.dto_to_entity_mapper import DtoToEntityMapper
 from src.application.mappers.entity_to_model_mapper import EntityToModelMapper
 from src.application.mappers.model_to_entity_mapper import ModelToEntityMapper
 from src.application.mappers.entity_to_view_model_mapper import EntityToViewModelMapper
+from src.data.repositories.user_repository import UserRepository
 from src.domain.dtos.document_dto import DocumentCreateDTO
 from src.domain.view_models.document_view_model import DocumentViewModel
 
 class DocumentService(BaseService):
     """Service for Document business logic"""
     
-    def __init__(self, repository: DocumentRepository):
+    def __init__(
+        self,
+        repository: DocumentRepository,
+        user_repo: UserRepository
+    ):
         super().__init__(repository, 'document', mapper_class=ModelToEntityMapper)
         self.repository = repository
+        self.user_repo = user_repo
     
     async def upload_document(self, dto: DocumentCreateDTO) -> DocumentViewModel:
         """Upload a new document"""
         try:
+            if not dto.user_id:
+                raise ValueError('Documento precisa estar atrelado a um usuário')
+            user = await self.user_repo.get_by_id(UUID(dto.user_id))
+            if not user:
+                raise ValueError('Usuário não encontrado')
             entity = DtoToEntityMapper.document(dto)
             model = EntityToModelMapper.document(entity)
             existing_document = await self.repository.get_latest_document(model)

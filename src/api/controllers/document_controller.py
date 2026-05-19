@@ -10,6 +10,7 @@ from src.data.repositories.document_repository import DocumentRepository
 from src.data.db_context.database import get_db
 from src.api.dependencies.auth_dependencies import get_current_active_user
 from src.data.repositories.document_validation_repository import DocumentValidationRepository
+from src.data.repositories.user_repository import UserRepository
 from src.domain.dtos.document_dto import DocumentCreateDTO
 from src.domain.dtos.document_validation_dto import DocumentValidationDTO
 from src.domain.view_models.document_validation_view_model import DocumentValidationViewModel
@@ -26,7 +27,8 @@ router = APIRouter(
 def get_document_service(db: Session = Depends(get_db)) -> DocumentService:
     """Dependency injection for DocumentService"""
     repository = DocumentRepository(db)
-    return DocumentService(repository)
+    user_repo = UserRepository(db)
+    return DocumentService(repository, user_repo)
     
     
 def get_validation_service(db: Session = Depends(get_db)) -> DocumentValidationService:
@@ -43,6 +45,8 @@ async def upload_document(
 ):
     """Upload a new document."""
     try:
+        if dto.user_id and current_user.id != dto.user_id:
+            ValueError('Só pode enviar seus próprios documentos')
         return await service.upload_document(dto)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
