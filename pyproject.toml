@@ -23,6 +23,7 @@ python-jose = {extras = ["cryptography"], version = "^3.5.0"}
 passlib = {extras = ["bcrypt"], version = "^1.7.4"}
 email-validator = "^2.3.0"
 requests = "^2.31.0"
+weasyprint = "^68.1"
 
 [tool.poetry.group.dev.dependencies]
 black = "^26.3.1"
