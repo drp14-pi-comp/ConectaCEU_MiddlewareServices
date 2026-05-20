@@ -122,15 +122,19 @@ class UserService(BaseService):
             
             # ========== Create User ==========
             entity = DtoToEntityMapper.user(dto)
+            is_user_student = entity.user_type_id == 5
 
             if entity.email != '' and not is_admin_or_secretary:
                 entity.email_verified = False
+
+            if is_user_student:
+                entity.student_sequential = await self._get_new_student_sequential()
             
             # Set user status based on creation path
-            if is_admin_or_secretary:
-                entity.active = True
-            else:
+            if is_user_student:
                 entity.active = False
+            else:
+                entity.active = True
             
             # Save user
             model = EntityToModelMapper.user(entity)
@@ -167,7 +171,6 @@ class UserService(BaseService):
                 created_documents.append(await _create_document(dto.health_certificate, user_id_bytes))
 
             # ========== Create Legal Representatives ==========
-            is_user_student = saved_model.user_type_id == 5  # Only creates representatives if user is student
             if is_user_student:
                 async def _create_legal_representative(rep_dto, student_user_id_bytes):
                     rep_entity = DtoToEntityMapper.legal_representative(rep_dto)
@@ -602,3 +605,9 @@ class UserService(BaseService):
             )
             validation_model = EntityToModelMapper.document_validation(validation)
             await self.doc_validation_repo.create(validation_model)
+    
+    async def _get_new_student_sequential(self) -> int:
+        """Get the latest student sequential"""
+        last_sequential = await self.repository.get_last_student_senquential()
+        new_sequential = last_sequential + 1
+        return new_sequential

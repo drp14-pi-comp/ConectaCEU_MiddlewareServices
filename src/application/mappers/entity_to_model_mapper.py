@@ -57,7 +57,8 @@ class EntityToModelMapper:
             sex_id=entity.sex_id,
             gender_id=entity.gender_id,
             user_type_id=entity.user_type_id,
-            email_verified=entity.email_verified if entity.email != '' else None
+            email_verified=entity.email_verified if entity.email != '' else None,
+            student_sequential=entity.student_sequential
         )
     
     # ========== Address ==========

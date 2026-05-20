@@ -17,6 +17,7 @@ class UserModel(UuidPkUpdatableBaseModel):
     password_reset_token = Column(String(255), nullable=True)
     password_reset_expires = Column(DateTime, nullable=True)
     email_verified = Column(Boolean, nullable=True)
+    student_sequential = Column(Integer, unique=True, nullable=True)
     
     # Foreign keys
     sex_id = Column(Integer, ForeignKey('user_sex_type.id'), nullable=False)

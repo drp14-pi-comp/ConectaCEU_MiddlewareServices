@@ -72,7 +72,8 @@ class ModelToEntityMapper:
             active=model.active,
             sex_id=model.sex_id,
             gender_id=model.gender_id,
-            user_type_id=model.user_type_id
+            user_type_id=model.user_type_id,
+            student_sequential=model.student_sequential
         )
     
     # ========== Address ==========

@@ -64,7 +64,8 @@ class EntityToViewModelMapper:
             active=entity.active,
             sex_id=entity.sex_id,
             gender_id=entity.gender_id,
-            user_type_id=entity.user_type_id
+            user_type_id=entity.user_type_id,
+            student_sequential=entity.student_sequential
         )
     
     # ========== Address ==========

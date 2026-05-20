@@ -2,7 +2,7 @@
 from typing import Optional, List
 from uuid import UUID
 from sqlalchemy.orm import Session
-from sqlalchemy import select, and_, or_
+from sqlalchemy import select, and_
 
 from src.data.models.user_model import UserModel
 from src.data.repositories.base.base_repository import BaseRepository
@@ -126,3 +126,15 @@ class UserRepository(BaseRepository[UserModel]):
             self.session.flush()
             return True
         return False
+    
+    async def get_last_student_senquential(self) -> int:
+        stmt = select(UserModel).where(
+            and_(
+                UserModel.user_type_id == 5,
+                UserModel.student_sequential != None
+            )
+        )
+        result = self.session.execute(stmt)
+        user = result.scalar_one_or_none()
+        last_sequential = user.student_sequential if user else 0
+        return last_sequential

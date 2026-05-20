@@ -24,6 +24,7 @@ class UserViewModel(BaseModel):
     sex_id: int
     gender_id: int
     user_type_id: int
+    student_sequential: Optional[int]
     
     model_config = ConfigDict(from_attributes=True)
 
