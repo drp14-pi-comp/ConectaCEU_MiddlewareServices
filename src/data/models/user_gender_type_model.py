@@ -5,4 +5,4 @@ from src.data.db_context.base import IntPkBaseModel
 class UserGenderTypeModel(IntPkBaseModel):
     __tablename__ = "user_gender_type"
 
-    description = Column(String(20), unique=True, nullable=False)
+    description = Column(String(30), unique=True, nullable=False)

@@ -1,5 +1,5 @@
 """User model"""
-from sqlalchemy import Column, String, DateTime, Integer, Boolean, ForeignKey, func
+from sqlalchemy import Column, String, DateTime, Integer, Boolean, ForeignKey
 from src.data.db_context.base import UuidPkUpdatableBaseModel
 
 class UserModel(UuidPkUpdatableBaseModel):
