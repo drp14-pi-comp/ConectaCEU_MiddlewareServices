@@ -98,7 +98,7 @@ class UserService(BaseService):
             
             # Validate creator if not public
             if is_public:
-                is_admin_or_secretary = False
+                is_creator_admin_or_secretary = False
             else:
                 creator = await self.repository.get_by_id(created_by_user_id)
                 if not creator:
@@ -111,7 +111,7 @@ class UserService(BaseService):
                 if creator.user_type_id not in [1, 2]:
                     raise ValueError("Este usuário não pode criar outros usuários")
                 
-                is_admin_or_secretary = True
+                is_creator_admin_or_secretary = True
             
             # ========== Business Rules ==========
             is_minor = (DateTimeHandler.now().date() - dto.birthdate).days < 18 * 365
@@ -122,19 +122,19 @@ class UserService(BaseService):
             
             # ========== Create User ==========
             entity = DtoToEntityMapper.user(dto)
-            is_user_student = entity.user_type_id == 5
+            is_creating_student = entity.user_type_id == 5
 
-            if entity.email != '' and not is_admin_or_secretary:
+            if entity.email != '' and not is_creator_admin_or_secretary:
                 entity.email_verified = False
 
-            if is_user_student:
+            if is_creating_student:
                 entity.student_sequential = await self._get_new_student_sequential()
             
-            # Set user status based on creation path
-            if is_user_student:
-                entity.active = False
-            else:
+            # Set user status based on creator role
+            if is_creator_admin_or_secretary:
                 entity.active = True
+            else:
+                entity.active = False
             
             # Save user
             model = EntityToModelMapper.user(entity)
@@ -171,7 +171,7 @@ class UserService(BaseService):
                 created_documents.append(await _create_document(dto.health_certificate, user_id_bytes))
 
             # ========== Create Legal Representatives ==========
-            if is_user_student:
+            if is_creating_student:
                 async def _create_legal_representative(rep_dto, student_user_id_bytes):
                     rep_entity = DtoToEntityMapper.legal_representative(rep_dto)
                     rep_entity.user_id = UUID(bytes=student_user_id_bytes)
@@ -192,7 +192,7 @@ class UserService(BaseService):
                     await _create_legal_representative(dto.legal_representative_2, user_id_bytes)
             
             # ========== Create Document Validations ==========
-            if is_admin_or_secretary:
+            if is_creator_admin_or_secretary:
                 await self._auto_approve_documents(created_documents)
             else:
                 await self._create_pending_validations(created_documents)
