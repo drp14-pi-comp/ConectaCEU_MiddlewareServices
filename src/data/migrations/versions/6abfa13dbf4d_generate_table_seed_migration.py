@@ -29,7 +29,7 @@ def upgrade() -> None:
     # ========== user_gender_type ==========
     op.bulk_insert(
         sa.table('user_gender_type', sa.column('id', sa.Integer), sa.column('description', sa.String)),
-        [{'id': 1, 'description': 'Mulher'}, {'id': 2, 'description': 'Homem'}, {'id': 3, 'description': 'Não-binário'}, {'id': 4, 'description': 'Outro'}]
+        [{'id': 1, 'description': 'Mulher'}, {'id': 2, 'description': 'Homem'}, {'id': 3, 'description': 'Não-binário'}, {'id': 4, 'description': 'Outro'}, {'id': 5, 'description': 'Prefiro não informar'}]
     )
 
     # ========== document_type ==========
