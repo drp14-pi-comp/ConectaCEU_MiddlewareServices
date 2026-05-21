@@ -20,7 +20,7 @@ from src.application.mappers.model_to_entity_mapper import ModelToEntityMapper
 from src.application.mappers.entity_to_view_model_mapper import EntityToViewModelMapper
 from src.application.mappers.update_mapper import UpdateMapper
 from src.domain.dtos.document_dto import DocumentCreateDTO
-from src.domain.dtos.user_dto import DeactivateUserDTO, UserCreateDTO, UserUpdateDTO, UserLoginDTO, PasswordChangeDTO
+from src.domain.dtos.user_dto import DeactivateUserDTO, UserCreateDTO, UserUpdateDTO, PasswordChangeDTO
 from src.domain.view_models.user_view_model import StudentUserViewModel, UserViewModel
 from src.infrastructure.handlers.datetime_handler import DateTimeHandler
 from src.infrastructure.handlers.password_hasher import PasswordHasher
@@ -60,6 +60,7 @@ class UserService(BaseService):
             created_by_user_id: ID of the user creating this account (None for public registration)
         """
         try:
+            # ========== Normalize fields ==========
             dto.document = re.sub(r'\D', '', dto.document)
 
             if dto.legal_representative_1:
@@ -67,6 +68,10 @@ class UserService(BaseService):
             
             if dto.legal_representative_2:
                 dto.legal_representative_2.document = re.sub(r'\D', '', dto.legal_representative_2.document)
+
+            dto.name = dto.name.title()
+            dto.address.street = dto.address.street.title()
+            dto.address.neighborhood = dto.address.neighborhood.title()
 
             # Validate if password are the same
             if dto.password != dto.confirm_password:
@@ -148,7 +153,7 @@ class UserService(BaseService):
                 hashed_password=entity.password
             )
             
-            # ========== Create Documents ==========
+            # ========== Creates uploaded documents ==========
             async def _create_document(doc_dto: DocumentCreateDTO, user_id_bytes, legal_rep_id_bytes=None) -> DocumentModel:
                 if len(doc_dto.base64) <= 0:
                     raise ValueError('Conteúdo do documento não pode ser vazio')
@@ -162,15 +167,15 @@ class UserService(BaseService):
                 doc_model = EntityToModelMapper.document(doc_entity)
                 return await self.document_repo.create(doc_model)
             
-            created_documents = []
-            created_documents.append(await _create_document(dto.id_document_front, user_id_bytes))
-            created_documents.append(await _create_document(dto.id_document_back, user_id_bytes))
-            created_documents.append(await _create_document(dto.user_photo, user_id_bytes))
+            created_documents_to_validate = []
+            created_documents_to_validate.append(await _create_document(dto.id_document_front, user_id_bytes))
+            created_documents_to_validate.append(await _create_document(dto.id_document_back, user_id_bytes))
+            created_documents_to_validate.append(await _create_document(dto.user_photo, user_id_bytes))
             
             if dto.health_certificate:
-                created_documents.append(await _create_document(dto.health_certificate, user_id_bytes))
+                created_documents_to_validate.append(await _create_document(dto.health_certificate, user_id_bytes))
 
-            # ========== Create Legal Representatives ==========
+            # ========== Create legal representatives ==========
             if is_creating_student:
                 async def _create_legal_representative(rep_dto, student_user_id_bytes):
                     rep_entity = DtoToEntityMapper.legal_representative(rep_dto)
@@ -179,9 +184,9 @@ class UserService(BaseService):
                     saved_rep = await self.legal_rep_repo.create(rep_model)
                     rep_id_bytes = saved_rep.id
                     
-                    created_documents.append(await _create_document(rep_dto.id_document_front, user_id_bytes, rep_id_bytes))
-                    created_documents.append(await _create_document(rep_dto.id_document_back, user_id_bytes, rep_id_bytes))
-                    created_documents.append(await _create_document(rep_dto.student_registry_authorization, user_id_bytes, rep_id_bytes))
+                    created_documents_to_validate.append(await _create_document(rep_dto.id_document_front, user_id_bytes, rep_id_bytes))
+                    created_documents_to_validate.append(await _create_document(rep_dto.id_document_back, user_id_bytes, rep_id_bytes))
+                    created_documents_to_validate.append(await _create_document(rep_dto.student_registry_authorization, user_id_bytes, rep_id_bytes))
                     
                     return saved_rep
                 
@@ -193,15 +198,52 @@ class UserService(BaseService):
             
             # ========== Create Document Validations ==========
             if is_creator_admin_or_secretary:
-                await self._auto_approve_documents(created_documents)
+                await self._auto_approve_documents(created_documents_to_validate)
             else:
-                await self._create_pending_validations(created_documents)
+                await self._create_pending_validations(created_documents_to_validate)
             
             # ========== Create Address ==========
             address_entity = DtoToEntityMapper.address(dto.address)
             address_entity.user_id = user_id
             address_model = EntityToModelMapper.address(address_entity)
             await self.address_repo.create(address_model)
+
+            # ========== Create student card ==========
+            if is_creating_student:
+                async def _create_student_card(
+                    student_dto: UserCreateDTO,
+                    student_id: bytes,
+                    student_sequential: int
+                ) -> DocumentCreateDTO:
+                    card_html = ''
+                    with open("src/templates/docs/student_card.html", "r", encoding="utf-8") as f:
+                        card_html = f.read()
+                    card_html = card_html.replace('${studentSequential}', str(student_sequential))
+                    card_html = card_html.replace('${name}', student_dto.name)
+                    card_html = card_html.replace('${document}', student_dto.document)
+                    card_html = card_html.replace('${birthdate}', student_dto.birthdate.strftime("%d/%m/%Y"))
+                    card_html = card_html.replace('${studentPhotoBase64}', student_dto.user_photo.base64)
+                    card_html = card_html.replace('${userFullAddress}', f'{student_dto.address.street}, {student_dto.address.number} - {student_dto.address.neighborhood}, {self._format_zip_code(student_dto.address.zip_code)}')
+                    student_phone_number = student_dto.cellphone_number if student_dto.cellphone_number else ''
+                    card_html = card_html.replace('${userPhoneNumber}', self._format_phone(student_phone_number))
+
+                    from src.infrastructure.pdf.pdf_render_service import PdfRenderService
+
+                    # testing
+                    pdf_bytes = PdfRenderService.render_to_bytes(card_html)
+                    with open("test.pdf", "wb") as f:
+                        f.write(pdf_bytes)
+
+                    return DocumentCreateDTO(
+                        base64=PdfRenderService.render_to_base64(card_html),
+                        user_id=str(UUID(bytes=student_id)),
+                        document_type_id=8,
+                        is_front=None,
+                        legal_representative_id=None
+                    )
+
+                student_card = await _create_student_card(dto, saved_model.id, saved_model.student_sequential)
+                await _create_document(student_card, user_id_bytes)
 
             self.repository.session.commit()
             
@@ -608,6 +650,23 @@ class UserService(BaseService):
     
     async def _get_new_student_sequential(self) -> int:
         """Get the latest student sequential"""
-        last_sequential = await self.repository.get_last_student_senquential()
+        last_sequential = await self.repository.get_last_student_sequential()
         new_sequential = last_sequential + 1
         return new_sequential
+    
+    def _format_phone(self, phone: str) -> str:
+        """Format phone as (XX) [X]XXXX-XXXX"""
+        digits = ''.join(filter(str.isdigit, phone))
+        
+        if len(digits) == 11:
+            return f"({digits[:2]}) {digits[2:7]}-{digits[7:]}"
+        elif len(digits) == 10:
+            return f"({digits[:2]}) {digits[2:6]}-{digits[6:]}"
+        else:
+            return phone
+    
+    def _format_zip_code(self, value: str) -> str:
+        """Formats the zip code into Brazilian style"""
+        if len(value) <= 3:
+            return value
+        return f"{value[:-3]}-{value[-3:]}"
