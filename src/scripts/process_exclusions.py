@@ -78,6 +78,8 @@ async def _stream_exclusions() -> AsyncGenerator[ProfilesToExcludeModel, None]:
     finally:
         session.close()
 
+def get_anonymized_unique_value(model_id: bytes) -> str:
+    return f"ANONYMIZED_{model_id.hex()[:8]}"
 
 async def process_exclusions():
     processed = 0
@@ -99,7 +101,7 @@ async def process_exclusions():
                 user.contact_cellphone_number = None
                 user.school = None
                 user.password = ""
-                user.document = ""
+                user.document = get_anonymized_unique_value(user_id_bytes)
 
             # Unenroll from all active classes
             from src.data.models.user_course_model import UserCourseModel
