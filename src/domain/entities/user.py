@@ -16,8 +16,8 @@ class User(BaseModel):
     document: str = Field(..., min_length=11, max_length=11)
     name: str = Field(..., min_length=3, max_length=200)
     email: Optional[EmailStr] = None
-    cellphone_number: Optional[str] = Field(None, pattern=r'^\d{9}$')
-    contact_cellphone_number: Optional[str] = Field(None, pattern=r'^\d{9}$')
+    cellphone_number: Optional[str] = Field(None, pattern=r'^\d{8,11}$')
+    contact_cellphone_number: Optional[str] = Field(None, pattern=r'^\d{8,11}$')
     password: str
     birthdate: date
     school: Optional[str] = Field(None, max_length=200)
