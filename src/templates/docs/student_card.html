@@ -20,6 +20,10 @@
             font-family: Arial, Helvetica, sans-serif;
         }
 
+        .bold {
+            font-weight: 600;
+        }
+
         .background-image img {
             position: absolute;
             max-width: 718px;
@@ -42,7 +46,8 @@
         .logo {
             background: linear-gradient(to bottom, #32abff 30%, #fff 70%);
             border: 3px solid black;
-            max-width: 2.8cm;
+            max-height: 2.4cm;
+            max-width: 3cm;
             padding: 5px;
             position: absolute;
         }
@@ -51,13 +56,17 @@
             background-color: rgb(23, 23, 23);
             display: block;
             margin: auto;
-            max-width: 2.3cm;
-            padding-right: 20px;
-            padding-left: 20px;
+            max-width: 2.2cm;
+            padding-right: 5px;
+            padding-left: 5px;
         }
 
         .input {
-            height: 25px;
+            height: 26px;
+        }
+
+        .two-row-input {
+            height: 45px;
         }
 
         h1 {
@@ -65,7 +74,7 @@
         }
 
         p {
-            font-size: 0.5em;
+            font-size: 0.6em;
         }
 
         :not(.rules) > p:first-child {
@@ -74,7 +83,7 @@
 
         h3 {
             font-weight: 600;
-            font-size: 6pt;
+            font-size: 6.5pt;
         }
         
         .input, .rules {
@@ -86,21 +95,19 @@
         }
 
         .rules {
-            font-size: 12pt;
+            font-size: 11pt;
             margin-bottom: 0px;
         }
 
         .number {
             margin-left: 60%;
+            padding-top: 9px;
+            text-align: center;
             width: 40%;
         }
 
         .signature {
             text-align: right;
-        }
-
-        .center-text {
-            text-align: center;
         }
 
         .left-side:not(.exclude-left-side), .right-side {
@@ -121,9 +128,14 @@
         .student-photo {
             background-color: #fff;
             border-radius: 15px;
-            height: 140px;
+            height: 120px;
             margin-top: 15px;
             margin-left: auto;
+            max-width: 100px;
+        }
+
+        .student-photo img {
+            border-radius: 15px;
             max-width: 100px;
         }
 
@@ -155,25 +167,22 @@
             </div>
 
             <div class="flex-box">
-                <div class="left-side">
+                <div class="left-side" style="width: 70%;">
                     <div class="input number">
                         <p>${studentSequential}</p>
                     </div>
                     <div class="student-name">
-                        <div class="input">
-                            <p>Nome</p>
-                            <p>${name}</p>
-                        </div>
-                        <div class="input">
+                        <div class="input two-row-input">
+                            <p class="bold">Nome</p>
                             <p>${name}</p>
                         </div>
                     </div>
                     <div class="input document">
-                        <p>Documento</p>
+                        <p class="bold">Documento</p>
                         <p>${document}</p>
                     </div>
                     <div class="input birthdate">
-                        <p>Nascimento</p>
+                        <p class="bold">Nascimento</p>
                         <p>${birthdate}</p>
                     </div>
                 </div>
@@ -186,16 +195,13 @@
         </section>
         <section class="id-back right-side">
             <div class="userAddress">
-                <div class="input">
-                    <p>Endereço</p>
-                    <p>${userFullAddress}</p>
-                </div>
-                <div class="input">
+                <div class="input two-row-input">
+                    <p class="bold">Endereço</p>
                     <p>${userFullAddress}</p>
                 </div>
             </div>
             <div class="input">
-                <p>Telefone</p>
+                <p class="bold">Telefone</p>
                 <p>${userPhoneNumber}</p>
             </div>
             <div class="rules">
