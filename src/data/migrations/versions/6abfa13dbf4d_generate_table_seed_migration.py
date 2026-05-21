@@ -38,7 +38,8 @@ def upgrade() -> None:
         [
             {'id': 1, 'description': 'CPF'}, {'id': 2, 'description': 'RG'}, {'id': 3, 'description': 'CIN'},
             {'id': 4, 'description': 'Foto de perfil'}, {'id': 5, 'description': 'Autorização de matrícula de menor de idade'},
-            {'id': 6, 'description': 'Atestado de saúde'}, {'id': 7, 'description': 'Justificativa de falta'}
+            {'id': 6, 'description': 'Atestado de saúde'}, {'id': 7, 'description': 'Justificativa de falta'},
+            {'id': 8, 'description': 'Carteirinha'}
         ]
     )
 
