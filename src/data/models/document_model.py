@@ -1,12 +1,12 @@
 """Document model"""
-from sqlalchemy import Column, Boolean, ForeignKey, Integer, Text
-from sqlalchemy.dialects.mysql import BINARY
+from sqlalchemy import Column, Boolean, ForeignKey, Integer
+from sqlalchemy.dialects.mysql import BINARY, MEDIUMTEXT
 from src.data.db_context.base import UuidPkUpdatableBaseModel
 
 class DocumentModel(UuidPkUpdatableBaseModel):
     __tablename__ = "document"
     
-    base64 = Column(Text, nullable=False)
+    base64 = Column(MEDIUMTEXT, nullable=False)
     is_front = Column(Boolean, nullable=True)
     
     # Foreign keys
