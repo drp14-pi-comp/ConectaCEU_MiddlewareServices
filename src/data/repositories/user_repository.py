@@ -127,14 +127,18 @@ class UserRepository(BaseRepository[UserModel]):
             return True
         return False
     
-    async def get_last_student_senquential(self) -> int:
-        stmt = select(UserModel).where(
-            and_(
-                UserModel.user_type_id == 5,
-                UserModel.student_sequential != None
+    async def get_last_student_sequential(self) -> int:
+        stmt = (
+            select(UserModel.student_sequential)
+            .where(
+                and_(
+                    UserModel.user_type_id == 5,
+                    UserModel.student_sequential != None
+                )
             )
+            .order_by(UserModel.student_sequential.desc())
+            .limit(1)
         )
         result = self.session.execute(stmt)
-        user = result.scalar_one_or_none()
-        last_sequential = user.student_sequential if user else 0
-        return last_sequential
+        last = result.scalar_one_or_none()
+        return last or 0
