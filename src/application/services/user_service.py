@@ -23,6 +23,7 @@ from src.domain.dtos.document_dto import DocumentCreateDTO
 from src.domain.dtos.user_dto import DeactivateUserDTO, UserCreateDTO, UserUpdateDTO, PasswordChangeDTO
 from src.domain.view_models.user_view_model import StudentUserViewModel, UserViewModel
 from src.infrastructure.handlers.datetime_handler import DateTimeHandler
+from src.infrastructure.handlers.format_handler import FormatHandler
 from src.infrastructure.handlers.password_hasher import PasswordHasher
 
 class UserService(BaseService):
@@ -223,16 +224,11 @@ class UserService(BaseService):
                     card_html = card_html.replace('${document}', student_dto.document)
                     card_html = card_html.replace('${birthdate}', student_dto.birthdate.strftime("%d/%m/%Y"))
                     card_html = card_html.replace('${studentPhotoBase64}', student_dto.user_photo.base64)
-                    card_html = card_html.replace('${userFullAddress}', f'{student_dto.address.street}, {student_dto.address.number} - {student_dto.address.neighborhood}, {self._format_zip_code(student_dto.address.zip_code)}')
+                    card_html = card_html.replace('${userFullAddress}', f'{student_dto.address.street}, {student_dto.address.number} - {student_dto.address.neighborhood}, {FormatHandler.format_zip_code(student_dto.address.zip_code)}')
                     student_phone_number = student_dto.cellphone_number if student_dto.cellphone_number else ''
-                    card_html = card_html.replace('${userPhoneNumber}', self._format_phone(student_phone_number))
+                    card_html = card_html.replace('${userPhoneNumber}', FormatHandler.format_phone(student_phone_number))
 
                     from src.infrastructure.pdf.pdf_render_service import PdfRenderService
-
-                    # testing
-                    pdf_bytes = PdfRenderService.render_to_bytes(card_html)
-                    with open("test.pdf", "wb") as f:
-                        f.write(pdf_bytes)
 
                     return DocumentCreateDTO(
                         base64=PdfRenderService.render_to_base64(card_html),
@@ -653,20 +649,3 @@ class UserService(BaseService):
         last_sequential = await self.repository.get_last_student_sequential()
         new_sequential = last_sequential + 1
         return new_sequential
-    
-    def _format_phone(self, phone: str) -> str:
-        """Format phone as (XX) [X]XXXX-XXXX"""
-        digits = ''.join(filter(str.isdigit, phone))
-        
-        if len(digits) == 11:
-            return f"({digits[:2]}) {digits[2:7]}-{digits[7:]}"
-        elif len(digits) == 10:
-            return f"({digits[:2]}) {digits[2:6]}-{digits[6:]}"
-        else:
-            return phone
-    
-    def _format_zip_code(self, value: str) -> str:
-        """Formats the zip code into Brazilian style"""
-        if len(value) <= 3:
-            return value
-        return f"{value[:-3]}-{value[-3:]}"
