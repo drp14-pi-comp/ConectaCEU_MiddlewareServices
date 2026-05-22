@@ -1,9 +1,11 @@
 """Document service - business logic for Document entity"""
-from typing import List
+from typing import List, Optional
 from uuid import UUID
 
 from src.application.logging.application_logger import ApplicationLogger
 from src.data.models.document_model import DocumentModel
+from src.data.models.user_model import UserModel
+from src.data.repositories.address_repository import AddressRepository
 from src.data.repositories.document_repository import DocumentRepository
 from src.application.services.base_service import BaseService
 from src.application.mappers.dto_to_entity_mapper import DtoToEntityMapper
@@ -14,6 +16,7 @@ from src.data.repositories.user_repository import UserRepository
 from src.domain.dtos.document_dto import DocumentCreateDTO
 from src.domain.view_models.document_view_model import DocumentViewModel
 from src.infrastructure.handlers.datetime_handler import DateTimeHandler
+from src.infrastructure.handlers.format_handler import FormatHandler
 
 class DocumentService(BaseService):
     """Service for Document business logic"""
@@ -21,33 +24,54 @@ class DocumentService(BaseService):
     def __init__(
         self,
         repository: DocumentRepository,
-        user_repo: UserRepository
+        user_repo: UserRepository,
+        address_repo: AddressRepository
     ):
         super().__init__(repository, 'document', mapper_class=ModelToEntityMapper)
         self.repository = repository
         self.user_repo = user_repo
+        self.address_repo = address_repo
     
     async def upload_document(self, dto: DocumentCreateDTO) -> DocumentViewModel:
         """Upload a new document"""
         try:
             if len(dto.base64) <= 0:
                 raise ValueError('Conteúdo do documento não pode ser vazio')
+            
             if not dto.user_id:
                 raise ValueError('Documento precisa estar atrelado a um usuário')
+            
             user = await self.user_repo.get_by_id(UUID(dto.user_id))
             if not user:
                 raise ValueError('Usuário não encontrado')
+            
             entity = DtoToEntityMapper.document(dto)
             model = EntityToModelMapper.document(entity)
+            student_photo_doc_type_id = 4
+            is_user_photo = model.document_type_id == student_photo_doc_type_id;
             existing_document = await self.repository.get_latest_document(model)
+
             if existing_document:
                 existing_document.base64 = dto.base64
                 self.repository.update(existing_document)
+
+                if is_user_photo:
+                    existing_student_card = (await self.repository.get_by_type(
+                        UUID(bytes=user.id),
+                        student_photo_doc_type_id
+                    ))[0]
+                    existing_student_card.base64 = await self._get_student_card_base64(user, dto.base64)
+                    await self.repository.update(existing_student_card)
             else:
                 saved_model = await self.repository.create(model)
+
+                if is_user_photo:
+                    self._create_student_card(user, dto.base64)
+
             self._create_pending_validation(model)
             self.repository.session.commit()
             saved_entity = ModelToEntityMapper.document(saved_model)
+
             return EntityToViewModelMapper.document(saved_entity)
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
@@ -94,8 +118,8 @@ class DocumentService(BaseService):
         self,
         user_id: UUID,
         document_type_id: int,
-        logged_user_id: UUID,
-        user_ip_address: str
+        logged_user_id: Optional[UUID] = None,
+        user_ip_address: Optional[str] = None
     ) -> List[DocumentViewModel]:
         """Get a document by type"""
         try:
@@ -103,15 +127,16 @@ class DocumentService(BaseService):
             if not documents or len(documents) <= 0:
                 raise ValueError("Nenhum documento encontrado")
             
-            for document in documents:
-                # Log document request
-                from src.data.repositories.log_document_request_repository import LogDocumentRequestRepository
-                log_repo = LogDocumentRequestRepository(self.repository.session)
-                await log_repo.log(
-                    document_id=document.id,
-                    user_id=logged_user_id.bytes,
-                    user_ip_address=user_ip_address
-                )
+            if logged_user_id and user_ip_address:
+                for document in documents:
+                    # Log document request
+                    from src.data.repositories.log_document_request_repository import LogDocumentRequestRepository
+                    log_repo = LogDocumentRequestRepository(self.repository.session)
+                    await log_repo.log(
+                        document_id=document.id,
+                        user_id=logged_user_id.bytes,
+                        user_ip_address=user_ip_address
+                    )
 
             self.repository.session.commit()
             
@@ -153,3 +178,44 @@ class DocumentService(BaseService):
         )
         validation_model = EntityToModelMapper.document_validation(validation)
         await doc_validation_repo.create(validation_model)
+
+    async def _get_student_card_base64(self, user: UserModel, photo_base_64: str) -> str:
+        if len(photo_base_64) <= 0:
+            raise ValueError('Foto de usuário não pode ser vazia')
+        
+        card_html = ''
+        with open("src/templates/docs/student_card.html", "r", encoding="utf-8") as f:
+            card_html = f.read()
+        card_html = card_html.replace('${studentSequential}', str(user.student_sequential))
+        card_html = card_html.replace('${name}', user.name)
+        card_html = card_html.replace('${document}', user.document)
+        card_html = card_html.replace('${birthdate}', user.birthdate.strftime("%d/%m/%Y"))
+        card_html = card_html.replace('${studentPhotoBase64}', photo_base_64.base64)
+        user_address = (await self.address_repo.get_by_user_id(UUID(bytes=user.id)))[0]
+        street = user_address.street if user_address else ''
+        number = user_address.number if user_address else ''
+        neighborhood = user_address.neighborhood if user_address else ''
+        zip_code = user_address.zip_code if user_address else ''
+        card_html = card_html.replace('${userFullAddress}', f'{street}, {number} - {neighborhood}, {FormatHandler.format_zip_code(zip_code)}')
+        student_phone_number = user.cellphone_number if user.cellphone_number else ''
+        card_html = card_html.replace('${userPhoneNumber}', FormatHandler.format_phone(student_phone_number))
+
+        from src.infrastructure.pdf.pdf_render_service import PdfRenderService
+
+        return PdfRenderService.render_to_base64(card_html)
+    
+    async def _create_student_card(self, user: UserModel, photo_base_64: str) -> DocumentCreateDTO:
+        user_id: UUID = UUID(bytes=user.id)
+        card = DocumentModel(
+            base64=self._get_student_card_base64(user, photo_base_64),
+            user_id=str(user_id),
+            document_type_id=8,
+            is_front=None,
+            legal_representative_id=None
+        )
+        
+        doc_entity = DtoToEntityMapper.document(card)
+        doc_entity.user_id = user_id
+        doc_model = EntityToModelMapper.document(doc_entity)
+
+        await self.repository.create(doc_model)

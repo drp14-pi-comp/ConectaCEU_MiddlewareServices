@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from src.application.services.document_service import DocumentService
 from src.application.services.document_validation_service import DocumentValidationService
+from src.data.repositories.address_repository import AddressRepository
 from src.data.repositories.document_repository import DocumentRepository
 from src.data.db_context.database import get_db
 from src.api.dependencies.auth_dependencies import get_current_active_user
@@ -28,7 +29,8 @@ def get_document_service(db: Session = Depends(get_db)) -> DocumentService:
     """Dependency injection for DocumentService"""
     repository = DocumentRepository(db)
     user_repo = UserRepository(db)
-    return DocumentService(repository, user_repo)
+    address_repo = AddressRepository(db)
+    return DocumentService(repository, user_repo, address_repo)
     
     
 def get_validation_service(db: Session = Depends(get_db)) -> DocumentValidationService:
