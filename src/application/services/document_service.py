@@ -36,6 +36,9 @@ class DocumentService(BaseService):
     async def upload_document(self, dto: DocumentCreateDTO) -> DocumentViewModel:
         """Upload a new document"""
         try:
+            if DocumentTypes.is_template_type(dto.document_type_id):
+                raise ValueError('Este tipo de documento não pode ser salvo')
+
             if len(dto.base64) <= 0:
                 raise ValueError('Conteúdo do documento não pode ser vazio')
             
