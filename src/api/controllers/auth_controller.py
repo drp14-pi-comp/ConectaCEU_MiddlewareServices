@@ -1,6 +1,6 @@
 """Authentication controller"""
 from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.security import HTTPBearer
 
 from src.application.services.auth_service import AuthService
 from src.application.services.user_password_history_service import UserPasswordHistoryService
