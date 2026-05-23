@@ -256,17 +256,8 @@ class DocumentService(BaseService):
     # Register user form template
     def _get_register_user_form_template(self) -> str:
         "Get the register user form template"
-        html = ''
         with open('src/templates/docs/register_user_form_template.html', 'r', encoding='utf-8') as f:
-            # return f.read()
-            html = f.read()
-        
-        from src.infrastructure.pdf.pdf_render_service import PdfRenderService
-
-        # testing
-        pdf_bytes = PdfRenderService.render_to_bytes(html)
-        with open("test.pdf", "wb") as f:
-            f.write(pdf_bytes)
+            return self._render_to_base64(f.read())
     
     # Attendance list template
     async def _get_attendance_list_template(self) -> str:
