@@ -36,10 +36,17 @@ def upgrade() -> None:
     op.bulk_insert(
         sa.table('document_type', sa.column('id', sa.Integer), sa.column('description', sa.String)),
         [
-            {'id': 1, 'description': 'CPF'}, {'id': 2, 'description': 'RG'}, {'id': 3, 'description': 'CIN'},
-            {'id': 4, 'description': 'Foto de perfil'}, {'id': 5, 'description': 'Autorização de matrícula de menor de idade'},
-            {'id': 6, 'description': 'Atestado de saúde'}, {'id': 7, 'description': 'Justificativa de falta'},
-            {'id': 8, 'description': 'Carteirinha'}
+            {'id': 1, 'description': 'CPF'},
+            {'id': 2, 'description': 'RG'},
+            {'id': 3, 'description': 'CIN'},
+            {'id': 4, 'description': 'Foto de perfil'},
+            {'id': 5, 'description': 'Autorização de matrícula de menor de idade'},
+            {'id': 6, 'description': 'Atestado de saúde'},
+            {'id': 7, 'description': 'Justificativa de falta'},
+            {'id': 8, 'description': 'Carteirinha'},
+            {'id': 9, 'description': 'Template ficha de cadastro'},
+            {'id': 10, 'description': 'Template atestado de saúde'},
+            {'id': 11, 'description': 'Template lista de presença'}
         ]
     )
 
