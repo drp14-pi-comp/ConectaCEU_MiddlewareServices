@@ -13,6 +13,7 @@ from src.application.mappers.entity_to_model_mapper import EntityToModelMapper
 from src.application.mappers.model_to_entity_mapper import ModelToEntityMapper
 from src.application.mappers.entity_to_view_model_mapper import EntityToViewModelMapper
 from src.data.repositories.user_repository import UserRepository
+from src.domain.constants.document_types import DocumentTypes
 from src.domain.dtos.document_dto import DocumentCreateDTO
 from src.domain.view_models.document_view_model import DocumentViewModel
 from src.infrastructure.handlers.datetime_handler import DateTimeHandler
@@ -145,6 +146,27 @@ class DocumentService(BaseService):
             return [EntityToViewModelMapper.document(entity) for entity in entities]
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
+
+    async def get_management_document_template(self, document_type_id: int) -> Optional[dict]:
+        try:
+            if not DocumentTypes.is_template_type(document_type_id):
+                raise ValueError('Tipo de documento inválido')
+            
+            document_base64: str = ''
+
+            match DocumentTypes(document_type_id):
+                case DocumentTypes.HEALTH_CERTIFICATE_TEMPLATE:
+                    document_base64 = self._get_health_certificate_template()
+                case DocumentTypes.REGISTER_USER_FORM_TEMPLATE:
+                    document_base64 = self._get_register_user_form_template()
+                case DocumentTypes.ATTENDANCE_LIST_TEMPLATE:
+                    document_base64 = await self._get_attendance_list_template()
+                case _:
+                    return None
+
+            return { 'base64': document_base64 }
+        except Exception as e:
+            await ApplicationLogger.log_error(e, reraise=True)
     
     async def delete_document(self, document_id: UUID) -> bool:
         """Delete a document"""
@@ -179,6 +201,14 @@ class DocumentService(BaseService):
         validation_model = EntityToModelMapper.document_validation(validation)
         await doc_validation_repo.create(validation_model)
 
+    # PDF rendering
+    def _render_to_base64(self, html: str) -> str:
+        """Render the HTML as PDF"""
+        from src.infrastructure.pdf.pdf_render_service import PdfRenderService
+
+        return PdfRenderService.render_to_base64(html)
+
+    # Student card
     async def _get_student_card_base64(self, user: UserModel, photo_base_64: str) -> str:
         if len(photo_base_64) <= 0:
             raise ValueError('Foto de usuário não pode ser vazia')
@@ -192,17 +222,14 @@ class DocumentService(BaseService):
         card_html = card_html.replace('${birthdate}', user.birthdate.strftime("%d/%m/%Y"))
         card_html = card_html.replace('${studentPhotoBase64}', photo_base_64.base64)
         user_address = (await self.address_repo.get_by_user_id(UUID(bytes=user.id)))[0]
-        street = user_address.street if user_address else ''
-        number = user_address.number if user_address else ''
-        neighborhood = user_address.neighborhood if user_address else ''
-        zip_code = user_address.zip_code if user_address else ''
-        card_html = card_html.replace('${userFullAddress}', f'{street}, {number} - {neighborhood}, {FormatHandler.format_zip_code(zip_code)}')
+        card_html = card_html.replace(
+            '${userFullAddress}',
+            f'{user_address.street}, {user_address.number} - {user_address.neighborhood}, {FormatHandler.format_zip_code(user_address.zip_code)}' if user_address else ''
+        )
         student_phone_number = user.cellphone_number if user.cellphone_number else ''
         card_html = card_html.replace('${userPhoneNumber}', FormatHandler.format_phone(student_phone_number))
 
-        from src.infrastructure.pdf.pdf_render_service import PdfRenderService
-
-        return PdfRenderService.render_to_base64(card_html)
+        return self._render_to_base64(card_html)
     
     async def _create_student_card(self, user: UserModel, photo_base_64: str) -> DocumentCreateDTO:
         user_id: UUID = UUID(bytes=user.id)
@@ -219,3 +246,33 @@ class DocumentService(BaseService):
         doc_model = EntityToModelMapper.document(doc_entity)
 
         await self.repository.create(doc_model)
+    
+    # Health certificate
+    def _get_health_certificate_template(self) -> str:
+        """Get the health certificate template"""
+        with open('src/templates/docs/health_certificate.html', 'r', encoding='utf-8') as f:
+            return self._render_to_base64(f.read())
+
+    # Register user form template
+    def _get_register_user_form_template(self) -> str:
+        "Get the register user form template"
+        html = ''
+        with open('src/templates/docs/register_user_form_template.html', 'r', encoding='utf-8') as f:
+            # return f.read()
+            html = f.read()
+        
+        from src.infrastructure.pdf.pdf_render_service import PdfRenderService
+
+        # testing
+        pdf_bytes = PdfRenderService.render_to_bytes(html)
+        with open("test.pdf", "wb") as f:
+            f.write(pdf_bytes)
+    
+    # Attendance list template
+    async def _get_attendance_list_template(self) -> str:
+        """Get the attendance list template"""
+        html = ''
+        with open('src/templates/docs/attendance_list_template.html', 'r', encoding='utf-8') as f:
+            html = f.read()
+        
+        return html
