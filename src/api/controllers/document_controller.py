@@ -90,7 +90,7 @@ async def get_document(
     
     return document
 
-@router.get("user/{user_id}/type/{document_type_id}", response_model=List[DocumentViewModel])
+@router.get("/user/{user_id}/type/{document_type_id}", response_model=List[DocumentViewModel])
 async def get_document_by_type(
     request: Request,
     user_id: UUID,
