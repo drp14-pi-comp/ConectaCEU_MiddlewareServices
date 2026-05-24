@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Chamada</title>
+    <style>
+        @page {
+            size: A4 landscape;
+            margin: 1cm;
+        }
+
+        * {
+            box-sizing: border-box;
+            padding: 0;
+            margin: 0;
+        }
+
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 7pt;
+            font-weight: 500;
+        }
+
+        h1, h2 {
+            font-size: 1.5em;
+        }
+
+        table {
+            border-collapse: collapse;
+        }
+
+        tr:nth-child(even) {
+            background-color: #b7b7b7;
+        }
+
+        .control_container {
+            background-color: #2a3990;
+        }
+
+        .control_container, .main_title, .institution {
+            border: 1px solid #000;
+        }
+
+        .main_title, .institution {
+            margin-left: auto;
+            text-align: center;
+            padding: 5px;
+            width: 70%;
+        }
+
+        .main_title {
+            background-color: #d9ead3;
+        }
+
+        .institution {
+            background-color: #fff;
+        }
+
+        .course_info, .input_container {
+            display: flex;
+        }
+
+        .course_info {
+            justify-content: space-around;
+            padding: 5px 30px;
+        }
+
+        .control_container label {
+            color: #fff;
+            font-weight: 600;
+            font-style: italic;
+        }
+
+        .control_container .column {
+            padding-left: 10px;
+            min-width: 25%;
+            margin-left: 50px;
+        }
+
+        .control_container p {
+            margin-top: -10px;
+            margin-left: 2px;
+        }
+
+        .input_container {
+            margin: 5px auto;
+            align-items: flex-end;
+        }
+
+        .input_box {
+            background-color: #fff;
+            flex: 1;
+            height: 2em;
+            margin-left: 2px;
+        }
+
+        .two_row_input_box {
+            height: 3.5em;
+        }
+
+        .attendance_legend {
+            background-color: #fff;
+        }
+
+        .attendance_legend label {
+            color: #980000;
+        }
+
+        .attendance_legend, .attendance_legend th {
+            border: 1px solid #000;
+        }
+
+        .attendance_legend th, .attendance_legend td {
+            padding: 6px 10px;
+        }
+
+        .student_list {
+            font-size: 6pt;
+        }
+        
+        .student_list th, .student_list td {
+            border: 1px solid #000;
+        }
+
+        .student_list .student {
+            width: 30%;
+        }
+
+        .student_position {
+            padding-right: 30px;
+        }
+
+        .student_inner_wrapper {
+            display: flex;
+        }
+
+        .student_list th, .student_position, .student_name {
+            padding: 2px;
+        }
+
+        .separator_row {
+            display: block;
+            background-color: #d9d9d9;
+            min-height: 1.5em;
+        }
+
+        .table_footer {
+            background-color: #f9f9f9;
+        }
+
+        .veredict {
+            display: flex;
+            font-weight: 600;
+            height: 6em;
+            text-align: center;
+        }
+
+        .separator_row, .observations_title, .observations, .signature {
+            border: 1px solid #000;
+        }
+
+        .veredict > *:not(.signature) {
+            width: 25%;
+        }
+
+        .veredict p {
+            margin-top: 2.5em;
+        }
+
+        .observation_row {
+            background-color: #fff;
+            display: block;
+            min-height: 1.45em;
+        }
+
+        .observation_row:not(.observation_row:last-child) {
+            border-bottom: 1px solid #000;
+        }
+
+        .signature {
+            display: flex;
+            width: 50%;
+        }
+
+        .signature > * {
+            width: 50%;
+        }
+
+        .signature_title {
+            border-right: 1px solid #000;
+        }
+
+        .signature_space {
+            border-left: 1px solid #000;
+        }
+    </style>
+</head>
+<body>
+    <div class="table_wrapper">
+        <div class="control_container">
+            <div class="main_title">
+                <h1>SME/COCEU/DIESP - FREQUÊNCIA</h1>
+            </div>
+            <div class="institution">
+                <h2>DRE SM - CEU SÃO RAFAEL</h2>
+            </div>
+            <div class="course_info">
+                <div class="column">
+                    <div class="input_container">
+                        <label>NOME:</label>
+                        <span class="input_box">
+                            <p>${responsibleName}</p>
+                        </span>
+                    </div>
+                    <div class="input_container">
+                        <label>RESPONSÁVEL:</label>
+                        <span class="input_box">
+                            <p>${responsibleOccupation}</p>
+                        </span>
+                    </div>
+                    <div class="input_container">
+                        <label>CÓD. TURMA NO EOL:</label>
+                        <span class="input_box">
+                            <p>${classCodeOnEol}</p>
+                        </span>
+                    </div>
+                </div>
+                <div class="column">
+                    <div class="input_container">
+                        <label>ATIVIDADE:</label>
+                        <span class="input_box">
+                            <p>${componentName}</p>
+                        </span>
+                    </div>
+                    <div class="input_container">
+                        <label>FAIXA ETÁRIA:</label>
+                        <span class="input_box">
+                            <p>${ageGroup}</p>
+                        </span>
+                    </div>
+                    <div class="input_container">
+                        <label>
+                            DIA/HORA DE
+                            <br />
+                            AULAS DA TURMA:
+                        </label>
+                        <span class="input_box two_row_input_box">
+                            <p>${classTimeDays}</p>
+                        </span>
+                    </div>
+                </div>
+                <div class="column">
+                    <div class="input_container">
+                        <label>TURMA:</label>
+                        <span class="input_box">
+                            <p>${class}</p>
+                        </span>
+                    </div>
+                </div>
+                <div class="column">
+                    <table class="attendance_legend">
+                        <thead>
+                            <tr>
+                                <th>
+                                    <label>Legenda:</label>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>P - PRESENÇA</td>
+                            </tr>
+                            <tr>
+                                <td>F - FALTA</td>
+                            </tr>
+                            <tr>
+                                <td>FJ - FALTA JUSTIFICADA</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <table class="student_list">
+            <thead>
+                <tr>
+                    <th rowspan="2">ALUNOS</th>
+                    <th rowspan="2">EOL</th>
+                    ${day_wrappers}
+                    <th rowspan="2">Presenças</th>
+                    <th rowspan="2">Faltas</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${studentRows}
+            </tbody>
+        </table>
+        <div class="table_footer">
+            <span class="separator_row"></span>
+            <div class="veredict">
+                <div class="observations_title">
+                    <p>Observação/Ocorrências:</p>
+                </div>
+                <div class="observations">
+                    <span class="observation_row"></span>
+                    <span class="observation_row"></span>
+                    <span class="observation_row"></span>
+                    <span class="observation_row"></span>
+                </div>
+                <div class="signature">
+                    <div class="signature_title">
+                        <p>CARIMBO E CIÊNCIA DO NEL</p>
+                    </div>
+                    <div class="signature_space"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
