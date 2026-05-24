@@ -190,7 +190,7 @@ class UserCourseService(BaseService):
             if not enrollment:
                 raise ValueError("Enrollment not found")
             
-            course_id = UUID(enrollment.course_id)
+            course_id = UUID(bytes=enrollment.course_id)
             
             if not enrollment.active:
                 raise ValueError("Enrollment already inactive")

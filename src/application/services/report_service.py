@@ -91,7 +91,7 @@ class ReportService:
                                 'component_id': str(component_uuid),
                                 'component_name': component.name,
                                 'class_id': str(class_uuid),
-                                'shift_type_id': class_.shift_type_id,
+                                'shift_type_id': course.shift_type_id,
                                 'student_name': user.name,
                                 'student_document': user.document,
                                 'student_email': user.email,

@@ -57,7 +57,9 @@ class DocumentService(BaseService):
             is_user_photo = model.document_type_id == student_photo_doc_type_id;
             existing_document = await self.repository.get_latest_document(model)
 
+            saved_model = None
             if existing_document:
+                saved_model = existing_document
                 existing_document.base64 = dto.base64
                 self.repository.update(existing_document)
 
@@ -96,7 +98,7 @@ class DocumentService(BaseService):
         document_id: UUID,
         user_id: UUID,
         user_ip_address: str
-    ) -> dict:
+    ) -> DocumentViewModel:
         """Get document and log the request"""
         try:
             document: DocumentModel = await self.repository.get_by_id(document_id)
@@ -116,7 +118,7 @@ class DocumentService(BaseService):
             
             entity = ModelToEntityMapper.document(document)
 
-            return EntityToViewModelMapper.document(entity).model_dump()
+            return EntityToViewModelMapper.document(entity)
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
         
