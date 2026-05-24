@@ -1,5 +1,5 @@
 """Document controller"""
-from typing import List
+from typing import List, Optional
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
@@ -112,6 +112,8 @@ async def get_document_by_type(
 @router.get("/management/type/{document_type_id}", response_model=dict)
 async def get_management_document_template(
     document_type_id: int,
+    component_id: Optional[UUID] = None,
+    month: Optional[int] = None,
     current_user: User = Depends(get_current_active_user),
     service: DocumentService = Depends(get_document_service)
 ):
@@ -119,7 +121,7 @@ async def get_management_document_template(
     if current_user.user_type_id == 5:
         raise HTTPException(status_code=403, detail="Só equipe pode consultar estes documentos")
     
-    document: dict = await service.get_management_document_template(document_type_id)
+    document: dict = await service.get_management_document_template(document_type_id, component_id, month)
 
     if not document:
         raise HTTPException(status_code=404, detail="Nenhum documento encontrado")

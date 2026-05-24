@@ -1,9 +1,11 @@
 """Document service - business logic for Document entity"""
 from typing import List, Optional
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from src.application.logging.application_logger import ApplicationLogger
+from src.data.models.class_model import ClassModel
 from src.data.models.document_model import DocumentModel
+from src.data.models.user_course_model import UserCourseModel
 from src.data.models.user_model import UserModel
 from src.data.repositories.address_repository import AddressRepository
 from src.data.repositories.document_repository import DocumentRepository
@@ -150,7 +152,12 @@ class DocumentService(BaseService):
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
 
-    async def get_management_document_template(self, document_type_id: int) -> Optional[dict]:
+    async def get_management_document_template(
+        self,
+        document_type_id: int,
+        component_id: Optional[UUID],
+        month: Optional[int]
+    ) -> Optional[dict]:
         try:
             if not DocumentTypes.is_template_type(document_type_id):
                 raise ValueError('Tipo de documento inválido')
@@ -163,11 +170,20 @@ class DocumentService(BaseService):
                 case DocumentTypes.REGISTER_USER_FORM_TEMPLATE:
                     document_base64 = self._get_register_user_form_template()
                 case DocumentTypes.ATTENDANCE_LIST_TEMPLATE:
-                    document_base64 = await self._get_attendance_list_template()
+                    if not component_id:
+                        raise ValueError('ID Curso do curso inválido')
+                    if not month or month <= 0 or month > 12:
+                        raise ValueError('Mês inválido')
+                    document_base64 = await self._get_attendance_list_template(component_id, month)
                 case _:
                     return None
+                
+            fileName: str = f'arquivo_{str(uuid4()).replace('-', '')}.pdf'
 
-            return { 'base64': document_base64 }
+            return {
+                'fileName': fileName,
+                'base64': document_base64
+            }
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
     
@@ -263,10 +279,133 @@ class DocumentService(BaseService):
             return self._render_to_base64(f.read())
     
     # Attendance list template
-    async def _get_attendance_list_template(self) -> str:
+    def _generate_attendance_list_day_wrappers(self, classes_in_month: list[ClassModel]) -> str:
+        WEEKDAYS: list[str] = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"]
+        result_html: str = ''
+        day_wrapper_html: str = '''
+<th class="day_wrapper">
+    <p>${day}</p>
+    <p>${weekDay}</p>
+</th>'''
+
+        for class_ in classes_in_month:
+            aux_html: str = day_wrapper_html.replace('${day}', class_.date.strftime("%d/%m"))
+            aux_html = aux_html.replace('${weekDay}', WEEKDAYS[class_.date.weekday()])
+            result_html += aux_html
+        
+        return result_html
+
+    async def _generate_attendance_list_student_rows(
+        self,
+        enrollments: list[UserCourseModel],
+        classes_count: int
+    ) -> str:
+        ATTENDANCE_CELL = '<td class="attendance_check"></td>'
+        RESULT_CELL = '<td class="attended_count"></td><td class="absence_count"></td>'
+        STUDENT_ROW_HTML: str = '''
+<tr>
+    <td class="student">
+        <span class="student_inner_wrapper">
+            <span class="student_position">${studentPosition}</span>
+            <p class="student_name">${studentName}</p>
+        </span>
+    </td>
+    <td class="eol_check"></td>
+    ${attendanceCells}
+    ${resultCells}
+</tr>'''
+        result_html: str = ''
+        attendance_cells = ATTENDANCE_CELL * classes_count
+        
+        count = 1
+        for enrollment in enrollments:
+            user = await self.user_repo.get_by_id(UUID(bytes=enrollment.user_id))
+            if not user:
+                continue
+            
+            row = STUDENT_ROW_HTML.replace('${studentPosition}', str(count))
+            row = row.replace('${studentName}', user.name)
+            row = row.replace('${attendanceCells}', attendance_cells)
+            row = row.replace('${resultCells}', RESULT_CELL)
+            result_html += row
+            count += 1
+        
+        return result_html
+    
+    def _get_schedule_description(self, classes_in_month: list[ClassModel]) -> str:
+        """Returns: 'Segunda, Terça, Quarta\n10h00'"""
+        WEEKDAYS_FULL = [
+            "Segunda", "Terça", "Quarta",
+            "Quinta", "Sexta", "Sábado", "Domingo"
+        ]
+        
+        seen = set()
+        time = classes_in_month[0].date.strftime("%Hh%M") if classes_in_month else ""
+        
+        for c in classes_in_month:
+            seen.add(c.date.weekday())
+        
+        sorted_days = sorted(seen)
+        day_names = [WEEKDAYS_FULL[d] for d in sorted_days]
+        
+        return f"{', '.join(day_names)}<br>{time}"
+
+    async def _get_attendance_list_template(self, component_id: UUID, month: int) -> str:
         """Get the attendance list template"""
+        if month <= 0:
+            raise ValueError('Mês inválido')
+
+        from src.data.models.course_model import CourseModel
+        from src.data.models.course_component_model import CourseComponentModel
+        from src.data.repositories.user_course_repository import UserCourseRepository
+        from src.data.repositories.course_repository import CourseRepository
+        from src.data.repositories.course_component_repository import CourseComponentRepository
+        from src.data.repositories.class_repository import ClassRepository
+        user_course_repo = UserCourseRepository(self.repository.session)
+        course_repo = CourseRepository(self.repository.session)
+        component_repo = CourseComponentRepository(self.repository.session)
+        class_repo = ClassRepository(self.repository.session)
+
+        component: CourseComponentModel = await component_repo.get_by_id(component_id)
+        if not component:
+            raise ValueError('Componente não existe')
+        
+        classes_in_month: list[ClassModel] = await class_repo.get_by_component_and_month(component_id, month)
+        class_count: int = len(classes_in_month)
+        if class_count == 0:
+            raise ValueError('Nenhuma aula encontrada para o mês')
+        
+        course: CourseModel = await course_repo.get_by_id(UUID(bytes=component.course_id))
+        if not course:
+            raise ValueError('Curso não encontrado')
+        
+        enrollments: list[UserCourseModel] = await user_course_repo.get_active_by_course_id(UUID(bytes=course.id))
+        if len(enrollments) == 0:
+            raise ValueError('Nenhuma matricula encontrada para o curso')
+        
+        educator: UserModel = await self.user_repo.get_by_id(UUID(bytes=course.responsible_educator_1))
+        if not educator:
+            raise ValueError('Educador responsável não encontrado')
+
         html = ''
         with open('src/templates/docs/attendance_list_template.html', 'r', encoding='utf-8') as f:
             html = f.read()
+
+        html = html.replace('${responsibleName}', educator.name)
+        html = html.replace('${responsibleOccupation}', '')
+        html = html.replace('${classCodeOnEol}', '')
+        html = html.replace('${componentName}', component.name)
+        html = html.replace('${ageGroup}', '')
+        html = html.replace('${classTimeDays}', self._get_schedule_description(classes_in_month))
+        html = html.replace('${class}', '')
+        html = html.replace('${day_wrappers}', self._generate_attendance_list_day_wrappers(classes_in_month))
+        html = html.replace('${studentRows}', await self._generate_attendance_list_student_rows(enrollments, class_count))
         
-        return html
+        # testing
+        from src.infrastructure.pdf.pdf_render_service import PdfRenderService
+        pdf_bytes = PdfRenderService.render_to_bytes(html)
+        with open("test.pdf", "wb") as f:
+            f.write(pdf_bytes)
+        # end of testing
+        
+        return self._render_to_base64(html)
